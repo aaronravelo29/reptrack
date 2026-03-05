@@ -4,6 +4,9 @@ import { useState, useRef, useEffect, useMemo, createContext, useContext } from 
 const SUPABASE_URL = "https://lzxutumsrzjovjmebqns.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6eHV0dW1zcnpqb3ZqbWVicW5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODAzNzAsImV4cCI6MjA4ODI1NjM3MH0.WuZsLON6sZ2Oe7uEKOZysZzcQXOGwFDaK5doxhulEAA";
 
+// ─── ANTHROPIC CONFIG ─────────────────────────────────────────────────────────
+const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
+
 // Simple Supabase client
 const supabase = {
   auth: {
@@ -63,7 +66,6 @@ const supabase = {
       return { error: null };
     },
     onAuthStateChange: (callback) => {
-      // Simple implementation - check on load
       const token = localStorage.getItem('sb-token');
       const user = localStorage.getItem('sb-user');
       if (token && user) {
@@ -82,13 +84,11 @@ function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -98,17 +98,13 @@ function AuthProvider({ children }) {
 
   const signUp = async (email, password) => {
     const { data, error } = await supabase.auth.signUp({ email, password });
-    if (!error && data?.user) {
-      setUser(data.user);
-    }
+    if (!error && data?.user) setUser(data.user);
     return { data, error };
   };
 
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error && data?.user) {
-      setUser(data.user);
-    }
+    if (!error && data?.user) setUser(data.user);
     return { data, error };
   };
 
@@ -128,7 +124,7 @@ const useAuth = () => useContext(AuthContext);
 
 // ─── AUTH SCREEN ──────────────────────────────────────────────────────────────
 function AuthScreen() {
-  const [mode, setMode] = useState("login"); // "login" | "signup"
+  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -180,48 +176,26 @@ function AuthScreen() {
         maxWidth: 420,
         boxShadow: "0 25px 80px rgba(0,0,0,0.4)"
       }}>
-        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{
-            fontSize: 32,
-            fontWeight: 700,
-            color: "#0F2742",
-            fontFamily: "'Inter', sans-serif",
-            letterSpacing: -1
-          }}>
+          <div style={{ fontSize: 32, fontWeight: 700, color: "#0F2742", fontFamily: "'Inter', sans-serif", letterSpacing: -1 }}>
             Rep<span style={{ color: "#C6A24A" }}>Track</span>
           </div>
-          <div style={{
-            fontSize: 11,
-            color: "#4D6785",
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            marginTop: 6
-          }}>
+          <div style={{ fontSize: 11, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginTop: 6 }}>
             Real Estate Professional Tracker
           </div>
         </div>
 
-        {/* Tabs */}
         <div style={{ display: "flex", marginBottom: 28, borderBottom: "1px solid #d4cfbd" }}>
           {["login", "signup"].map(m => (
             <button
               key={m}
               onClick={() => { setMode(m); setError(""); setMessage(""); }}
               style={{
-                flex: 1,
-                padding: "12px 0",
-                background: "none",
-                border: "none",
+                flex: 1, padding: "12px 0", background: "none", border: "none",
                 borderBottom: mode === m ? "2px solid #C6A24A" : "2px solid transparent",
                 color: mode === m ? "#C6A24A" : "#4D6785",
-                fontSize: 12,
-                fontWeight: 600,
-                letterSpacing: 1.5,
-                textTransform: "uppercase",
-                cursor: "pointer",
-                transition: "all 0.15s",
-                fontFamily: "'IBM Plex Mono', monospace"
+                fontSize: 12, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase",
+                cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace"
               }}
             >
               {m === "login" ? "Log In" : "Sign Up"}
@@ -229,141 +203,35 @@ function AuthScreen() {
           ))}
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 18 }}>
-            <label style={{
-              display: "block",
-              fontSize: 10,
-              color: "#4D6785",
-              letterSpacing: 2,
-              textTransform: "uppercase",
-              marginBottom: 6
-            }}>
-              Email
-            </label>
+            <label style={{ display: "block", fontSize: 10, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Email</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                fontSize: 14,
-                border: "1px solid #d4cfbd",
-                borderRadius: 4,
-                background: "#faf8f4",
-                color: "#0F2742",
-                outline: "none",
-                fontFamily: "'IBM Plex Mono', monospace",
-                boxSizing: "border-box",
-                transition: "border-color 0.2s"
-              }}
-              onFocus={(e) => e.target.style.borderColor = "#C6A24A"}
-              onBlur={(e) => e.target.style.borderColor = "#d4cfbd"}
+              type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+              style={{ width: "100%", padding: "12px 14px", fontSize: 14, border: "1px solid #d4cfbd", borderRadius: 4, background: "#faf8f4", color: "#0F2742", outline: "none", fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }}
               placeholder="you@example.com"
             />
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{
-              display: "block",
-              fontSize: 10,
-              color: "#4D6785",
-              letterSpacing: 2,
-              textTransform: "uppercase",
-              marginBottom: 6
-            }}>
-              Password
-            </label>
+            <label style={{ display: "block", fontSize: 10, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Password</label>
             <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              style={{
-                width: "100%",
-                padding: "12px 14px",
-                fontSize: 14,
-                border: "1px solid #d4cfbd",
-                borderRadius: 4,
-                background: "#faf8f4",
-                color: "#0F2742",
-                outline: "none",
-                fontFamily: "'IBM Plex Mono', monospace",
-                boxSizing: "border-box",
-                transition: "border-color 0.2s"
-              }}
-              onFocus={(e) => e.target.style.borderColor = "#C6A24A"}
-              onBlur={(e) => e.target.style.borderColor = "#d4cfbd"}
+              type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
+              style={{ width: "100%", padding: "12px 14px", fontSize: 14, border: "1px solid #d4cfbd", borderRadius: 4, background: "#faf8f4", color: "#0F2742", outline: "none", fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }}
               placeholder="••••••••"
             />
           </div>
 
-          {error && (
-            <div style={{
-              background: "#f5e4e4",
-              border: "1px solid #993030",
-              borderRadius: 4,
-              padding: "10px 14px",
-              marginBottom: 18,
-              fontSize: 12,
-              color: "#7a1a1a"
-            }}>
-              {error}
-            </div>
-          )}
+          {error && <div style={{ background: "#f5e4e4", border: "1px solid #993030", borderRadius: 4, padding: "10px 14px", marginBottom: 18, fontSize: 12, color: "#7a1a1a" }}>{error}</div>}
+          {message && <div style={{ background: "#e4f2ea", border: "1px solid #256b45", borderRadius: 4, padding: "10px 14px", marginBottom: 18, fontSize: 12, color: "#1a5c38" }}>{message}</div>}
 
-          {message && (
-            <div style={{
-              background: "#e4f2ea",
-              border: "1px solid #256b45",
-              borderRadius: 4,
-              padding: "10px 14px",
-              marginBottom: 18,
-              fontSize: 12,
-              color: "#1a5c38"
-            }}>
-              {message}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: "100%",
-              padding: "14px 20px",
-              background: loading ? "#8a9aaa" : "#C6A24A",
-              border: "none",
-              borderRadius: 4,
-              color: "#0F2742",
-              fontSize: 12,
-              fontWeight: 600,
-              letterSpacing: 1.5,
-              textTransform: "uppercase",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontFamily: "'IBM Plex Mono', monospace",
-              transition: "background 0.2s",
-              boxShadow: "0 2px 8px rgba(198,162,74,0.3)"
-            }}
-            onMouseOver={(e) => !loading && (e.target.style.background = "#d4b060")}
-            onMouseOut={(e) => !loading && (e.target.style.background = "#C6A24A")}
-          >
+          <button type="submit" disabled={loading}
+            style={{ width: "100%", padding: "14px 20px", background: loading ? "#8a9aaa" : "#C6A24A", border: "none", borderRadius: 4, color: "#0F2742", fontSize: 12, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase", cursor: loading ? "not-allowed" : "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
             {loading ? "Please wait..." : mode === "login" ? "Log In" : "Create Account"}
           </button>
         </form>
 
-        <div style={{
-          marginTop: 28,
-          paddingTop: 20,
-          borderTop: "1px solid #d4cfbd",
-          textAlign: "center",
-          fontSize: 11,
-          color: "#7a96b0"
-        }}>
+        <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid #d4cfbd", textAlign: "center", fontSize: 11, color: "#7a96b0" }}>
           {mode === "login" ? (
             <>Don't have an account? <span onClick={() => setMode("signup")} style={{ color: "#C6A24A", cursor: "pointer" }}>Sign up</span></>
           ) : (
@@ -377,44 +245,24 @@ function AuthScreen() {
 
 // ─── Sample Data ──────────────────────────────────────────────────────────────
 const SAMPLE_PROPERTIES = [
-  { id:"p1", name:"Oak Street Duplex",       address:"123 Oak St, Pittsburgh PA 15213",      type:"multi_family", units:2, rent:3400 },
-  { id:"p2", name:"Downtown Studio",          address:"88 Fifth Ave #4C, Pittsburgh PA 15219", type:"single_family",units:1, rent:1650 },
-  { id:"p3", name:"Squirrel Hill 4-Plex",    address:"501 Murray Ave, Pittsburgh PA 15217",  type:"multi_family", units:4, rent:6800 },
-  { id:"p4", name:"Lawrenceville Commercial", address:"4200 Butler St, Pittsburgh PA 15201",  type:"commercial",   units:1, rent:4200 },
+  { id:"p1", name:"Oak Street Duplex", address:"123 Oak St, Pittsburgh PA 15213", type:"multi_family", units:2, rent:3400 },
+  { id:"p2", name:"Downtown Studio", address:"88 Fifth Ave #4C, Pittsburgh PA 15219", type:"single_family", units:1, rent:1650 },
+  { id:"p3", name:"Squirrel Hill 4-Plex", address:"501 Murray Ave, Pittsburgh PA 15217", type:"multi_family", units:4, rent:6800 },
+  { id:"p4", name:"Lawrenceville Commercial", address:"4200 Butler St, Pittsburgh PA 15201", type:"commercial", units:1, rent:4200 },
 ];
-const SAMPLE_TENANTS = [
-  { id:"t1", name:"James & Priya Okafor", email:"okafor@email.com",  phone:"412-555-0182", property:"p1", unit:"Unit A", rent:1700, leaseEnd:"2025-01-31" },
-  { id:"t2", name:"Derek Shin",           email:"dshin@gmail.com",   phone:"412-555-0391", property:"p1", unit:"Unit B", rent:1700, leaseEnd:"2025-05-31" },
-  { id:"t3", name:"Anika Thompson",       email:"anika.t@email.com", phone:"412-555-0714", property:"p2", unit:"#4C",    rent:1650, leaseEnd:"2025-11-30" },
-  { id:"t4", name:"Rivera Family",        email:"rivera@email.com",  phone:"412-555-0823", property:"p3", unit:"Unit 1", rent:1700, leaseEnd:"2025-08-31" },
-  { id:"t5", name:"Chen Properties LLC",  email:"chen.llc@biz.com",  phone:"412-555-0944", property:"p4", unit:"Full",   rent:4200, leaseEnd:"2026-12-31" },
-];
-const SAMPLE_SUPPLIERS = [
-  { id:"s1", name:"Kowalski Plumbing",         type:"plumber",     email:"kowalski@plumb.com",       phone:"412-555-1100", notes:"License #PL-8821 · $95/hr · 24hr emergency" },
-  { id:"s2", name:"Three Rivers Electric",     type:"electrician", email:"info@3riverselectric.com", phone:"412-555-2200", notes:"Master license #EL-4401" },
-  { id:"s3", name:"Allegheny HVAC Solutions",  type:"hvac",        email:"service@alleghenyhvac.com",phone:"412-555-3300", notes:"Annual service contracts available" },
-  { id:"s4", name:"Steel City Contractors",    type:"contractor",  email:"bids@steelcitycon.com",    phone:"412-555-4400", notes:"GC license #GC-7733" },
-  { id:"s5", name:"Greenleaf Landscaping",     type:"landscaping", email:"green@greenleaf.com",      phone:"412-555-5500", notes:"Monthly contracts · Snow removal" },
-];
+
 const SAMPLE_ENTRIES = [
-  { id:"e1",  date:"2024-11-01", qualifies:true,  category:"management",    categoryLabel:"Property Management",    activity:"Called tenant re maintenance request — Oak St Unit A",    minutes:30  },
-  { id:"e2",  date:"2024-11-01", qualifies:false, category:"non_re",        categoryLabel:"Non-RE Work",            activity:"Dr. Rodriguez W-2 physician shift",                       minutes:480 },
-  { id:"e3",  date:"2024-11-02", qualifies:true,  category:"maintenance",   categoryLabel:"Maintenance & Repairs",  activity:"Supervised plumber — Oak St hot water heater repair",     minutes:90  },
-  { id:"e4",  date:"2024-11-04", qualifies:true,  category:"leasing",       categoryLabel:"Leasing",                activity:"Showed vacant unit — Downtown Studio #4C (2 showings)",   minutes:120 },
-  { id:"e5",  date:"2024-11-05", qualifies:true,  category:"financial_mgmt",categoryLabel:"Financial Management",   activity:"Reviewed monthly rent rolls and P&L — all 4 properties",  minutes:75  },
-];
-const SAMPLE_EMAILS = [
-  { id:"em1", to:"kowalski@plumb.com", subject:"Invoice #1022 — Oak St Hot Water Heater", type:"supplier", status:"sent", date:"2024-11-04", body:"Hi Mike,\n\nThank you for the prompt service..." },
-];
-const SAMPLE_PLANS = [
-  { id:"ap1", date:"2024-11-14", title:"CPA Meeting — Cost Segregation Follow-Up", notes:"Notes from Nov 14 meeting.", items:["Order cost segregation study","Request depreciation schedule"] },
+  { id:"e1", date:"2024-11-01", qualifies:true, category:"management", categoryLabel:"Property Management", activity:"Called tenant re maintenance request — Oak St Unit A", minutes:30 },
+  { id:"e2", date:"2024-11-01", qualifies:false, category:"non_re", categoryLabel:"Non-RE Work", activity:"W-2 work shift", minutes:480 },
+  { id:"e3", date:"2024-11-02", qualifies:true, category:"maintenance", categoryLabel:"Maintenance & Repairs", activity:"Supervised plumber — Oak St hot water heater repair", minutes:90 },
+  { id:"e4", date:"2024-11-04", qualifies:true, category:"leasing", categoryLabel:"Leasing", activity:"Showed vacant unit — Downtown Studio #4C", minutes:120 },
+  { id:"e5", date:"2024-11-05", qualifies:true, category:"financial_mgmt", categoryLabel:"Financial Management", activity:"Reviewed monthly rent rolls and P&L", minutes:75 },
 ];
 
 const fmtH = (m) => { const h=Math.floor(m/60),mn=m%60; return !h&&!mn?"0h":`${h>0?h+"h":""}${mn>0?" "+mn+"m":""}`.trim(); };
-const uid  = () => Date.now()+Math.random().toString(36).slice(2);
+const uid = () => Date.now()+Math.random().toString(36).slice(2);
 const todayStr = () => new Date().toISOString().split("T")[0];
 
-// ── RepTrack Brand System ──────────────────────────────────────────────────
 const C = {
   bg:"#F7F5EA", white:"#ffffff", dark:"#0F2742", darker:"#091e33", text:"#0F2742",
   mid:"#2d4a6a", light:"#4D6785", lighter:"#7a96b0", border:"#d4cfbd", borderL:"#e8e4d4",
@@ -426,24 +274,126 @@ const C = {
 };
 
 const VIEWS = [
+  { id:"assistant", icon:"◈", label:"Assistant" },
   { id:"dashboard", icon:"◉", label:"Dashboard" },
-  { id:"records",   icon:"⊟", label:"Records" },
-  { id:"properties",icon:"⌂", label:"Properties" },
+  { id:"records", icon:"⊟", label:"Records" },
+  { id:"properties", icon:"⌂", label:"Properties" },
 ];
 
-// ═══ MAIN APP (after login) ════════════════════════════════════════════════
+// ─── CLAUDE AI SYSTEM PROMPT ──────────────────────────────────────────────────
+const getSystemPrompt = (reHrs, rePct, entries) => `You are an AI assistant for RepTrack, a Real Estate Professional (REP) tax documentation platform. Your role is to help users log their real estate activities, organize records, and draft communications.
+
+CURRENT USER STATUS:
+- RE hours logged: ${reHrs} hours (need 750 for REP status)
+- RE percentage of work: ${rePct.toFixed(1)}% (need >50% for REP status)
+- Total entries: ${entries.length}
+
+YOUR CAPABILITIES:
+1. LOG ACTIVITIES: When users describe real estate work, help them log it. Extract: activity description, duration (in minutes), category, and whether it qualifies as RE work.
+
+2. CATEGORIES for RE work:
+- Property Management (tenant relations, oversight)
+- Maintenance & Repairs (coordinating/supervising repairs)
+- Leasing (showings, applications, lease prep)
+- Financial Management (rent collection, bookkeeping, P&L)
+- Legal & Administrative (lease review, compliance)
+- Vendor Coordination (contractor meetings, bids)
+- Acquisition (property tours, due diligence)
+- Construction (renovation oversight)
+
+3. NON-RE WORK: W-2 jobs, non-real-estate businesses, etc.
+
+4. DRAFT EMAILS: Help draft professional emails to tenants, vendors, etc.
+
+5. ANSWER QUESTIONS: About REP status requirements, documentation best practices, etc.
+
+RESPONSE FORMAT:
+- Be concise and professional
+- When logging an activity, confirm the details
+- If you need clarification, ask specific questions
+- Don't give tax advice - remind users to consult their CPA
+
+IMPORTANT: You are NOT a tax advisor. You help with DOCUMENTATION only.`;
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
 function MainApp() {
   const { user, signOut } = useAuth();
-  const [view, setView] = useState("dashboard");
+  const [view, setView] = useState("assistant");
   const [localEntries, setLocalEntries] = useState(SAMPLE_ENTRIES);
-  const [localEmails, setLocalEmails] = useState(SAMPLE_EMAILS);
-  const [localPlans, setLocalPlans] = useState(SAMPLE_PLANS);
+  
+  // Chat state
+  const [messages, setMessages] = useState([
+    { role: "assistant", id: "welcome", content: "Hi! I'm your RepTrack assistant. I can help you:\n\n• Log real estate activities\n• Track your hours toward REP status\n• Draft emails to tenants and vendors\n• Answer questions about documentation\n\nWhat did you work on today?" }
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef(null);
 
   const reEntries = localEntries.filter(e => e.qualifies);
   const totalREMins = reEntries.reduce((s, e) => s + e.minutes, 0);
+  const reHrs = Math.round(totalREMins / 60 * 10) / 10;
   const nonREMins = localEntries.filter(e => !e.qualifies).reduce((s, e) => s + e.minutes, 0);
   const totalMins = totalREMins + nonREMins;
   const rePct = totalMins > 0 ? (totalREMins / totalMins) * 100 : 0;
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return;
+
+    const userMessage = { role: "user", id: uid(), content: input.trim() };
+    setMessages(prev => [...prev, userMessage]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1024,
+          system: getSystemPrompt(reHrs, rePct, localEntries),
+          messages: [...messages.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })), { role: "user", content: input.trim() }]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error.message);
+      }
+
+      const assistantMessage = {
+        role: "assistant",
+        id: uid(),
+        content: data.content[0].text
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        id: uid(),
+        content: `Sorry, I encountered an error: ${err.message}. Please try again.`
+      }]);
+    }
+
+    setLoading(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
 
   return (
     <div style={{ fontFamily: "Georgia, serif", background: C.bg, minHeight: "100vh", color: C.text }}>
@@ -456,13 +406,16 @@ function MainApp() {
         .card { background:#fff; border:1px solid ${C.border}; border-radius:3px; padding:20px; }
         .btn-gold { background:#C6A24A; border:none; color:#0F2742; font-weight:600; padding:10px 22px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; border-radius:2px; }
         .btn-outline { background:#fff; border:1px solid ${C.border}; color:${C.mid}; padding:9px 18px; font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer; border-radius:2px; }
+        .msg-bubble { max-width: 80%; padding: 12px 16px; border-radius: 12px; margin-bottom: 12px; }
+        .msg-user { background: ${C.dark}; color: ${C.goldBright}; margin-left: auto; border-bottom-right-radius: 4px; }
+        .msg-assistant { background: white; border: 1px solid ${C.border}; color: ${C.text}; margin-right: auto; border-bottom-left-radius: 4px; }
       `}</style>
 
       {/* Header */}
       <header style={{ background: C.darker, borderBottom: `1px solid ${C.gold}`, padding: "0 24px" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-            <div style={{ padding: "14px 0", display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ padding: "14px 0" }}>
               <span style={{ fontSize: 22, fontWeight: 700, color: C.goldBright, fontFamily: "'Inter', sans-serif" }}>
                 Rep<span style={{ color: "#fff" }}>Track</span>
               </span>
@@ -478,15 +431,103 @@ function MainApp() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.goldL }}>{user?.email}</span>
-            <button onClick={signOut} className="btn-outline" style={{ padding: "6px 14px", fontSize: 10, color: "#aaa", borderColor: "#444" }}>
-              Log Out
-            </button>
+            <button onClick={signOut} className="btn-outline" style={{ padding: "6px 14px", fontSize: 10, color: "#aaa", borderColor: "#444" }}>Log Out</button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "24px" }}>
+        
+        {/* ASSISTANT VIEW */}
+        {view === "assistant" && (
+          <div style={{ display: "flex", gap: 24, height: "calc(100vh - 140px)" }}>
+            {/* Chat Area */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              <div style={{ marginBottom: 16 }}>
+                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>AI Assistant</h1>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>Powered by Claude • Log activities, draft emails, get answers</p>
+              </div>
+
+              {/* Messages */}
+              <div className="card" style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column" }}>
+                {messages.map(msg => (
+                  <div key={msg.id} className={`msg-bubble ${msg.role === "user" ? "msg-user" : "msg-assistant"}`}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {loading && (
+                  <div className="msg-bubble msg-assistant">
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.light }}>Thinking...</div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input */}
+              <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Tell me what you worked on, or ask a question..."
+                  style={{
+                    flex: 1, padding: "14px 16px", fontSize: 14, border: `1px solid ${C.border}`,
+                    borderRadius: 8, background: "white", color: C.text, outline: "none", resize: "none",
+                    fontFamily: "'IBM Plex Mono', monospace", minHeight: 56
+                  }}
+                />
+                <button onClick={sendMessage} disabled={loading || !input.trim()} className="btn-gold" style={{ padding: "14px 24px", opacity: loading || !input.trim() ? 0.5 : 1 }}>
+                  Send
+                </button>
+              </div>
+
+              {/* Quick Actions */}
+              <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {["I reviewed leases for 2 hours", "Log a 45-min contractor call", "Draft email to tenant about rent", "What counts as RE work?"].map(q => (
+                  <button key={q} onClick={() => setInput(q)} style={{
+                    background: "white", border: `1px solid ${C.border}`, borderRadius: 20,
+                    padding: "6px 14px", fontSize: 11, color: C.mid, cursor: "pointer",
+                    fontFamily: "'IBM Plex Mono', monospace"
+                  }}>
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sidebar Stats */}
+            <div style={{ width: 280, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div className="card" style={{ borderLeft: `4px solid ${C.greenB}` }}>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>RE HOURS</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.green }}>{reHrs}h</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>of 750h threshold</div>
+                <div style={{ marginTop: 8, height: 6, background: C.borderL, borderRadius: 3 }}>
+                  <div style={{ height: "100%", width: `${Math.min((reHrs/750)*100, 100)}%`, background: C.greenB, borderRadius: 3 }} />
+                </div>
+              </div>
+
+              <div className="card" style={{ borderLeft: `4px solid ${C.goldL}` }}>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>RE PERCENTAGE</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.gold }}>{rePct.toFixed(0)}%</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>of total work time</div>
+                <div style={{ marginTop: 8, height: 6, background: C.borderL, borderRadius: 3 }}>
+                  <div style={{ height: "100%", width: `${Math.min(rePct, 100)}%`, background: C.goldL, borderRadius: 3 }} />
+                </div>
+              </div>
+
+              <div className="card" style={{ borderLeft: `4px solid ${C.blueB}` }}>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>ENTRIES</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.blue }}>{localEntries.length}</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>activities logged</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DASHBOARD VIEW */}
         {view === "dashboard" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div>
@@ -497,7 +538,7 @@ function MainApp() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
               <div className="card" style={{ borderLeft: `4px solid ${C.greenB}` }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>RE HOURS</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.green }}>{fmtH(totalREMins)}</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.green }}>{reHrs}h</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>of 750 hr threshold</div>
               </div>
               <div className="card" style={{ borderLeft: `4px solid ${C.goldL}` }}>
@@ -535,6 +576,7 @@ function MainApp() {
           </div>
         )}
 
+        {/* RECORDS VIEW */}
         {view === "records" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div>
@@ -560,6 +602,7 @@ function MainApp() {
           </div>
         )}
 
+        {/* PROPERTIES VIEW */}
         {view === "properties" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div>
