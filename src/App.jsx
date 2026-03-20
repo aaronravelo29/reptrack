@@ -342,7 +342,7 @@ function AuthScreen() {
 
 // ─── IRS CATEGORIES & RULES ───────────────────────────────────────────────────
 const IRS_CATEGORIES = {
-  // RE Qualifying Categories
+  // RE Qualifying Categories - Long Term Rentals
   management: { label: "Property Management", qualifies: true, examples: "tenant relations, property oversight, lease enforcement" },
   maintenance: { label: "Maintenance & Repairs", qualifies: true, examples: "coordinating repairs, supervising contractors, property inspections" },
   leasing: { label: "Leasing", qualifies: true, examples: "showings, tenant screening, lease preparation, move-in/out" },
@@ -353,6 +353,15 @@ const IRS_CATEGORIES = {
   construction: { label: "Construction", qualifies: true, examples: "renovation oversight, permits, contractor coordination" },
   travel: { label: "RE Travel", qualifies: true, examples: "driving to properties, travel for REP activities" },
   education: { label: "RE Education", qualifies: true, examples: "RE courses, seminars, studying RE topics" },
+  // STR Qualifying Categories
+  guest_communication: { label: "Guest Communication", qualifies: true, examples: "responding to inquiries, booking questions, issue resolution", isSTR: true },
+  turnover_coordination: { label: "Turnover Coordination", qualifies: true, examples: "scheduling cleaners, coordinating access, quality checks", isSTR: true },
+  cleaning_supervision: { label: "Cleaning Supervision", qualifies: true, examples: "inspecting cleanliness, restocking supplies, turnover walks", isSTR: true },
+  platform_management: { label: "Platform Management", qualifies: true, examples: "updating listings, photos, descriptions, availability", isSTR: true },
+  pricing_optimization: { label: "Pricing & Revenue", qualifies: true, examples: "dynamic pricing, rate adjustments, competitor analysis", isSTR: true },
+  checkin_checkout: { label: "Check-in/Check-out", qualifies: true, examples: "guest arrivals, key handoffs, departure inspections", isSTR: true },
+  review_management: { label: "Review Management", qualifies: true, examples: "responding to reviews, addressing feedback, reputation", isSTR: true },
+  supplies_restocking: { label: "Supplies & Restocking", qualifies: true, examples: "purchasing supplies, inventory management, deliveries", isSTR: true },
   // Non-REP Categories (for tracking total work hours)
   w2_employment: { label: "W-2 Employment", qualifies: false, examples: "regular job, employer work, scheduled shifts" },
   self_employment: { label: "Self-Employment (Non-REP)", qualifies: false, examples: "non-REP business, freelance, side business" },
@@ -390,9 +399,32 @@ const VIEWS = [
   { id:"dashboard", icon:"◉", label:"Dashboard" },
   { id:"records", icon:"⊟", label:"Records" },
   { id:"properties", icon:"⌂", label:"Properties" },
+  { id:"str", icon:"🏖️", label:"STR" },
   { id:"tenants", icon:"👥", label:"Tenants" },
   { id:"vendors", icon:"🔧", label:"Vendors" },
 ];
+
+// STR Platforms
+const STR_PLATFORMS = [
+  { id: "airbnb", name: "Airbnb", icon: "🏠", color: "#FF5A5F" },
+  { id: "vrbo", name: "VRBO", icon: "🏡", color: "#3B5998" },
+  { id: "padslip", name: "Padslip", icon: "📱", color: "#00C853" },
+  { id: "direct", name: "Direct Booking", icon: "📧", color: "#FFA000" },
+  { id: "other", name: "Other", icon: "🔗", color: "#757575" },
+];
+
+// STR IRS Categories (all qualify for REP)
+const STR_CATEGORIES = {
+  guest_communication: { label: "Guest Communication", qualifies: true, examples: "responding to inquiries, booking questions, issue resolution" },
+  turnover_coordination: { label: "Turnover Coordination", qualifies: true, examples: "scheduling cleaners, coordinating access, quality checks" },
+  cleaning_supervision: { label: "Cleaning Supervision", qualifies: true, examples: "inspecting cleanliness, restocking supplies, turnover walks" },
+  platform_management: { label: "Platform Management", qualifies: true, examples: "updating listings, photos, descriptions, availability" },
+  pricing_optimization: { label: "Pricing & Revenue", qualifies: true, examples: "dynamic pricing, rate adjustments, competitor analysis" },
+  checkin_checkout: { label: "Check-in/Check-out", qualifies: true, examples: "guest arrivals, key handoffs, departure inspections" },
+  review_management: { label: "Review Management", qualifies: true, examples: "responding to reviews, addressing feedback, reputation" },
+  supplies_restocking: { label: "Supplies & Restocking", qualifies: true, examples: "purchasing supplies, inventory management, deliveries" },
+  maintenance_str: { label: "STR Maintenance", qualifies: true, examples: "quick fixes between guests, appliance issues, repairs" },
+};
 
 // Vendor categories
 const VENDOR_CATEGORIES = [
@@ -676,6 +708,27 @@ function MainApp() {
     companyName: "", contactName: "", category: "plumber", email: "", phone: "", 
     propertyIds: [], notes: ""
   });
+
+  // STR state
+  const [strBookings, setStrBookings] = useState([]);
+  const [strCleaners, setStrCleaners] = useState([]);
+  const [showAddBookingModal, setShowAddBookingModal] = useState(false);
+  const [showAddCleanerModal, setShowAddCleanerModal] = useState(false);
+  const [showLogSTRTimeModal, setShowLogSTRTimeModal] = useState(false);
+  const [newBooking, setNewBooking] = useState({
+    propertyId: "", guestName: "", platform: "airbnb", checkIn: "", checkOut: "", 
+    guests: 1, totalAmount: "", notes: ""
+  });
+  const [newCleaner, setNewCleaner] = useState({
+    name: "", phone: "", email: "", rate: "", propertyIds: []
+  });
+  const [strTimeLog, setStrTimeLog] = useState({
+    propertyId: "", category: "guest_communication", minutes: "", description: ""
+  });
+
+  // Get STR properties (properties flagged as STR)
+  const strProperties = localProperties.filter(p => p.isSTR);
+  const ltrProperties = localProperties.filter(p => !p.isSTR);
 
   // Save email provider preference
   const saveEmailProvider = (provider) => {
@@ -1727,7 +1780,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Properties</h1>
-                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>Your real estate portfolio • {localProperties.length} properties</p>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>
+                  {localProperties.length} properties • {strProperties.length} STR • {ltrProperties.length} Long-Term
+                </p>
               </div>
               <button 
                 onClick={() => setShowAddPropertyModal(true)}
@@ -1744,20 +1799,43 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                   className="card" 
                   onClick={() => setShowPropertyDetailModal(p)}
                   style={{ 
-                    borderLeft: `4px solid ${C.greenB}`, cursor: "pointer",
+                    borderLeft: `4px solid ${p.isSTR ? "#FF5A5F" : C.greenB}`, cursor: "pointer",
                     transition: "transform 0.15s, box-shadow 0.15s"
                   }}
                   onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)"; }}
                   onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, fontWeight: 600, color: C.dark }}>{p.name}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, fontWeight: 600, color: C.dark }}>{p.name}</span>
+                      {p.isSTR && (
+                        <span style={{ padding: "2px 6px", background: "#FF5A5F", color: "white", fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, borderRadius: 3, fontWeight: 600 }}>STR</span>
+                      )}
+                    </div>
                     <span style={{ padding: "2px 8px", background: "#f0ece4", border: `1px solid ${C.border}`, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid, borderRadius: 2 }}>{p.type.replace("_", " ")}</span>
                   </div>
                   <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid, marginBottom: 12 }}>{p.address}</div>
-                  <div style={{ display: "flex", gap: 20 }}>
+                  <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light }}>{p.units} unit{p.units !== 1 ? "s" : ""}</div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.green, fontWeight: 600 }}>${p.rent.toLocaleString()}<span style={{ fontSize: 10, color: C.light }}>/mo</span></div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.green, fontWeight: 600 }}>${p.rent?.toLocaleString() || 0}<span style={{ fontSize: 10, color: C.light }}>/mo</span></div>
+                    {/* STR Toggle */}
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLocalProperties(prev => prev.map(prop => 
+                          prop.id === p.id ? {...prop, isSTR: !prop.isSTR} : prop
+                        ));
+                      }}
+                      style={{ 
+                        marginLeft: "auto", padding: "4px 8px", 
+                        background: p.isSTR ? "#FF5A5F" : "#f0f0f0", 
+                        border: "none", borderRadius: 4, 
+                        fontSize: 10, color: p.isSTR ? "white" : C.mid, 
+                        cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace"
+                      }}
+                    >
+                      {p.isSTR ? "🏖️ STR" : "Set as STR"}
+                    </button>
                   </div>
                   {/* Hours logged for this property */}
                   {repByProperty[p.name] && (
@@ -1765,6 +1843,17 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                       <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.green }}>
                         ✅ {(repByProperty[p.name].minutes / 60).toFixed(1)}h logged • {repByProperty[p.name].count} activities
                       </div>
+                    </div>
+                  )}
+                  {/* STR Platforms if STR */}
+                  {p.isSTR && p.platforms && p.platforms.length > 0 && (
+                    <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
+                      {p.platforms.map(pl => {
+                        const platform = STR_PLATFORMS.find(s => s.id === pl);
+                        return platform ? (
+                          <span key={pl} style={{ fontSize: 12 }} title={platform.name}>{platform.icon}</span>
+                        ) : null;
+                      })}
                     </div>
                   )}
                 </div>
@@ -1787,6 +1876,208 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>Add New Property</div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* STR VIEW */}
+        {view === "str" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
+                  🏖️ Short-Term Rentals
+                </h1>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>
+                  {strProperties.length} STR properties • Manage bookings, turnovers & guest communications
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setShowLogSTRTimeModal(true)} className="btn-gold" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  ⏱️ Log STR Time
+                </button>
+                <button onClick={() => setShowAddBookingModal(true)} style={{ padding: "10px 16px", background: "#FF5A5F", color: "white", border: "none", borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                  ➕ Add Booking
+                </button>
+              </div>
+            </div>
+
+            {/* No STR Properties Message */}
+            {strProperties.length === 0 && (
+              <div className="card" style={{ textAlign: "center", padding: 40 }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>🏖️</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, color: C.dark, marginBottom: 8 }}>No STR Properties Yet</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light, marginBottom: 16 }}>
+                  Go to Properties tab and click "Set as STR" on any property to manage it here
+                </div>
+                <button onClick={() => setView("properties")} className="btn-gold">Go to Properties</button>
+              </div>
+            )}
+
+            {/* STR Properties Grid */}
+            {strProperties.length > 0 && (
+              <>
+                {/* Quick Stats */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+                  <div className="card" style={{ borderLeft: "4px solid #FF5A5F" }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>STR PROPERTIES</div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: "#FF5A5F" }}>{strProperties.length}</div>
+                  </div>
+                  <div className="card" style={{ borderLeft: "4px solid #00C853" }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>ACTIVE BOOKINGS</div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: "#00C853" }}>{strBookings.filter(b => new Date(b.checkOut) >= new Date()).length}</div>
+                  </div>
+                  <div className="card" style={{ borderLeft: "4px solid #FFA000" }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>CLEANERS</div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: "#FFA000" }}>{strCleaners.length}</div>
+                  </div>
+                  <div className="card" style={{ borderLeft: `4px solid ${C.greenB}` }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>STR HOURS (YTD)</div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.green }}>
+                      {Math.round(localEntries.filter(e => IRS_CATEGORIES[e.category]?.isSTR && new Date(e.date).getFullYear() === currentYear).reduce((s, e) => s + e.minutes, 0) / 60 * 10) / 10}h
+                    </div>
+                  </div>
+                </div>
+
+                {/* STR Properties */}
+                <div className="card">
+                  <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                    🏠 Your STR Properties
+                  </h2>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    {strProperties.map(p => (
+                      <div key={p.id} style={{ padding: 16, background: "#fff5f5", border: "1px solid #ffcdd2", borderRadius: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
+                          <div>
+                            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark }}>{p.name}</div>
+                            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{p.address}</div>
+                          </div>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            {STR_PLATFORMS.slice(0, 3).map(pl => (
+                              <button 
+                                key={pl.id}
+                                onClick={() => {
+                                  const platforms = p.platforms || [];
+                                  const newPlatforms = platforms.includes(pl.id) 
+                                    ? platforms.filter(x => x !== pl.id)
+                                    : [...platforms, pl.id];
+                                  setLocalProperties(prev => prev.map(prop => 
+                                    prop.id === p.id ? {...prop, platforms: newPlatforms} : prop
+                                  ));
+                                }}
+                                style={{ 
+                                  padding: "4px 8px", 
+                                  background: (p.platforms || []).includes(pl.id) ? pl.color : "#f0f0f0",
+                                  border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer",
+                                  opacity: (p.platforms || []).includes(pl.id) ? 1 : 0.5
+                                }}
+                                title={pl.name}
+                              >
+                                {pl.icon}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Upcoming bookings for this property */}
+                        <div style={{ marginTop: 8 }}>
+                          {strBookings.filter(b => b.propertyId === p.id && new Date(b.checkIn) >= new Date()).length > 0 ? (
+                            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#FF5A5F" }}>
+                              📅 {strBookings.filter(b => b.propertyId === p.id && new Date(b.checkIn) >= new Date()).length} upcoming booking(s)
+                            </div>
+                          ) : (
+                            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light }}>No upcoming bookings</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Bookings */}
+                <div className="card">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+                      📅 Bookings
+                    </h2>
+                    <button onClick={() => setShowAddBookingModal(true)} style={{ padding: "6px 12px", background: "#FF5A5F", color: "white", border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+                      + Add Booking
+                    </button>
+                  </div>
+                  {strBookings.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: 30, color: C.light }}>
+                      <div style={{ fontSize: 24, marginBottom: 8 }}>📅</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>No bookings yet. Add your first booking!</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {strBookings.slice(0, 5).map(b => {
+                        const property = localProperties.find(p => p.id === b.propertyId);
+                        const platform = STR_PLATFORMS.find(p => p.id === b.platform);
+                        return (
+                          <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, background: "#fafafa", borderRadius: 6, border: `1px solid ${C.borderL}` }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <span style={{ fontSize: 18 }}>{platform?.icon || "📅"}</span>
+                              <div>
+                                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: C.dark }}>{b.guestName}</div>
+                                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{property?.name} • {b.guests} guest{b.guests !== 1 ? "s" : ""}</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.dark }}>{b.checkIn} → {b.checkOut}</div>
+                              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.green, fontWeight: 600 }}>${b.totalAmount}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Cleaning Crew */}
+                <div className="card">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+                      🧹 Cleaning Crew
+                    </h2>
+                    <button onClick={() => setShowAddCleanerModal(true)} style={{ padding: "6px 12px", background: C.goldL, color: C.dark, border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+                      + Add Cleaner
+                    </button>
+                  </div>
+                  {strCleaners.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: 30, color: C.light }}>
+                      <div style={{ fontSize: 24, marginBottom: 8 }}>🧹</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>No cleaners yet. Add your cleaning crew!</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                      {strCleaners.map(c => (
+                        <div key={c.id} style={{ padding: 12, background: "#fafafa", borderRadius: 6, border: `1px solid ${C.borderL}` }}>
+                          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: C.dark, marginBottom: 4 }}>{c.name}</div>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginBottom: 8 }}>${c.rate}/turnover</div>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button onClick={() => copyToClipboard(c.phone)} style={{ padding: "4px 8px", background: "#f0f0f0", border: "none", borderRadius: 3, fontSize: 12, cursor: "pointer" }}>📱</button>
+                            <a href={getEmailLink(c.email, "Turnover Request")} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 8px", background: "#f0f0f0", border: "none", borderRadius: 3, fontSize: 12, cursor: "pointer", textDecoration: "none" }}>✉️</a>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* STR Time Categories Reference */}
+                <div className="card" style={{ background: "#fff5f5", border: "1px solid #ffcdd2" }}>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#FF5A5F", letterSpacing: 2, marginBottom: 12 }}>
+                    ⏱️ STR ACTIVITIES THAT COUNT TOWARD 750 HOURS
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {Object.entries(IRS_CATEGORIES).filter(([k, v]) => v.isSTR).map(([key, cat]) => (
+                      <div key={key} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>
+                        ✅ {cat.label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -3335,6 +3626,311 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               >
                 Save & Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ ADD BOOKING MODAL ═══ */}
+      {showAddBookingModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.9)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+        }}>
+          <div style={{
+            background: C.bg, borderRadius: 12, padding: 0, width: "100%",
+            maxWidth: 500, boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+          }}>
+            <div style={{ 
+              background: "#FF5A5F", padding: "20px 24px", 
+              borderRadius: "12px 12px 0 0", display: "flex", 
+              justifyContent: "space-between", alignItems: "center"
+            }}>
+              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: "white", margin: 0 }}>
+                📅 Add Booking
+              </h2>
+              <button onClick={() => setShowAddBookingModal(false)} style={{
+                background: "rgba(255,255,255,0.2)", border: "none", fontSize: 20, color: "white", 
+                cursor: "pointer", width: 36, height: 36, borderRadius: "50%"
+              }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {/* Property */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>PROPERTY *</label>
+                <select value={newBooking.propertyId} onChange={(e) => setNewBooking({...newBooking, propertyId: e.target.value})}
+                  style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }}>
+                  <option value="">Select STR property...</option>
+                  {strProperties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+
+              {/* Platform */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>PLATFORM</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {STR_PLATFORMS.map(pl => (
+                    <button key={pl.id} type="button" onClick={() => setNewBooking({...newBooking, platform: pl.id})}
+                      style={{
+                        flex: 1, padding: "10px", border: `2px solid ${newBooking.platform === pl.id ? pl.color : C.border}`,
+                        borderRadius: 6, background: newBooking.platform === pl.id ? `${pl.color}20` : "white",
+                        cursor: "pointer", textAlign: "center"
+                      }}>
+                      <div style={{ fontSize: 18 }}>{pl.icon}</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: C.text, marginTop: 2 }}>{pl.name}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Guest Name */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>GUEST NAME *</label>
+                <input type="text" value={newBooking.guestName} onChange={(e) => setNewBooking({...newBooking, guestName: e.target.value})}
+                  placeholder="John Smith"
+                  style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
+              </div>
+
+              {/* Dates */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>CHECK-IN</label>
+                  <input type="date" value={newBooking.checkIn} onChange={(e) => setNewBooking({...newBooking, checkIn: e.target.value})}
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>CHECK-OUT</label>
+                  <input type="date" value={newBooking.checkOut} onChange={(e) => setNewBooking({...newBooking, checkOut: e.target.value})}
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
+                </div>
+              </div>
+
+              {/* Guests & Amount */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 24 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>GUESTS</label>
+                  <input type="number" value={newBooking.guests} onChange={(e) => setNewBooking({...newBooking, guests: parseInt(e.target.value) || 1})}
+                    min="1"
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>TOTAL $</label>
+                  <input type="number" value={newBooking.totalAmount} onChange={(e) => setNewBooking({...newBooking, totalAmount: e.target.value})}
+                    placeholder="500"
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: "flex", gap: 12 }}>
+                <button onClick={() => setShowAddBookingModal(false)}
+                  style={{ flex: 1, padding: "12px 20px", background: "white", border: `1px solid ${C.border}`, borderRadius: 4, color: C.mid, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    if (!newBooking.propertyId || !newBooking.guestName) return;
+                    const booking = { id: uid(), ...newBooking };
+                    setStrBookings(prev => [booking, ...prev]);
+                    setShowAddBookingModal(false);
+                    setNewBooking({ propertyId: "", guestName: "", platform: "airbnb", checkIn: "", checkOut: "", guests: 1, totalAmount: "", notes: "" });
+                  }}
+                  disabled={!newBooking.propertyId || !newBooking.guestName}
+                  style={{ flex: 1, padding: "12px 20px", background: !newBooking.propertyId || !newBooking.guestName ? C.border : "#FF5A5F", border: "none", borderRadius: 4, color: "white", fontSize: 12, fontWeight: 600, cursor: !newBooking.propertyId || !newBooking.guestName ? "not-allowed" : "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+                  Add Booking
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ ADD CLEANER MODAL ═══ */}
+      {showAddCleanerModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.9)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+        }}>
+          <div style={{
+            background: C.bg, borderRadius: 12, padding: 0, width: "100%",
+            maxWidth: 450, boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+          }}>
+            <div style={{ 
+              background: C.goldL, padding: "20px 24px", 
+              borderRadius: "12px 12px 0 0", display: "flex", 
+              justifyContent: "space-between", alignItems: "center"
+            }}>
+              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: C.dark, margin: 0 }}>
+                🧹 Add Cleaner
+              </h2>
+              <button onClick={() => setShowAddCleanerModal(false)} style={{
+                background: "rgba(0,0,0,0.1)", border: "none", fontSize: 20, color: C.dark, 
+                cursor: "pointer", width: 36, height: 36, borderRadius: "50%"
+              }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>NAME *</label>
+                <input type="text" value={newCleaner.name} onChange={(e) => setNewCleaner({...newCleaner, name: e.target.value})}
+                  placeholder="Maria's Cleaning"
+                  style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>PHONE</label>
+                  <input type="tel" value={newCleaner.phone} onChange={(e) => setNewCleaner({...newCleaner, phone: e.target.value})}
+                    placeholder="(412) 555-1234"
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>RATE $/TURNOVER</label>
+                  <input type="number" value={newCleaner.rate} onChange={(e) => setNewCleaner({...newCleaner, rate: e.target.value})}
+                    placeholder="75"
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>EMAIL</label>
+                <input type="email" value={newCleaner.email} onChange={(e) => setNewCleaner({...newCleaner, email: e.target.value})}
+                  placeholder="cleaner@email.com"
+                  style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
+              </div>
+
+              <div style={{ display: "flex", gap: 12 }}>
+                <button onClick={() => setShowAddCleanerModal(false)}
+                  style={{ flex: 1, padding: "12px 20px", background: "white", border: `1px solid ${C.border}`, borderRadius: 4, color: C.mid, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    if (!newCleaner.name) return;
+                    const cleaner = { id: uid(), ...newCleaner };
+                    setStrCleaners(prev => [...prev, cleaner]);
+                    setShowAddCleanerModal(false);
+                    setNewCleaner({ name: "", phone: "", email: "", rate: "", propertyIds: [] });
+                  }}
+                  disabled={!newCleaner.name}
+                  style={{ flex: 1, padding: "12px 20px", background: !newCleaner.name ? C.border : C.gold, border: "none", borderRadius: 4, color: C.dark, fontSize: 12, fontWeight: 600, cursor: !newCleaner.name ? "not-allowed" : "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+                  Add Cleaner
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ LOG STR TIME MODAL ═══ */}
+      {showLogSTRTimeModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.9)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+        }}>
+          <div style={{
+            background: C.bg, borderRadius: 12, padding: 0, width: "100%",
+            maxWidth: 500, boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+          }}>
+            <div style={{ 
+              background: C.greenB, padding: "20px 24px", 
+              borderRadius: "12px 12px 0 0", display: "flex", 
+              justifyContent: "space-between", alignItems: "center"
+            }}>
+              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: "white", margin: 0 }}>
+                ⏱️ Log STR Time
+              </h2>
+              <button onClick={() => setShowLogSTRTimeModal(false)} style={{
+                background: "rgba(255,255,255,0.2)", border: "none", fontSize: 20, color: "white", 
+                cursor: "pointer", width: 36, height: 36, borderRadius: "50%"
+              }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {/* Property */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>PROPERTY</label>
+                <select value={strTimeLog.propertyId} onChange={(e) => setStrTimeLog({...strTimeLog, propertyId: e.target.value})}
+                  style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }}>
+                  <option value="">All STR Properties</option>
+                  {strProperties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+
+              {/* Category */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>ACTIVITY TYPE</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {Object.entries(IRS_CATEGORIES).filter(([k, v]) => v.isSTR).map(([key, cat]) => (
+                    <button key={key} type="button" onClick={() => setStrTimeLog({...strTimeLog, category: key})}
+                      style={{
+                        padding: "10px", border: `2px solid ${strTimeLog.category === key ? C.greenB : C.border}`,
+                        borderRadius: 6, background: strTimeLog.category === key ? C.greenPale : "white",
+                        cursor: "pointer", textAlign: "left"
+                      }}>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: C.dark }}>{cat.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>DURATION (minutes)</label>
+                <input type="number" value={strTimeLog.minutes} onChange={(e) => setStrTimeLog({...strTimeLog, minutes: e.target.value})}
+                  placeholder="30"
+                  style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
+              </div>
+
+              {/* Description */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>DESCRIPTION</label>
+                <textarea value={strTimeLog.description} onChange={(e) => setStrTimeLog({...strTimeLog, description: e.target.value})}
+                  placeholder="Responded to guest inquiry about check-in..."
+                  rows={2}
+                  style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box", resize: "none" }} />
+              </div>
+
+              <div style={{ display: "flex", gap: 12 }}>
+                <button onClick={() => setShowLogSTRTimeModal(false)}
+                  style={{ flex: 1, padding: "12px 20px", background: "white", border: `1px solid ${C.border}`, borderRadius: 4, color: C.mid, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    if (!strTimeLog.minutes || parseInt(strTimeLog.minutes) <= 0) return;
+                    const property = strProperties.find(p => p.id === strTimeLog.propertyId);
+                    const category = IRS_CATEGORIES[strTimeLog.category];
+                    const newEntry = {
+                      id: uid(),
+                      date: todayStr(),
+                      qualifies: true,
+                      category: strTimeLog.category,
+                      categoryLabel: category?.label || "STR Activity",
+                      activity: strTimeLog.description || `${category?.label} - STR`,
+                      minutes: parseInt(strTimeLog.minutes),
+                      property: property?.name || "STR General",
+                      irsDescription: `Short-term rental ${category?.label.toLowerCase()}: ${strTimeLog.description || 'STR management activity'}. Property: ${property?.name || 'General STR'}.`
+                    };
+                    setLocalEntries(prev => [newEntry, ...prev]);
+                    setShowLogSTRTimeModal(false);
+                    setStrTimeLog({ propertyId: "", category: "guest_communication", minutes: "", description: "" });
+                    
+                    setMessages(prev => [...prev, {
+                      role: "assistant", id: uid(),
+                      content: `⏱️ **STR Time Logged!**\n\n• Activity: ${category?.label}\n• Duration: ${strTimeLog.minutes} minutes\n• Property: ${property?.name || "General STR"}\n\n✅ This counts toward your 750-hour REP requirement!`,
+                      activityLogged: true
+                    }]);
+                  }}
+                  disabled={!strTimeLog.minutes || parseInt(strTimeLog.minutes) <= 0}
+                  style={{ flex: 1, padding: "12px 20px", background: !strTimeLog.minutes ? C.border : C.greenB, border: "none", borderRadius: 4, color: "white", fontSize: 12, fontWeight: 600, cursor: !strTimeLog.minutes ? "not-allowed" : "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+                  Log Time
+                </button>
+              </div>
             </div>
           </div>
         </div>
