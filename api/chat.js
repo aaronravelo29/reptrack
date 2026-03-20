@@ -1,43 +1,33 @@
 export default async function handler(req, res) {
-  // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Get API key from environment (server-side, secure)
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  
-  if (!apiKey) {
-    return res.status(500).json({ error: 'API key not configured' });
-  }
+  const { system, messages } = req.body;
 
   try {
-    const { messages, system } = req.body;
-
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-opus-4-5',
         max_tokens: 1024,
-        system: system,
-        messages: messages
+        system,
+        messages
       })
     });
 
     const data = await response.json();
-    
-    if (data.error) {
-      return res.status(400).json({ error: data.error.message });
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.error?.message || 'API error' });
     }
 
     return res.status(200).json(data);
-  } catch (error) {
-    console.error('API Error:', error);
-    return res.status(500).json({ error: 'Failed to connect to AI service' });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 }
