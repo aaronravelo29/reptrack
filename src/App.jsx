@@ -1027,19 +1027,8 @@ function MainApp() {
     // Update local state
     setLocalProperties(prev => prev.map(p => p.id === updatedProperty.id ? updatedProperty : p));
     
-    // Update in Supabase
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${updatedProperty.id}`, {
-        method: 'PATCH',
-        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({
-          name: updatedProperty.name, address: updatedProperty.address, type: updatedProperty.type,
-          units: updatedProperty.units, rent: updatedProperty.rent
-        })
-      });
-    } catch (err) {
-      console.error("Error updating property:", err);
-    }
+    // Update in Supabase - save ALL fields
+    await updatePropertyInDb(updatedProperty);
     
     setShowEditPropertyModal(null);
   };
@@ -1449,13 +1438,32 @@ function MainApp() {
     try {
       const headers = getAuthHeaders();
       
-      // Load properties
+      // Load properties - ALL FIELDS
       const propsRes = await fetch(`${SUPABASE_URL}/rest/v1/properties?select=*&order=created_at.desc`, { headers });
       const propsData = await propsRes.json();
       if (Array.isArray(propsData)) {
         setLocalProperties(propsData.map(p => ({
-          id: p.id, name: p.name, address: p.address, type: p.type,
-          units: p.units, rent: p.rent, purchaseDate: p.purchase_date
+          id: p.id,
+          name: p.name,
+          address: p.address,
+          type: p.type,
+          units: p.units || 1,
+          rent: p.rent || 0,
+          purchaseDate: p.purchase_date,
+          purchasePrice: p.purchase_price || 0,
+          downPayment: p.down_payment || 0,
+          mortgagePayment: p.mortgage_payment || 0,
+          isSTR: p.is_str || false,
+          platforms: p.platforms || [],
+          taxes: p.taxes || 0,
+          insurance: p.insurance || 0,
+          hoa: p.hoa || 0,
+          utilities: p.utilities || 0,
+          maintenance: p.maintenance || 0,
+          propertyMgmt: p.property_mgmt || 0,
+          vacancyRate: p.vacancy_rate || 5,
+          totalExpenses: p.total_expenses || 0,
+          unitDetails: p.unit_details || []
         })));
       }
       
@@ -1508,15 +1516,80 @@ function MainApp() {
         method: 'POST',
         headers: { ...getAuthHeaders(), 'Prefer': 'return=representation' },
         body: JSON.stringify({
-          user_id: user.id, name: property.name, address: property.address,
-          type: property.type, units: property.units, rent: property.rent,
-          purchase_date: property.purchaseDate || null
+          user_id: user.id,
+          name: property.name,
+          address: property.address,
+          type: property.type,
+          units: property.units || 1,
+          rent: property.rent || 0,
+          purchase_date: property.purchaseDate || null,
+          purchase_price: property.purchasePrice || 0,
+          down_payment: property.downPayment || 0,
+          mortgage_payment: property.mortgagePayment || 0,
+          is_str: property.isSTR || false,
+          platforms: property.platforms || [],
+          taxes: property.taxes || 0,
+          insurance: property.insurance || 0,
+          hoa: property.hoa || 0,
+          utilities: property.utilities || 0,
+          maintenance: property.maintenance || 0,
+          property_mgmt: property.propertyMgmt || 0,
+          vacancy_rate: property.vacancyRate || 0,
+          total_expenses: property.totalExpenses || 0,
+          unit_details: property.unitDetails || null
         })
       });
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("Supabase error:", errorData);
+        return null;
+      }
       const data = await res.json();
       return data[0];
     } catch (err) {
       console.error("Error saving property:", err);
+      return null;
+    }
+  };
+
+  // Update property in Supabase
+  const updatePropertyInDb = async (property) => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${property.id}`, {
+        method: 'PATCH',
+        headers: { ...getAuthHeaders(), 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          name: property.name,
+          address: property.address,
+          type: property.type,
+          units: property.units || 1,
+          rent: property.rent || 0,
+          purchase_date: property.purchaseDate || null,
+          purchase_price: property.purchasePrice || 0,
+          down_payment: property.downPayment || 0,
+          mortgage_payment: property.mortgagePayment || 0,
+          is_str: property.isSTR || false,
+          platforms: property.platforms || [],
+          taxes: property.taxes || 0,
+          insurance: property.insurance || 0,
+          hoa: property.hoa || 0,
+          utilities: property.utilities || 0,
+          maintenance: property.maintenance || 0,
+          property_mgmt: property.propertyMgmt || 0,
+          vacancy_rate: property.vacancyRate || 0,
+          total_expenses: property.totalExpenses || 0,
+          unit_details: property.unitDetails || null
+        })
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("Supabase update error:", errorData);
+        return null;
+      }
+      const data = await res.json();
+      return data[0];
+    } catch (err) {
+      console.error("Error updating property:", err);
       return null;
     }
   };
@@ -2465,13 +2538,133 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                     <span style={{ fontSize: 20 }}>📎</span>
                     <span className="upload-text" style={{ fontSize: 11, color: C.mid, fontFamily: "'IBM Plex Mono', monospace" }}>Upload</span>
                     <input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" style={{ display: "none" }} 
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          // Show uploading message
                           setMessages(prev => [...prev, {
-                            role: "assistant", id: uid(),
-                            content: `📎 **Document Uploaded: ${file.name}**\n\nI received your document. To add the information to your records, please tell me:\n\n**For Mortgage Statements:**\n• Monthly payment amount\n• Property address\n• Loan balance (optional)\n\n**For Leases:**\n• Tenant name\n• Monthly rent\n• Lease dates\n\n**For HUD-1/Closing Docs:**\n• Purchase price\n• Down payment\n• Property address\n\nJust type the key details and I'll help you add them!`
+                            role: "user", id: uid(),
+                            content: `📎 Uploading: ${file.name}`
                           }]);
+                          
+                          setLoading(true);
+                          
+                          // Convert file to base64 for AI analysis
+                          const reader = new FileReader();
+                          reader.onload = async (event) => {
+                            const base64 = event.target.result.split(',')[1];
+                            const fileType = file.type;
+                            const fileName = file.name.toLowerCase();
+                            
+                            // Determine document type from filename
+                            let docType = "real estate document";
+                            if (fileName.includes("mortgage") || fileName.includes("loan") || fileName.includes("mtg")) {
+                              docType = "mortgage statement";
+                            } else if (fileName.includes("lease") || fileName.includes("rental agreement")) {
+                              docType = "lease agreement";
+                            } else if (fileName.includes("hud") || fileName.includes("closing") || fileName.includes("settlement")) {
+                              docType = "HUD-1 closing document";
+                            } else if (fileName.includes("insurance") || fileName.includes("policy")) {
+                              docType = "insurance policy";
+                            } else if (fileName.includes("tax") || fileName.includes("1098")) {
+                              docType = "tax document";
+                            }
+                            
+                            // Send to AI for smart extraction
+                            try {
+                              const isImage = fileType.startsWith('image/');
+                              
+                              const systemPrompt = `You are a smart real estate document analyzer. The user uploaded a ${docType}. 
+
+EXTRACT the following information if visible:
+- Property address (CRITICAL - find any address)
+- Purchase price or property value
+- Down payment amount
+- Monthly mortgage/loan payment
+- Interest rate
+- Loan term
+- Monthly rent (for leases)
+- Tenant name (for leases)
+- Lease start/end dates
+- Insurance premium
+- Tax amount
+
+RESPOND in this format:
+📋 **Document Analysis: ${file.name}**
+
+**Property Identified:**
+• Address: [extracted address or "Not found"]
+
+**Key Financial Data:**
+• [List all extracted values with labels]
+
+**Suggested Action:**
+[Tell user what to do next - e.g., "I can add this property to your portfolio. Just confirm the details above or provide any missing information."]
+
+If you find an address, offer to add the property with:
+[[ADD_PROPERTY:{"address":"extracted address","purchasePrice":X,"mortgagePayment":X}]]
+
+Be helpful and specific. If the image/document is unclear, ask for specific details.`;
+
+                              const messageContent = isImage ? [
+                                { type: "image", source: { type: "base64", media_type: fileType, data: base64 } },
+                                { type: "text", text: `Please analyze this ${docType} and extract property/financial information. Look for any property address, purchase price, mortgage details, rent amounts, or lease terms.` }
+                              ] : [
+                                { type: "text", text: `I uploaded a ${docType} named "${file.name}". Please help me extract the key information. The document appears to be a ${docType}.
+
+Since I can't directly read the document content, please ask me for the specific details you need to add this to my records:
+- What is the property address?
+- What is the monthly payment amount?
+- What other key details should I provide?` }
+                              ];
+
+                              const response = await fetch("/api/chat", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  system: systemPrompt,
+                                  messages: [{ role: "user", content: messageContent }]
+                                })
+                              });
+                              
+                              const data = await response.json();
+                              let aiResponse = data.content?.[0]?.text || data.error || "I couldn't analyze the document. Please describe what's in it.";
+                              
+                              // Check for property add tag
+                              const propMatch = aiResponse.match(/\[\[ADD_PROPERTY:(.*?)\]\]/);
+                              if (propMatch) {
+                                try {
+                                  const propData = JSON.parse(propMatch[1]);
+                                  // Offer to add but don't auto-add
+                                  aiResponse = aiResponse.replace(/\[\[ADD_PROPERTY:.*?\]\]/g, '');
+                                } catch (e) {}
+                              }
+                              
+                              setMessages(prev => [...prev, {
+                                role: "assistant", id: uid(),
+                                content: aiResponse
+                              }]);
+                              
+                            } catch (err) {
+                              console.error("Document analysis error:", err);
+                              setMessages(prev => [...prev, {
+                                role: "assistant", id: uid(),
+                                content: `📎 **Document Received: ${file.name}**\n\nI received your ${docType}. Please tell me the key details:\n\n• **Property address?**\n• **Purchase price?** (for closing docs)\n• **Monthly mortgage payment?**\n• **Monthly rent?** (for leases)\n\nJust type the information and I'll help add it to your records!`
+                              }]);
+                            }
+                            
+                            setLoading(false);
+                          };
+                          
+                          reader.onerror = () => {
+                            setMessages(prev => [...prev, {
+                              role: "assistant", id: uid(),
+                              content: `❌ Error reading file. Please try again or manually enter the property details.`
+                            }]);
+                            setLoading(false);
+                          };
+                          
+                          reader.readAsDataURL(file);
                         }
                         e.target.value = '';
                       }}
