@@ -746,7 +746,8 @@ function MainApp() {
   const [showPropertyDetailModal, setShowPropertyDetailModal] = useState(null);
   const [newProperty, setNewProperty] = useState({
     address: "", type: "single_family", units: 1, rent: "", purchaseDate: "",
-    purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false
+    purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false,
+    taxes: "", insurance: "", hoa: "", utilities: "", maintenance: "", propertyMgmt: "", vacancyRate: "5"
   });
 
   // Tenant modals
@@ -1061,6 +1062,16 @@ function MainApp() {
   const addProperty = async () => {
     if (!newProperty.address.trim()) return;
     
+    // Parse expense values
+    const taxes = parseInt(newProperty.taxes) || 0;
+    const insurance = parseInt(newProperty.insurance) || 0;
+    const hoa = parseInt(newProperty.hoa) || 0;
+    const utilities = parseInt(newProperty.utilities) || 0;
+    const maintenance = parseInt(newProperty.maintenance) || 0;
+    const propertyMgmt = parseInt(newProperty.propertyMgmt) || 0;
+    const vacancyRate = parseInt(newProperty.vacancyRate) || 5;
+    const totalExpenses = taxes + insurance + hoa + utilities + maintenance + propertyMgmt;
+    
     const property = {
       name: newProperty.address.split(",")[0].trim(),
       address: newProperty.address.trim(),
@@ -1071,12 +1082,17 @@ function MainApp() {
       purchasePrice: parseInt(newProperty.purchasePrice) || 0,
       downPayment: parseInt(newProperty.downPayment) || 0,
       mortgagePayment: parseInt(newProperty.mortgagePayment) || 0,
-      isSTR: newProperty.isSTR || false
+      isSTR: newProperty.isSTR || false,
+      // Operating expenses
+      taxes, insurance, hoa, utilities, maintenance, propertyMgmt, vacancyRate,
+      totalExpenses
     };
     
-    // Calculate metrics
-    const cashFlow = property.rent - property.mortgagePayment;
-    const capRate = property.purchasePrice ? (((property.rent * 12) * 0.6) / property.purchasePrice * 100).toFixed(1) : null;
+    // Calculate metrics with actual expenses
+    const effectiveRent = property.rent * (1 - vacancyRate / 100); // Account for vacancy
+    const noi = effectiveRent - totalExpenses; // Net Operating Income (before mortgage)
+    const cashFlow = noi - property.mortgagePayment; // After mortgage
+    const capRate = property.purchasePrice ? ((noi * 12) / property.purchasePrice * 100).toFixed(1) : null;
     const cashOnCash = property.downPayment ? ((cashFlow * 12) / property.downPayment * 100).toFixed(1) : null;
     
     // Save to Supabase
@@ -1089,7 +1105,11 @@ function MainApp() {
     
     setLocalProperties(prev => [...prev, property]);
     setShowAddPropertyModal(false);
-    setNewProperty({ address: "", type: "single_family", units: 1, rent: "", purchaseDate: "", purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false });
+    setNewProperty({ 
+      address: "", type: "single_family", units: 1, rent: "", purchaseDate: "", 
+      purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false,
+      taxes: "", insurance: "", hoa: "", utilities: "", maintenance: "", propertyMgmt: "", vacancyRate: "5"
+    });
     
     // Confirmation in chat with ROI info
     let roiInfo = "";
@@ -1907,54 +1927,158 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
             {/* Portfolio Summary */}
             {localProperties.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-                <div className="card" style={{ padding: 16, borderLeft: `4px solid ${C.greenB}` }}>
-                  <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>TOTAL MONTHLY RENT</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: C.green, fontFamily: "'Inter', sans-serif" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
+                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${C.greenB}` }}>
+                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>GROSS RENT</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: C.green, fontFamily: "'Inter', sans-serif" }}>
                     ${localProperties.reduce((s, p) => s + (p.rent || 0), 0).toLocaleString()}
                   </div>
                 </div>
-                <div className="card" style={{ padding: 16, borderLeft: `4px solid ${C.blueB}` }}>
-                  <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>TOTAL MORTGAGE</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: C.blue, fontFamily: "'Inter', sans-serif" }}>
+                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${C.orangeB}` }}>
+                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>EXPENSES</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: C.orange, fontFamily: "'Inter', sans-serif" }}>
+                    ${localProperties.reduce((s, p) => s + (p.totalExpenses || 0), 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${C.redB}` }}>
+                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>MORTGAGE</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: C.red, fontFamily: "'Inter', sans-serif" }}>
                     ${localProperties.reduce((s, p) => s + (p.mortgagePayment || 0), 0).toLocaleString()}
                   </div>
                 </div>
-                <div className="card" style={{ padding: 16, borderLeft: `4px solid ${(() => {
-                  const cashFlow = localProperties.reduce((s, p) => s + (p.rent || 0) - (p.mortgagePayment || 0), 0);
-                  return cashFlow >= 0 ? C.greenB : C.redB;
+                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${(() => {
+                  const netCashFlow = localProperties.reduce((s, p) => {
+                    const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                    return s + effectiveRent - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
+                  }, 0);
+                  return netCashFlow >= 0 ? C.greenB : C.redB;
                 })()}` }}>
-                  <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>NET CASH FLOW</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: (() => {
-                    const cashFlow = localProperties.reduce((s, p) => s + (p.rent || 0) - (p.mortgagePayment || 0), 0);
-                    return cashFlow >= 0 ? C.green : C.red;
+                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>CASH FLOW</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: (() => {
+                    const netCashFlow = localProperties.reduce((s, p) => {
+                      const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                      return s + effectiveRent - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
+                    }, 0);
+                    return netCashFlow >= 0 ? C.green : C.red;
                   })(), fontFamily: "'Inter', sans-serif" }}>
-                    ${localProperties.reduce((s, p) => s + (p.rent || 0) - (p.mortgagePayment || 0), 0).toLocaleString()}
+                    {(() => {
+                      const netCashFlow = localProperties.reduce((s, p) => {
+                        const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                        return s + effectiveRent - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
+                      }, 0);
+                      return (netCashFlow >= 0 ? '+' : '') + '$' + Math.round(netCashFlow).toLocaleString();
+                    })()}
                   </div>
                 </div>
-                <div className="card" style={{ padding: 16, borderLeft: `4px solid ${C.goldL}` }}>
-                  <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>AVG CAP RATE</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: C.gold, fontFamily: "'Inter', sans-serif" }}>
+                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${C.goldL}` }}>
+                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>AVG CAP</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: C.gold, fontFamily: "'Inter', sans-serif" }}>
                     {(() => {
                       const propsWithValue = localProperties.filter(p => p.purchasePrice && p.rent);
                       if (propsWithValue.length === 0) return "—";
                       const avgCapRate = propsWithValue.reduce((s, p) => {
-                        const noi = (p.rent * 12) * 0.6; // Assume 40% expenses
-                        return s + (noi / p.purchasePrice * 100);
+                        const effectiveRent = p.rent * (1 - (p.vacancyRate || 5) / 100);
+                        const noi = effectiveRent - (p.totalExpenses || 0);
+                        return s + (noi * 12 / p.purchasePrice * 100);
                       }, 0) / propsWithValue.length;
                       return avgCapRate.toFixed(1) + "%";
                     })()}
                   </div>
+                </div>
+                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${C.blueB}` }}>
+                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>TOTAL NPV</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: (() => {
+                    // Calculate total portfolio NPV
+                    const discountRate = 0.08;
+                    const appreciationRate = 0.03;
+                    const holdingPeriod = 10;
+                    
+                    let totalNPV = 0;
+                    localProperties.forEach(p => {
+                      if (!p.downPayment || !p.purchasePrice) return;
+                      
+                      const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                      const noi = effectiveRent - (p.totalExpenses || 0);
+                      const cashFlow = noi - (p.mortgagePayment || 0);
+                      const annualCashFlow = cashFlow * 12;
+                      
+                      let npv = -(p.downPayment || 0);
+                      for (let year = 1; year <= holdingPeriod; year++) {
+                        const yearCashFlow = annualCashFlow * Math.pow(1.02, year - 1);
+                        npv += yearCashFlow / Math.pow(1 + discountRate, year);
+                      }
+                      const futureValue = (p.purchasePrice || 0) * Math.pow(1 + appreciationRate, holdingPeriod);
+                      const equityAtSale = futureValue * 0.94;
+                      npv += equityAtSale / Math.pow(1 + discountRate, holdingPeriod);
+                      
+                      totalNPV += npv;
+                    });
+                    return totalNPV >= 0 ? C.blue : C.red;
+                  })(), fontFamily: "'Inter', sans-serif" }}>
+                    {(() => {
+                      const discountRate = 0.08;
+                      const appreciationRate = 0.03;
+                      const holdingPeriod = 10;
+                      
+                      let totalNPV = 0;
+                      localProperties.forEach(p => {
+                        if (!p.downPayment || !p.purchasePrice) return;
+                        
+                        const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                        const noi = effectiveRent - (p.totalExpenses || 0);
+                        const cashFlow = noi - (p.mortgagePayment || 0);
+                        const annualCashFlow = cashFlow * 12;
+                        
+                        let npv = -(p.downPayment || 0);
+                        for (let year = 1; year <= holdingPeriod; year++) {
+                          const yearCashFlow = annualCashFlow * Math.pow(1.02, year - 1);
+                          npv += yearCashFlow / Math.pow(1 + discountRate, year);
+                        }
+                        const futureValue = (p.purchasePrice || 0) * Math.pow(1 + appreciationRate, holdingPeriod);
+                        const equityAtSale = futureValue * 0.94;
+                        npv += equityAtSale / Math.pow(1 + discountRate, holdingPeriod);
+                        
+                        totalNPV += npv;
+                      });
+                      
+                      if (localProperties.filter(p => p.downPayment && p.purchasePrice).length === 0) return "—";
+                      return (totalNPV >= 0 ? '+$' : '-$') + Math.abs(Math.round(totalNPV / 1000)).toLocaleString() + 'K';
+                    })()}
+                  </div>
+                  <div style={{ fontSize: 8, color: C.light, marginTop: 2 }}>10yr @8%</div>
                 </div>
               </div>
             )}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               {localProperties.map(p => {
-                const cashFlow = (p.rent || 0) - (p.mortgagePayment || 0);
+                // Calculate with actual expenses
+                const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                const noi = effectiveRent - (p.totalExpenses || 0);
+                const cashFlow = noi - (p.mortgagePayment || 0);
                 const isPositive = cashFlow >= 0;
-                const capRate = p.purchasePrice && p.rent ? (((p.rent * 12) * 0.6) / p.purchasePrice * 100) : null;
+                const capRate = p.purchasePrice && p.rent ? ((noi * 12) / p.purchasePrice * 100) : null;
                 const cashOnCash = p.downPayment && cashFlow ? ((cashFlow * 12) / p.downPayment * 100) : null;
+                
+                // NPV Calculation (10-year horizon, 8% discount rate, 3% annual appreciation)
+                const discountRate = 0.08;
+                const appreciationRate = 0.03;
+                const holdingPeriod = 10; // years
+                const annualCashFlow = cashFlow * 12;
+                let npv = -(p.downPayment || 0); // Initial investment (negative)
+                
+                if (p.downPayment && p.purchasePrice) {
+                  for (let year = 1; year <= holdingPeriod; year++) {
+                    // Cash flows grow slightly with rent increases (~2%/yr assumed in cash flow)
+                    const yearCashFlow = annualCashFlow * Math.pow(1.02, year - 1);
+                    npv += yearCashFlow / Math.pow(1 + discountRate, year);
+                  }
+                  // Terminal value: sale price minus remaining mortgage (simplified)
+                  const futureValue = (p.purchasePrice || 0) * Math.pow(1 + appreciationRate, holdingPeriod);
+                  const equityAtSale = futureValue * 0.94; // 6% selling costs
+                  npv += equityAtSale / Math.pow(1 + discountRate, holdingPeriod);
+                }
+                const npvPositive = npv >= 0;
                 
                 return (
                   <div 
@@ -1966,6 +2090,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                       transition: "transform 0.15s, box-shadow 0.15s"
                     }}
                     onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)"; }}
+                    onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
                     onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -1982,26 +2107,30 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid, marginBottom: 12 }}>{p.address}</div>
                     
                     {/* Financial Summary */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 12 }}>
                       <div>
-                        <div style={{ fontSize: 9, color: C.light, letterSpacing: 1 }}>RENT</div>
-                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, color: C.green, fontWeight: 600 }}>${(p.rent || 0).toLocaleString()}</div>
+                        <div style={{ fontSize: 8, color: C.light, letterSpacing: 1 }}>RENT</div>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.green, fontWeight: 600 }}>${(p.rent || 0).toLocaleString()}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: 9, color: C.light, letterSpacing: 1 }}>MORTGAGE</div>
-                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, color: C.red, fontWeight: 600 }}>${(p.mortgagePayment || 0).toLocaleString()}</div>
+                        <div style={{ fontSize: 8, color: C.light, letterSpacing: 1 }}>EXPENSES</div>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.orange, fontWeight: 600 }}>${(p.totalExpenses || 0).toLocaleString()}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: 9, color: C.light, letterSpacing: 1 }}>CASH FLOW</div>
-                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, color: isPositive ? C.green : C.red, fontWeight: 700 }}>
-                          {isPositive ? "+" : ""}${cashFlow.toLocaleString()}
+                        <div style={{ fontSize: 8, color: C.light, letterSpacing: 1 }}>MORTGAGE</div>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.red, fontWeight: 600 }}>${(p.mortgagePayment || 0).toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 8, color: C.light, letterSpacing: 1 }}>CASH FLOW</div>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: isPositive ? C.green : C.red, fontWeight: 700 }}>
+                          {isPositive ? "+" : ""}${Math.round(cashFlow).toLocaleString()}
                         </div>
                       </div>
                     </div>
 
                     {/* ROI Metrics */}
-                    {(capRate || cashOnCash) && (
-                      <div style={{ display: "flex", gap: 12, marginBottom: 8 }}>
+                    {(capRate || cashOnCash || (p.downPayment && p.purchasePrice)) && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
                         {capRate && (
                           <div style={{ padding: "4px 8px", background: C.goldPale, borderRadius: 4 }}>
                             <span style={{ fontSize: 9, color: C.gold }}>CAP </span>
@@ -2012,6 +2141,20 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                           <div style={{ padding: "4px 8px", background: isPositive ? C.greenPale : C.redPale, borderRadius: 4 }}>
                             <span style={{ fontSize: 9, color: isPositive ? C.green : C.red }}>CoC </span>
                             <span style={{ fontSize: 12, color: isPositive ? C.green : C.red, fontWeight: 600 }}>{cashOnCash.toFixed(1)}%</span>
+                          </div>
+                        )}
+                        {p.downPayment && p.purchasePrice && (
+                          <div style={{ padding: "4px 8px", background: npvPositive ? C.bluePale : C.redPale, borderRadius: 4 }}>
+                            <span style={{ fontSize: 9, color: npvPositive ? C.blue : C.red }}>NPV </span>
+                            <span style={{ fontSize: 12, color: npvPositive ? C.blue : C.red, fontWeight: 600 }}>
+                              {npvPositive ? "+" : ""}${Math.round(npv / 1000)}K
+                            </span>
+                          </div>
+                        )}
+                        {p.vacancyRate > 0 && (
+                          <div style={{ padding: "4px 8px", background: "#f5f5f5", borderRadius: 4 }}>
+                            <span style={{ fontSize: 9, color: C.mid }}>VAC </span>
+                            <span style={{ fontSize: 12, color: C.mid, fontWeight: 600 }}>{p.vacancyRate}%</span>
                           </div>
                         )}
                       </div>
@@ -2928,9 +3071,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               {/* Financial Info Section */}
               <div style={{ background: "#f8f8f5", border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
                 <div style={{ fontSize: 10, color: C.gold, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>
-                  💰 FINANCIAL INFO (for ROI calculations)
+                  💰 PURCHASE INFO
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                   <div>
                     <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 6 }}>
                       Purchase Price ($)
@@ -2965,9 +3108,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                       }}
                     />
                   </div>
-                  <div style={{ gridColumn: "1 / -1" }}>
+                  <div>
                     <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 6 }}>
-                      Monthly Mortgage Payment ($)
+                      Mortgage/mo ($)
                     </label>
                     <input
                       type="number"
@@ -2983,8 +3126,130 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                     />
                   </div>
                 </div>
-                <div style={{ marginTop: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light }}>
-                  💡 Tip: Upload mortgage statement to AI Assistant to auto-fill
+              </div>
+
+              {/* Operating Expenses Section */}
+              <div style={{ background: "#fff5f5", border: `1px solid ${C.redB}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontSize: 10, color: C.red, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>
+                  📊 MONTHLY OPERATING EXPENSES
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 6 }}>
+                      Taxes/mo ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newProperty.taxes}
+                      onChange={(e) => setNewProperty({...newProperty, taxes: e.target.value})}
+                      placeholder="250"
+                      style={{
+                        width: "100%", padding: "10px 12px", fontSize: 13, border: `1px solid ${C.border}`,
+                        borderRadius: 4, background: "white", color: C.text, outline: "none",
+                        fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 6 }}>
+                      Insurance/mo ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newProperty.insurance}
+                      onChange={(e) => setNewProperty({...newProperty, insurance: e.target.value})}
+                      placeholder="150"
+                      style={{
+                        width: "100%", padding: "10px 12px", fontSize: 13, border: `1px solid ${C.border}`,
+                        borderRadius: 4, background: "white", color: C.text, outline: "none",
+                        fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 6 }}>
+                      HOA/mo ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newProperty.hoa}
+                      onChange={(e) => setNewProperty({...newProperty, hoa: e.target.value})}
+                      placeholder="0"
+                      style={{
+                        width: "100%", padding: "10px 12px", fontSize: 13, border: `1px solid ${C.border}`,
+                        borderRadius: 4, background: "white", color: C.text, outline: "none",
+                        fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 6 }}>
+                      Utilities/mo ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newProperty.utilities}
+                      onChange={(e) => setNewProperty({...newProperty, utilities: e.target.value})}
+                      placeholder="0"
+                      style={{
+                        width: "100%", padding: "10px 12px", fontSize: 13, border: `1px solid ${C.border}`,
+                        borderRadius: 4, background: "white", color: C.text, outline: "none",
+                        fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 6 }}>
+                      Maintenance/mo ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newProperty.maintenance}
+                      onChange={(e) => setNewProperty({...newProperty, maintenance: e.target.value})}
+                      placeholder="100"
+                      style={{
+                        width: "100%", padding: "10px 12px", fontSize: 13, border: `1px solid ${C.border}`,
+                        borderRadius: 4, background: "white", color: C.text, outline: "none",
+                        fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 6 }}>
+                      Prop Mgmt/mo ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newProperty.propertyMgmt}
+                      onChange={(e) => setNewProperty({...newProperty, propertyMgmt: e.target.value})}
+                      placeholder="0"
+                      style={{
+                        width: "100%", padding: "10px 12px", fontSize: 13, border: `1px solid ${C.border}`,
+                        borderRadius: 4, background: "white", color: C.text, outline: "none",
+                        fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
+                  <label style={{ fontSize: 10, color: C.light, letterSpacing: 1 }}>Vacancy Rate:</label>
+                  <select 
+                    value={newProperty.vacancyRate} 
+                    onChange={(e) => setNewProperty({...newProperty, vacancyRate: e.target.value})}
+                    style={{ padding: "6px 10px", fontSize: 12, border: `1px solid ${C.border}`, borderRadius: 4, fontFamily: "'IBM Plex Mono', monospace" }}
+                  >
+                    <option value="0">0%</option>
+                    <option value="5">5%</option>
+                    <option value="8">8%</option>
+                    <option value="10">10%</option>
+                  </select>
+                  <span style={{ fontSize: 10, color: C.light }}>(typical: 5-8%)</span>
                 </div>
               </div>
 
