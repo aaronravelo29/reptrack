@@ -525,6 +525,20 @@ OTHER CAPABILITIES
 • Explain IRS rules and documentation best practices
 • Review logged activities for audit readiness
 • Generate summary reports
+• ADD NEW PROPERTIES to the portfolio
+
+═══════════════════════════════════════════════════════════════════════════════
+ADDING PROPERTIES
+═══════════════════════════════════════════════════════════════════════════════
+When user wants to add a property (e.g., "Add my duplex at 123 Main St"), respond with:
+
+🏠 **Property Added!**
+• Address: [full address]
+• Type: [single family / multi-family / commercial]
+• Units: [number]
+• Rent: $[amount]/mo
+
+[[ADD_PROPERTY:{"address":"full address","type":"single_family|multi_family|commercial","units":1,"rent":0}]]
 
 ═══════════════════════════════════════════════════════════════════════════════
 IMPORTANT DISCLAIMERS
@@ -735,9 +749,25 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
     return null;
   };
 
-  // Remove the SAVE_ACTIVITY tag from displayed message
+  // Parse AI response for property data
+  const parsePropertyFromResponse = (text) => {
+    const match = text.match(/\[\[ADD_PROPERTY:(.*?)\]\]/);
+    if (match) {
+      try {
+        return JSON.parse(match[1]);
+      } catch (e) {
+        console.error("Failed to parse property:", e);
+      }
+    }
+    return null;
+  };
+
+  // Remove the SAVE_ACTIVITY and ADD_PROPERTY tags from displayed message
   const cleanResponseText = (text) => {
-    return text.replace(/\[\[SAVE_ACTIVITY:.*?\]\]/g, '').trim();
+    return text
+      .replace(/\[\[SAVE_ACTIVITY:.*?\]\]/g, '')
+      .replace(/\[\[ADD_PROPERTY:.*?\]\]/g, '')
+      .trim();
   };
 
   const sendMessage = async () => {
@@ -783,11 +813,26 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         setLocalEntries(prev => [newEntry, ...prev]);
       }
 
+      // Check for property data
+      const propertyData = parsePropertyFromResponse(responseText);
+      if (propertyData) {
+        const newProperty = {
+          id: uid(),
+          name: propertyData.address.split(",")[0].trim(),
+          address: propertyData.address,
+          type: propertyData.type || "single_family",
+          units: propertyData.units || 1,
+          rent: propertyData.rent || 0,
+          purchaseDate: propertyData.purchaseDate || null
+        };
+        setLocalProperties(prev => [...prev, newProperty]);
+      }
+
       const assistantMessage = {
         role: "assistant",
         id: uid(),
         content: cleanResponseText(responseText),
-        activityLogged: !!activityData
+        activityLogged: !!activityData || !!propertyData
       };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
@@ -1674,6 +1719,285 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                   )) : (
                     <div style={{ padding: 16, textAlign: "center", color: C.light, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>
                       No Non-REPP activities logged yet
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ ADD PROPERTY MODAL ═══ */}
+      {showAddPropertyModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.9)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000
+        }}>
+          <div style={{
+            background: C.bg, borderRadius: 12, padding: 0, width: "100%",
+            maxWidth: 500, boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+          }}>
+            {/* Header */}
+            <div style={{ 
+              background: C.greenB, padding: "20px 24px", 
+              borderRadius: "12px 12px 0 0", display: "flex", 
+              justifyContent: "space-between", alignItems: "center"
+            }}>
+              <div>
+                <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: "white", margin: 0 }}>
+                  🏠 Add New Property
+                </h2>
+              </div>
+              <button onClick={() => setShowAddPropertyModal(false)} style={{
+                background: "rgba(255,255,255,0.2)", border: "none", fontSize: 20, color: "white", 
+                cursor: "pointer", width: 36, height: 36, borderRadius: "50%", display: "flex",
+                alignItems: "center", justifyContent: "center"
+              }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {/* Address */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                  Property Address *
+                </label>
+                <input
+                  type="text"
+                  value={newProperty.address}
+                  onChange={(e) => setNewProperty({...newProperty, address: e.target.value})}
+                  placeholder="123 Main St, Pittsburgh PA 15213"
+                  style={{
+                    width: "100%", padding: "12px 14px", fontSize: 14, border: `1px solid ${C.border}`,
+                    borderRadius: 6, background: "white", color: C.text, outline: "none",
+                    fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              {/* Property Type */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                  Property Type
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                  {[
+                    { id: "single_family", label: "Single Family", icon: "🏠" },
+                    { id: "multi_family", label: "Multi-Family", icon: "🏢" },
+                    { id: "commercial", label: "Commercial", icon: "🏪" },
+                  ].map(type => (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => setNewProperty({...newProperty, type: type.id})}
+                      style={{
+                        padding: "10px", border: `2px solid ${newProperty.type === type.id ? C.greenB : C.border}`,
+                        borderRadius: 6, background: newProperty.type === type.id ? C.greenPale : "white",
+                        cursor: "pointer", textAlign: "center"
+                      }}
+                    >
+                      <div style={{ fontSize: 20, marginBottom: 4 }}>{type.icon}</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: C.text }}>{type.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Units and Rent */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                    Number of Units
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newProperty.units}
+                    onChange={(e) => setNewProperty({...newProperty, units: e.target.value})}
+                    style={{
+                      width: "100%", padding: "12px 14px", fontSize: 14, border: `1px solid ${C.border}`,
+                      borderRadius: 6, background: "white", color: C.text, outline: "none",
+                      fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                    Monthly Rent ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={newProperty.rent}
+                    onChange={(e) => setNewProperty({...newProperty, rent: e.target.value})}
+                    placeholder="2500"
+                    style={{
+                      width: "100%", padding: "12px 14px", fontSize: 14, border: `1px solid ${C.border}`,
+                      borderRadius: 6, background: "white", color: C.text, outline: "none",
+                      fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Purchase Date */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                  Purchase Date
+                </label>
+                <input
+                  type="date"
+                  value={newProperty.purchaseDate}
+                  onChange={(e) => setNewProperty({...newProperty, purchaseDate: e.target.value})}
+                  style={{
+                    width: "100%", padding: "12px 14px", fontSize: 14, border: `1px solid ${C.border}`,
+                    borderRadius: 6, background: "white", color: C.text, outline: "none",
+                    fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                  }}
+                />
+              </div>
+
+              {/* Buttons */}
+              <div style={{ display: "flex", gap: 12 }}>
+                <button
+                  onClick={() => setShowAddPropertyModal(false)}
+                  style={{
+                    flex: 1, padding: "14px 20px", background: "white", border: `1px solid ${C.border}`,
+                    borderRadius: 4, color: C.mid, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1, textTransform: "uppercase"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={addProperty}
+                  disabled={!newProperty.address.trim()}
+                  style={{
+                    flex: 1, padding: "14px 20px", background: !newProperty.address.trim() ? C.border : C.greenB,
+                    border: "none", borderRadius: 4, color: "white", fontSize: 12, fontWeight: 600,
+                    cursor: !newProperty.address.trim() ? "not-allowed" : "pointer",
+                    fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1, textTransform: "uppercase"
+                  }}
+                >
+                  Add Property
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ PROPERTY DETAIL MODAL ═══ */}
+      {showPropertyDetailModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.9)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000,
+          padding: 20
+        }}>
+          <div style={{
+            background: C.bg, borderRadius: 12, padding: 0, width: "100%",
+            maxWidth: 600, maxHeight: "90vh", overflowY: "auto",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+          }}>
+            {/* Header */}
+            <div style={{ 
+              background: C.greenB, padding: "20px 24px", 
+              borderRadius: "12px 12px 0 0", display: "flex", 
+              justifyContent: "space-between", alignItems: "center"
+            }}>
+              <div>
+                <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: "white", margin: 0 }}>
+                  🏠 {showPropertyDetailModal.name}
+                </h2>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>
+                  {showPropertyDetailModal.type.replace("_", " ")}
+                </div>
+              </div>
+              <button onClick={() => setShowPropertyDetailModal(null)} style={{
+                background: "rgba(255,255,255,0.2)", border: "none", fontSize: 20, color: "white", 
+                cursor: "pointer", width: 36, height: 36, borderRadius: "50%", display: "flex",
+                alignItems: "center", justifyContent: "center"
+              }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {/* Property Info */}
+              <div style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, marginBottom: 20 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>ADDRESS</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.text }}>{showPropertyDetailModal.address}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>TYPE</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.text }}>{showPropertyDetailModal.type.replace("_", " ")}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>UNITS</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.text }}>{showPropertyDetailModal.units}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>MONTHLY RENT</div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 700, color: C.green }}>${showPropertyDetailModal.rent.toLocaleString()}</div>
+                  </div>
+                  {showPropertyDetailModal.purchaseDate && (
+                    <div>
+                      <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>PURCHASE DATE</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.text }}>{showPropertyDetailModal.purchaseDate}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* REP Hours for this property */}
+              <div style={{ marginBottom: 20 }}>
+                <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
+                  ✅ REP Hours Logged
+                </h3>
+                {repByProperty[showPropertyDetailModal.name] ? (
+                  <div style={{ background: C.greenPale, border: `1px solid ${C.greenB}`, borderRadius: 8, padding: 16, textAlign: "center" }}>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.green }}>
+                      {(repByProperty[showPropertyDetailModal.name].minutes / 60).toFixed(1)}h
+                    </div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>
+                      {repByProperty[showPropertyDetailModal.name].count} activities
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ background: "#f8f8f8", border: `1px solid ${C.border}`, borderRadius: 8, padding: 20, textAlign: "center" }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>
+                      No hours logged yet for this property
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Activities */}
+              <div>
+                <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
+                  📝 Recent Activities
+                </h3>
+                <div style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+                  {repEntries.filter(e => e.property === showPropertyDetailModal.name).length > 0 ? (
+                    repEntries.filter(e => e.property === showPropertyDetailModal.name).slice(0, 5).map((e, i, arr) => (
+                      <div key={e.id} style={{ 
+                        padding: "12px 16px", 
+                        borderBottom: i < arr.length - 1 ? `1px solid ${C.borderL}` : "none"
+                      }}>
+                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                          <div>
+                            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.text }}>{e.activity}</div>
+                            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, marginTop: 2 }}>{e.date} • {e.categoryLabel}</div>
+                          </div>
+                          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 700, color: C.green }}>{fmtH(e.minutes)}</div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: 16, textAlign: "center", color: C.light, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>
+                      No activities logged for this property
                     </div>
                   )}
                 </div>
