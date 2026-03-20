@@ -369,22 +369,7 @@ const NON_RE_QUICK_OPTIONS = [
   { id: "other_business", label: "Other Business", icon: "📁" },
 ];
 
-// ─── Sample Data ──────────────────────────────────────────────────────────────
-const SAMPLE_PROPERTIES = [
-  { id:"p1", name:"Oak Street Duplex", address:"123 Oak St, Pittsburgh PA 15213", type:"multi_family", units:2, rent:3400 },
-  { id:"p2", name:"Downtown Studio", address:"88 Fifth Ave #4C, Pittsburgh PA 15219", type:"single_family", units:1, rent:1650 },
-  { id:"p3", name:"Squirrel Hill 4-Plex", address:"501 Murray Ave, Pittsburgh PA 15217", type:"multi_family", units:4, rent:6800 },
-  { id:"p4", name:"Lawrenceville Commercial", address:"4200 Butler St, Pittsburgh PA 15201", type:"commercial", units:1, rent:4200 },
-];
-
-const SAMPLE_ENTRIES = [
-  { id:"e1", date:"2024-11-01", qualifies:true, category:"management", categoryLabel:"Property Management", activity:"Called tenant re maintenance request — Oak St Unit A", minutes:30, irsDescription: "Coordinated tenant maintenance request for Oak Street Duplex Unit A. Documented issue, contacted service provider, and followed up with tenant on resolution timeline." },
-  { id:"e2", date:"2024-11-01", qualifies:false, category:"non_re", categoryLabel:"Non-REPP Work", activity:"W-2 work shift", minutes:480, irsDescription: null },
-  { id:"e3", date:"2024-11-02", qualifies:true, category:"maintenance", categoryLabel:"Maintenance & Repairs", activity:"Supervised plumber — Oak St hot water heater repair", minutes:90, irsDescription: "On-site supervision of licensed plumber performing hot water heater replacement at Oak Street Duplex. Verified work quality, approved invoice, and documented repair for property records." },
-  { id:"e4", date:"2024-11-04", qualifies:true, category:"leasing", categoryLabel:"Leasing", activity:"Showed vacant unit — Downtown Studio #4C", minutes:120, irsDescription: "Conducted property showing for prospective tenant at Downtown Studio Unit 4C. Discussed lease terms, property features, and tenant requirements. Collected rental application." },
-  { id:"e5", date:"2024-11-05", qualifies:true, category:"financial", categoryLabel:"Financial Management", activity:"Reviewed monthly rent rolls and P&L", minutes:75, irsDescription: "Monthly financial review for rental portfolio. Analyzed rent collection status, reviewed profit and loss statements, and reconciled property expenses across all units." },
-];
-
+// ─── Helper Functions ────────────────────────────────────────────────────────
 const fmtH = (m) => { const h=Math.floor(m/60),mn=m%60; return !h&&!mn?"0h":`${h>0?h+"h":""}${mn>0?" "+mn+"m":""}`.trim(); };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const todayStr = () => new Date().toISOString().split("T")[0];
@@ -423,73 +408,13 @@ const VENDOR_CATEGORIES = [
   { id: "other", label: "Other", icon: "📁" },
 ];
 
-// Sample tenants
-const SAMPLE_TENANTS = [
-  { 
-    id: "t1", 
-    firstName: "John", 
-    lastName: "Smith", 
-    email: "john.smith@email.com", 
-    phone: "(412) 555-1234",
-    propertyId: "p1",
-    propertyName: "Oak Street Duplex",
-    unit: "A",
-    leaseStart: "2024-01-01",
-    leaseEnd: "2024-12-31",
-    rent: 1700,
-    dob: "1985-03-15",
-    hasInsurance: true,
-    bio: "Works in tech, quiet tenant. Has a small dog (approved).",
-    deductible: 250,
-    latePayments: 0
-  },
-  { 
-    id: "t2", 
-    firstName: "Sarah", 
-    lastName: "Johnson", 
-    email: "sarah.j@email.com", 
-    phone: "(412) 555-5678",
-    propertyId: "p1",
-    propertyName: "Oak Street Duplex",
-    unit: "B",
-    leaseStart: "2024-03-01",
-    leaseEnd: "2025-02-28",
-    rent: 1700,
-    dob: "1990-07-22",
-    hasInsurance: true,
-    bio: "Nurse at UPMC. Very responsible tenant.",
-    deductible: 250,
-    latePayments: 1
-  },
-];
-
-// Sample vendors
-const SAMPLE_VENDORS = [
-  {
-    id: "v1",
-    companyName: "Pittsburgh Plumbing Pros",
-    contactName: "Mike Wilson",
-    category: "plumber",
-    email: "mike@pghplumbing.com",
-    phone: "(412) 555-9876",
-    city: "Pittsburgh",
-    propertyIds: ["p1", "p3"],
-    serviceHistory: ["Oak Street Duplex - Water heater 2024", "Squirrel Hill 4-Plex - Pipe repair 2024"],
-    notes: "24/7 emergency service available"
-  },
-  {
-    id: "v2",
-    companyName: "Sparks Electric LLC",
-    contactName: "Tom Garcia",
-    category: "electrician",
-    email: "tom@sparkselectric.com",
-    phone: "(412) 555-4321",
-    city: "Pittsburgh",
-    propertyIds: ["p1", "p2", "p3", "p4"],
-    serviceHistory: ["Oak Street Duplex - Panel upgrade 2023", "Downtown Studio - Outlet repair 2024"],
-    notes: "Licensed and insured"
-  },
-];
+// Email provider URLs for mailto links
+const EMAIL_PROVIDERS = {
+  gmail: { name: "Gmail", url: "https://mail.google.com/mail/?view=cm&to=" },
+  outlook: { name: "Outlook", url: "https://outlook.live.com/mail/0/deeplink/compose?to=" },
+  apple: { name: "Apple Mail", url: "mailto:" },
+  default: { name: "Default", url: "mailto:" }
+};
 
 // ─── ENHANCED CLAUDE AI SYSTEM PROMPT ─────────────────────────────────────────
 const getSystemPrompt = (reHrs, rePct, entries, profile, properties) => `You are RepTrack AI, an intelligent Real Estate Professional (REP) tax documentation assistant. You help real estate investors document their activities to qualify for REP status under IRC §469(c)(7).
@@ -699,10 +624,11 @@ IMPORTANT DISCLAIMERS
 function MainApp() {
   const { user, profile, signOut } = useAuth();
   const [view, setView] = useState("assistant");
-  const [localEntries, setLocalEntries] = useState(SAMPLE_ENTRIES);
-  const [localProperties, setLocalProperties] = useState(SAMPLE_PROPERTIES);
-  const [localTenants, setLocalTenants] = useState(SAMPLE_TENANTS);
-  const [localVendors, setLocalVendors] = useState(SAMPLE_VENDORS);
+  const [localEntries, setLocalEntries] = useState([]);
+  const [localProperties, setLocalProperties] = useState([]);
+  const [localTenants, setLocalTenants] = useState([]);
+  const [localVendors, setLocalVendors] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
   
   // Chat state
   const [messages, setMessages] = useState([]);
@@ -719,6 +645,14 @@ function MainApp() {
   // Detail modals
   const [showREPDetailModal, setShowREPDetailModal] = useState(false);
   const [showNonREPDetailModal, setShowNonREPDetailModal] = useState(false);
+
+  // Settings modal
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [emailProvider, setEmailProvider] = useState(() => localStorage.getItem('reptrack-email-provider') || 'gmail');
+  
+  // Year selection for viewing historical data
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
 
   // Property modals
   const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
@@ -743,6 +677,213 @@ function MainApp() {
     propertyIds: [], notes: ""
   });
 
+  // Save email provider preference
+  const saveEmailProvider = (provider) => {
+    setEmailProvider(provider);
+    localStorage.setItem('reptrack-email-provider', provider);
+  };
+
+  // Generate email link based on provider
+  const getEmailLink = (toEmail, subject = "", body = "") => {
+    const provider = EMAIL_PROVIDERS[emailProvider] || EMAIL_PROVIDERS.default;
+    const encodedSubject = encodeURIComponent(subject);
+    const encodedBody = encodeURIComponent(body);
+    
+    if (emailProvider === 'gmail') {
+      return `${provider.url}${toEmail}&su=${encodedSubject}&body=${encodedBody}`;
+    } else if (emailProvider === 'outlook') {
+      return `${provider.url}${toEmail}&subject=${encodedSubject}&body=${encodedBody}`;
+    } else {
+      return `mailto:${toEmail}?subject=${encodedSubject}&body=${encodedBody}`;
+    }
+  };
+
+  // Get available years from entries
+  const getAvailableYears = () => {
+    const years = new Set(localEntries.map(e => new Date(e.date).getFullYear()));
+    years.add(currentYear); // Always include current year
+    return Array.from(years).sort((a, b) => b - a);
+  };
+
+  // Filter entries by selected year
+  const entriesForYear = localEntries.filter(e => new Date(e.date).getFullYear() === selectedYear);
+  const repEntriesForYear = entriesForYear.filter(e => e.qualifies);
+  const nonRepEntriesForYear = entriesForYear.filter(e => !e.qualifies);
+  
+  // Calculate yearly stats
+  const yearlyRepMinutes = repEntriesForYear.reduce((s, e) => s + e.minutes, 0);
+  const yearlyNonRepMinutes = nonRepEntriesForYear.reduce((s, e) => s + e.minutes, 0);
+  const yearlyRepHours = Math.round(yearlyRepMinutes / 60 * 10) / 10;
+  const yearlyTotalMinutes = yearlyRepMinutes + yearlyNonRepMinutes;
+  const yearlyRepPct = yearlyTotalMinutes > 0 ? Math.round((yearlyRepMinutes / yearlyTotalMinutes) * 100) : 0;
+  
+  // Check if qualified for year
+  const meetsHoursRequirement = yearlyRepHours >= 750;
+  const meetsPercentRequirement = yearlyRepPct > 50;
+  const qualifiedForYear = meetsHoursRequirement && meetsPercentRequirement;
+
+  // ═══ SUPABASE DATA FUNCTIONS ═══════════════════════════════════════════════
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('sb-token');
+    return {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${token}`
+    };
+  };
+
+  // Load all data from Supabase
+  const loadAllData = async () => {
+    if (!user) return;
+    setDataLoading(true);
+    
+    try {
+      const headers = getAuthHeaders();
+      
+      // Load properties
+      const propsRes = await fetch(`${SUPABASE_URL}/rest/v1/properties?select=*&order=created_at.desc`, { headers });
+      const propsData = await propsRes.json();
+      if (Array.isArray(propsData)) {
+        setLocalProperties(propsData.map(p => ({
+          id: p.id, name: p.name, address: p.address, type: p.type,
+          units: p.units, rent: p.rent, purchaseDate: p.purchase_date
+        })));
+      }
+      
+      // Load entries
+      const entriesRes = await fetch(`${SUPABASE_URL}/rest/v1/entries?select=*&order=date.desc,created_at.desc`, { headers });
+      const entriesData = await entriesRes.json();
+      if (Array.isArray(entriesData)) {
+        setLocalEntries(entriesData.map(e => ({
+          id: e.id, date: e.date, qualifies: e.qualifies, category: e.category,
+          categoryLabel: e.category_label, activity: e.activity, minutes: e.minutes,
+          property: e.property, irsDescription: e.irs_description
+        })));
+      }
+      
+      // Load tenants
+      const tenantsRes = await fetch(`${SUPABASE_URL}/rest/v1/tenants?select=*&order=created_at.desc`, { headers });
+      const tenantsData = await tenantsRes.json();
+      if (Array.isArray(tenantsData)) {
+        setLocalTenants(tenantsData.map(t => ({
+          id: t.id, firstName: t.first_name, lastName: t.last_name, email: t.email,
+          phone: t.phone, propertyId: t.property_id, propertyName: t.property_name,
+          unit: t.unit, leaseStart: t.lease_start, leaseEnd: t.lease_end, rent: t.rent,
+          dob: t.dob, hasInsurance: t.has_insurance, bio: t.bio, deductible: t.deductible,
+          latePayments: t.late_payments
+        })));
+      }
+      
+      // Load vendors
+      const vendorsRes = await fetch(`${SUPABASE_URL}/rest/v1/vendors?select=*&order=created_at.desc`, { headers });
+      const vendorsData = await vendorsRes.json();
+      if (Array.isArray(vendorsData)) {
+        setLocalVendors(vendorsData.map(v => ({
+          id: v.id, companyName: v.company_name, contactName: v.contact_name,
+          category: v.category, email: v.email, phone: v.phone, city: v.city,
+          propertyIds: v.property_ids || [], serviceHistory: v.service_history || [],
+          notes: v.notes
+        })));
+      }
+    } catch (err) {
+      console.error("Error loading data:", err);
+    }
+    
+    setDataLoading(false);
+  };
+
+  // Save property to Supabase
+  const savePropertyToDb = async (property) => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/properties`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          user_id: user.id, name: property.name, address: property.address,
+          type: property.type, units: property.units, rent: property.rent,
+          purchase_date: property.purchaseDate || null
+        })
+      });
+      const data = await res.json();
+      return data[0];
+    } catch (err) {
+      console.error("Error saving property:", err);
+      return null;
+    }
+  };
+
+  // Save entry to Supabase
+  const saveEntryToDb = async (entry) => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/entries`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          user_id: user.id, date: entry.date, qualifies: entry.qualifies,
+          category: entry.category, category_label: entry.categoryLabel,
+          activity: entry.activity, minutes: entry.minutes,
+          property: entry.property, irs_description: entry.irsDescription
+        })
+      });
+      const data = await res.json();
+      return data[0];
+    } catch (err) {
+      console.error("Error saving entry:", err);
+      return null;
+    }
+  };
+
+  // Save tenant to Supabase
+  const saveTenantToDb = async (tenant) => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/tenants`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          user_id: user.id, first_name: tenant.firstName, last_name: tenant.lastName,
+          email: tenant.email, phone: tenant.phone, property_id: tenant.propertyId || null,
+          property_name: tenant.propertyName, unit: tenant.unit,
+          lease_start: tenant.leaseStart || null, lease_end: tenant.leaseEnd || null,
+          rent: tenant.rent || 0, dob: tenant.dob || null, has_insurance: tenant.hasInsurance,
+          bio: tenant.bio, deductible: tenant.deductible || 250, late_payments: tenant.latePayments || 0
+        })
+      });
+      const data = await res.json();
+      return data[0];
+    } catch (err) {
+      console.error("Error saving tenant:", err);
+      return null;
+    }
+  };
+
+  // Save vendor to Supabase
+  const saveVendorToDb = async (vendor) => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/vendors`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          user_id: user.id, company_name: vendor.companyName, contact_name: vendor.contactName,
+          category: vendor.category, email: vendor.email, phone: vendor.phone,
+          city: vendor.city, property_ids: vendor.propertyIds || [],
+          service_history: vendor.serviceHistory || [], notes: vendor.notes
+        })
+      });
+      const data = await res.json();
+      return data[0];
+    } catch (err) {
+      console.error("Error saving vendor:", err);
+      return null;
+    }
+  };
+
+  // Load data when user logs in
+  useEffect(() => {
+    if (user) {
+      loadAllData();
+    }
+  }, [user]);
+
   // Copy to clipboard helper
   const copyToClipboard = (text, type) => {
     navigator.clipboard.writeText(text);
@@ -750,18 +891,27 @@ function MainApp() {
   };
 
   // Add tenant function
-  const addTenant = () => {
+  const addTenant = async () => {
     if (!newTenant.firstName.trim() || !newTenant.lastName.trim()) return;
     
     const property = localProperties.find(p => p.id === newTenant.propertyId);
     const tenant = {
-      id: uid(),
       ...newTenant,
-      propertyName: property?.name || "Unknown",
-      rent: parseInt(newTenant.rent) || 0
+      propertyName: property?.name || "",
+      rent: parseInt(newTenant.rent) || 0,
+      deductible: 250,
+      latePayments: 0
     };
     
-    setLocalTenants(prev => [...prev, tenant]);
+    // Save to Supabase
+    const savedTenant = await saveTenantToDb(tenant);
+    if (savedTenant) {
+      tenant.id = savedTenant.id;
+    } else {
+      tenant.id = uid();
+    }
+    
+    setLocalTenants(prev => [tenant, ...prev]);
     setShowAddTenantModal(false);
     setNewTenant({ firstName: "", lastName: "", email: "", phone: "", propertyId: "", unit: "", leaseStart: "", leaseEnd: "", rent: "", dob: "", hasInsurance: false });
     
@@ -773,17 +923,22 @@ function MainApp() {
   };
 
   // Add vendor function
-  const addVendor = () => {
+  const addVendor = async () => {
     if (!newVendor.companyName.trim()) return;
     
-    const vendor = {
-      id: uid(),
-      ...newVendor
-    };
+    const vendor = { ...newVendor };
     
-    setLocalVendors(prev => [...prev, vendor]);
+    // Save to Supabase
+    const savedVendor = await saveVendorToDb(vendor);
+    if (savedVendor) {
+      vendor.id = savedVendor.id;
+    } else {
+      vendor.id = uid();
+    }
+    
+    setLocalVendors(prev => [vendor, ...prev]);
     setShowAddVendorModal(false);
-    setNewVendor({ companyName: "", contactName: "", category: "plumber", email: "", phone: "", propertyIds: [], notes: "" });
+    setNewVendor({ companyName: "", contactName: "", category: "plumber", email: "", phone: "", propertyIds: [], notes: "", city: "" });
     
     const categoryLabel = VENDOR_CATEGORIES.find(c => c.id === vendor.category)?.label || vendor.category;
     setMessages(prev => [...prev, {
@@ -794,11 +949,10 @@ function MainApp() {
   };
 
   // Add property function
-  const addProperty = () => {
+  const addProperty = async () => {
     if (!newProperty.address.trim()) return;
     
     const property = {
-      id: uid(),
       name: newProperty.address.split(",")[0].trim(),
       address: newProperty.address.trim(),
       type: newProperty.type,
@@ -806,6 +960,14 @@ function MainApp() {
       rent: parseInt(newProperty.rent) || 0,
       purchaseDate: newProperty.purchaseDate || null
     };
+    
+    // Save to Supabase
+    const savedProperty = await savePropertyToDb(property);
+    if (savedProperty) {
+      property.id = savedProperty.id;
+    } else {
+      property.id = uid();
+    }
     
     setLocalProperties(prev => [...prev, property]);
     setShowAddPropertyModal(false);
@@ -873,14 +1035,13 @@ function MainApp() {
   }));
 
   // Quick add non-REP hours function
-  const addNonREHours = () => {
+  const addNonREHours = async () => {
     if (!nonREHours || parseFloat(nonREHours) <= 0) return;
     
     const minutes = Math.round(parseFloat(nonREHours) * 60);
     const category = IRS_CATEGORIES[nonRECategory];
     
     const newEntry = {
-      id: uid(),
       date: todayStr(),
       qualifies: false,
       category: nonRECategory,
@@ -890,6 +1051,10 @@ function MainApp() {
       property: null,
       irsDescription: null
     };
+    
+    // Save to Supabase
+    const savedEntry = await saveEntryToDb(newEntry);
+    newEntry.id = savedEntry?.id || uid();
     
     setLocalEntries(prev => [newEntry, ...prev]);
     setShowNonREModal(false);
@@ -908,8 +1073,8 @@ function MainApp() {
 
   // Initialize welcome message with profile
   useEffect(() => {
-    if (profile && messages.length === 0) {
-      const reEntries = SAMPLE_ENTRIES.filter(e => e.qualifies);
+    if (profile && messages.length === 0 && !dataLoading) {
+      const reEntries = localEntries.filter(e => e.qualifies);
       const totalREMins = reEntries.reduce((s, e) => s + e.minutes, 0);
       const reHrs = Math.round(totalREMins / 60 * 10) / 10;
       
@@ -1026,7 +1191,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system: getSystemPrompt(reHrs, rePct, localEntries, profile, SAMPLE_PROPERTIES),
+          system: getSystemPrompt(reHrs, rePct, localEntries, profile, localProperties),
           messages: [...messages.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })), { role: "user", content: input.trim() }]
         })
       });
@@ -1043,7 +1208,6 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
       const activityData = parseActivityFromResponse(responseText);
       if (activityData) {
         const newEntry = {
-          id: uid(),
           date: todayStr(),
           qualifies: activityData.qualifies,
           category: activityData.category,
@@ -1053,6 +1217,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           property: activityData.property,
           irsDescription: activityData.irsDescription
         };
+        // Save to Supabase
+        const savedEntry = await saveEntryToDb(newEntry);
+        newEntry.id = savedEntry?.id || uid();
         setLocalEntries(prev => [newEntry, ...prev]);
       }
 
@@ -1060,7 +1227,6 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
       const propertyData = parsePropertyFromResponse(responseText);
       if (propertyData) {
         const newProperty = {
-          id: uid(),
           name: propertyData.address.split(",")[0].trim(),
           address: propertyData.address,
           type: propertyData.type || "single_family",
@@ -1068,6 +1234,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           rent: propertyData.rent || 0,
           purchaseDate: propertyData.purchaseDate || null
         };
+        // Save to Supabase
+        const savedProp = await savePropertyToDb(newProperty);
+        newProperty.id = savedProp?.id || uid();
         setLocalProperties(prev => [...prev, newProperty]);
       }
 
@@ -1075,7 +1244,6 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
       const tenantData = parseTenantFromResponse(responseText);
       if (tenantData) {
         const newTenant = {
-          id: uid(),
           firstName: tenantData.firstName,
           lastName: tenantData.lastName,
           email: tenantData.email || "",
@@ -1086,24 +1254,32 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           leaseEnd: tenantData.leaseEnd || "",
           rent: tenantData.rent || 0,
           dob: tenantData.dob || "",
-          hasInsurance: tenantData.hasInsurance || false
+          hasInsurance: tenantData.hasInsurance || false,
+          deductible: 250,
+          latePayments: 0
         };
-        setLocalTenants(prev => [...prev, newTenant]);
+        // Save to Supabase
+        const savedTenant = await saveTenantToDb(newTenant);
+        newTenant.id = savedTenant?.id || uid();
+        setLocalTenants(prev => [newTenant, ...prev]);
       }
 
       // Check for vendor data
       const vendorData = parseVendorFromResponse(responseText);
       if (vendorData) {
         const newVendor = {
-          id: uid(),
           companyName: vendorData.companyName,
           contactName: vendorData.contactName || "",
           category: vendorData.category || "other",
           email: vendorData.email || "",
           phone: vendorData.phone || "",
+          city: vendorData.city || "",
           notes: vendorData.notes || ""
         };
-        setLocalVendors(prev => [...prev, newVendor]);
+        // Save to Supabase
+        const savedVendor = await saveVendorToDb(newVendor);
+        newVendor.id = savedVendor?.id || uid();
+        setLocalVendors(prev => [newVendor, ...prev]);
       }
 
       const assistantMessage = {
@@ -1182,6 +1358,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.lighter }}>{profile.companyName}</div>
               )}
             </div>
+            <button onClick={() => setShowSettingsModal(true)} style={{ background: "transparent", border: "none", fontSize: 18, cursor: "pointer", padding: 8, color: C.goldL }} title="Settings">⚙️</button>
             <button onClick={signOut} className="btn-outline" style={{ padding: "6px 14px", fontSize: 10, color: "#aaa", borderColor: "#444" }}>Log Out</button>
           </div>
         </div>
@@ -1397,60 +1574,112 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         {/* DASHBOARD VIEW */}
         {view === "dashboard" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <div>
-              <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
-                Dashboard {profile?.firstName && <span style={{ fontWeight: 400, color: C.light }}>— {profile.firstName}</span>}
-              </h1>
-              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>{profile?.companyName || 'Track your real estate professional status'}</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
+                  Dashboard {profile?.firstName && <span style={{ fontWeight: 400, color: C.light }}>— {profile.firstName}</span>}
+                </h1>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>{profile?.companyName || 'Track your real estate professional status'}</p>
+              </div>
+              {/* Year Selector */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light }}>Tax Year:</span>
+                <select 
+                  value={selectedYear} 
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  style={{ padding: "8px 12px", borderRadius: 6, border: `1px solid ${C.border}`, fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, fontWeight: 600, background: "white", cursor: "pointer" }}
+                >
+                  {getAvailableYears().map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Year Qualification Status Banner */}
+            <div style={{ 
+              background: qualifiedForYear ? C.greenPale : C.orangePale, 
+              border: `2px solid ${qualifiedForYear ? C.greenB : C.orangeB}`, 
+              borderRadius: 12, 
+              padding: 20,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
+              <div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: qualifiedForYear ? C.green : C.orange, marginBottom: 4 }}>
+                  {qualifiedForYear ? "✅ REP Status Qualified" : "⚠️ REP Status Not Yet Qualified"} — {selectedYear}
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>
+                  {meetsHoursRequirement ? "✓" : "✗"} 750+ hours ({yearlyRepHours}h logged) &nbsp;&nbsp;
+                  {meetsPercentRequirement ? "✓" : "✗"} 50%+ REP time ({yearlyRepPct}% REP)
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: qualifiedForYear ? C.green : C.orange }}>
+                  {yearlyRepHours}h
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid }}>
+                  {meetsHoursRequirement ? "Threshold met!" : `${Math.max(0, 750 - yearlyRepHours).toFixed(1)}h to go`}
+                </div>
+              </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
               <div className="card" style={{ borderLeft: `4px solid ${C.greenB}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>REP HOURS</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.green }}>{reHrs}h</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>REP HOURS ({selectedYear})</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.green }}>{yearlyRepHours}h</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>of 750h threshold</div>
               </div>
               <div className="card" style={{ borderLeft: `4px solid ${C.redB}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>NON-REPP HOURS</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.red }}>{nonREHrs}h</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>NON-REP HOURS</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.red }}>{Math.round(yearlyNonRepMinutes / 60 * 10) / 10}h</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>W-2 & other work</div>
               </div>
               <div className="card" style={{ borderLeft: `4px solid ${C.goldL}` }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>REP PERCENTAGE</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.gold }}>{rePct.toFixed(0)}%</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.gold }}>{yearlyRepPct}%</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>of total work time</div>
               </div>
               <div className="card" style={{ borderLeft: `4px solid ${C.blueB}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>ENTRIES</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.blue }}>{localEntries.length}</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>ENTRIES ({selectedYear})</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.blue }}>{entriesForYear.length}</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>activities logged</div>
               </div>
               <div className="card" style={{ borderLeft: `4px solid ${C.purpleB}` }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>PROPERTIES</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.purple }}>{SAMPLE_PROPERTIES.length}</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.purple }}>{localProperties.length}</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>in portfolio</div>
               </div>
             </div>
 
             <div className="card">
-              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Recent Activity</h2>
-              {localEntries.slice(0, 5).map(e => (
-                <div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${C.borderL}` }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.text }}>{e.activity}</div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light, marginTop: 2 }}>{e.date} · {e.categoryLabel}</div>
-                    {e.irsDescription && (
-                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid, marginTop: 6, padding: "6px 8px", background: C.greenPale, borderRadius: 3, borderLeft: `2px solid ${C.greenB}` }}>
-                        📝 {e.irsDescription.substring(0, 100)}...
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginLeft: 16 }}>
-                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.gold, fontWeight: 600 }}>{fmtH(e.minutes)}</span>
-                    <span style={{ padding: "2px 8px", borderRadius: 2, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", background: e.qualifies ? C.greenPale : C.redPale, color: e.qualifies ? C.green : C.red }}>{e.qualifies ? "RE" : "Non-REP"}</span>
-                  </div>
+              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Recent Activity ({selectedYear})</h2>
+              {entriesForYear.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: C.light }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>📝</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13 }}>No activities logged for {selectedYear}</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, marginTop: 8 }}>Go to Assistant to start logging REP hours</div>
                 </div>
-              ))}
+              ) : (
+                entriesForYear.slice(0, 5).map(e => (
+                  <div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${C.borderL}` }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.text }}>{e.activity}</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light, marginTop: 2 }}>{e.date} · {e.categoryLabel}</div>
+                      {e.irsDescription && (
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid, marginTop: 6, padding: "6px 8px", background: C.greenPale, borderRadius: 3, borderLeft: `2px solid ${C.greenB}` }}>
+                          📝 {e.irsDescription.substring(0, 100)}...
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginLeft: 16 }}>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.gold, fontWeight: 600 }}>{fmtH(e.minutes)}</span>
+                      <span style={{ padding: "2px 8px", borderRadius: 2, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", background: e.qualifies ? C.greenPale : C.redPale, color: e.qualifies ? C.green : C.red }}>{e.qualifies ? "REP" : "Non-REP"}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
@@ -1632,7 +1861,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                         {/* Icon-only action buttons */}
                         <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                           <a 
-                            href={`mailto:${tenant.email}?subject=Regarding Your Lease at ${tenant.propertyName}`}
+                            href={getEmailLink(tenant.email, `Regarding Your Lease at ${tenant.propertyName}`)}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
                             style={{ padding: "8px 12px", background: C.blueB, border: "none", borderRadius: 4, color: "white", cursor: "pointer", textDecoration: "none", fontSize: 14 }}
                             title="Send Email"
@@ -1749,7 +1980,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                               {/* Icon-only action buttons */}
                               <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                                 <a 
-                                  href={`mailto:${vendor.email}?subject=Service Request`}
+                                  href={getEmailLink(vendor.email, "Service Request")}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
                                   onClick={(e) => e.stopPropagation()}
                                   style={{ padding: "8px 12px", background: C.goldL, border: "none", borderRadius: 4, color: C.dark, cursor: "pointer", textDecoration: "none", fontSize: 14 }}
                                   title="Send Email"
@@ -2723,7 +2956,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               {/* Quick Actions - Icon buttons + Send Email */}
               <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
                 <a 
-                  href={`mailto:${showTenantDetailModal.email}?subject=Regarding Your Lease at ${showTenantDetailModal.propertyName}`}
+                  href={getEmailLink(showTenantDetailModal.email, `Regarding Your Lease at ${showTenantDetailModal.propertyName}`)}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{ flex: 1, padding: "12px", background: C.blueB, border: "none", borderRadius: 6, color: "white", fontSize: 12, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace", textDecoration: "none", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                 >
                   ✉️ Send Email
@@ -2957,14 +3192,26 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
             <div style={{ padding: 24 }}>
               {/* Quick Actions */}
-              <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                <a 
+                  href={getEmailLink(showVendorDetailModal.email, "Service Request")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ flex: 1, padding: "12px", background: C.goldL, border: "none", borderRadius: 6, color: C.dark, fontSize: 12, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace", textDecoration: "none", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                >
+                  ✉️ Send Email
+                </a>
                 <button onClick={() => copyToClipboard(showVendorDetailModal.email)}
-                  style={{ flex: 1, padding: "12px", background: C.goldL, border: "none", borderRadius: 6, color: C.dark, fontSize: 11, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
-                  📧 Copy Email
+                  style={{ padding: "12px 16px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", fontSize: 16 }}
+                  title="Copy Email"
+                >
+                  📋
                 </button>
                 <button onClick={() => copyToClipboard(showVendorDetailModal.phone)}
-                  style={{ flex: 1, padding: "12px", background: C.greenB, border: "none", borderRadius: 6, color: "white", fontSize: 11, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
-                  📱 Copy Phone
+                  style={{ padding: "12px 16px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", fontSize: 16 }}
+                  title="Copy Phone"
+                >
+                  📱
                 </button>
               </div>
 
@@ -2999,6 +3246,95 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                   Ask the AI to draft formal service requests, quote requests, or follow-up communications to this vendor.
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ SETTINGS MODAL ═══ */}
+      {showSettingsModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.9)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+        }}>
+          <div style={{
+            background: C.bg, borderRadius: 12, padding: 0, width: "100%",
+            maxWidth: 450, boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+          }}>
+            <div style={{ 
+              background: C.dark, padding: "20px 24px", 
+              borderRadius: "12px 12px 0 0", display: "flex", 
+              justifyContent: "space-between", alignItems: "center"
+            }}>
+              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: "white", margin: 0 }}>
+                ⚙️ Settings
+              </h2>
+              <button onClick={() => setShowSettingsModal(false)} style={{
+                background: "rgba(255,255,255,0.2)", border: "none", fontSize: 20, color: "white", 
+                cursor: "pointer", width: 36, height: 36, borderRadius: "50%"
+              }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {/* Email Provider Selection */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 12 }}>EMAIL PROVIDER</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginBottom: 12 }}>
+                  Choose which email app opens when you click "Send Email"
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[
+                    { id: 'gmail', name: 'Gmail', icon: '📧', desc: 'Opens Gmail in browser' },
+                    { id: 'outlook', name: 'Outlook', icon: '📬', desc: 'Opens Outlook.com' },
+                    { id: 'apple', name: 'Apple Mail', icon: '✉️', desc: 'Opens default mail app' }
+                  ].map(provider => (
+                    <button
+                      key={provider.id}
+                      onClick={() => saveEmailProvider(provider.id)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 12,
+                        padding: "12px 16px", border: `2px solid ${emailProvider === provider.id ? C.goldL : C.border}`,
+                        borderRadius: 8, background: emailProvider === provider.id ? C.goldPale : "white",
+                        cursor: "pointer", textAlign: "left"
+                      }}
+                    >
+                      <span style={{ fontSize: 20 }}>{provider.icon}</span>
+                      <div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: C.dark }}>{provider.name}</div>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light }}>{provider.desc}</div>
+                      </div>
+                      {emailProvider === provider.id && (
+                        <span style={{ marginLeft: "auto", color: C.green, fontSize: 16 }}>✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Account Info */}
+              <div style={{ background: "#f5f5f5", borderRadius: 8, padding: 16, marginBottom: 24 }}>
+                <div style={{ fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>ACCOUNT</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.text }}>
+                  {profile?.firstName} {profile?.lastName}
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>
+                  {user?.email}
+                </div>
+                {profile?.companyName && (
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light, marginTop: 4 }}>
+                    {profile.companyName}
+                  </div>
+                )}
+              </div>
+
+              {/* Close Button */}
+              <button 
+                onClick={() => setShowSettingsModal(false)}
+                style={{ width: "100%", padding: "12px 20px", background: C.gold, border: "none", borderRadius: 6, color: C.dark, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}
+              >
+                Save & Close
+              </button>
             </div>
           </div>
         </div>
