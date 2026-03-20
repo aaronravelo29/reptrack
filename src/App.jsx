@@ -743,6 +743,22 @@ function MainApp() {
   // Settings modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [emailProvider, setEmailProvider] = useState(() => localStorage.getItem('reptrack-email-provider') || 'gmail');
+  const [fontSize, setFontSize] = useState(() => localStorage.getItem('reptrack-font-size') || 'medium');
+  
+  // Font size multipliers
+  const fontSizes = {
+    small: { base: 14, label: 12, title: 20, big: 28 },
+    medium: { base: 16, label: 14, title: 24, big: 32 },
+    large: { base: 18, label: 16, title: 28, big: 38 },
+    xlarge: { base: 22, label: 20, title: 34, big: 46 }
+  };
+  const fs = fontSizes[fontSize] || fontSizes.medium;
+  
+  // Save font size preference
+  const saveFontSize = (size) => {
+    setFontSize(size);
+    localStorage.setItem('reptrack-font-size', size);
+  };
   
   // Year selection for viewing historical data
   const currentYear = new Date().getFullYear();
@@ -754,8 +770,27 @@ function MainApp() {
   const [newProperty, setNewProperty] = useState({
     address: "", type: "single_family", units: 1, rent: "", purchaseDate: "",
     purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false,
-    taxes: "", insurance: "", hoa: "", utilities: "", maintenance: "", propertyMgmt: "", vacancyRate: "5"
+    taxes: "", insurance: "", hoa: "", utilities: "", maintenance: "", propertyMgmt: "", vacancyRate: "5",
+    unitDetails: [] // Array of { unitName, beds, baths, rent }
   });
+  
+  // Helper to update unit details for multifamily
+  const updateUnitDetail = (index, field, value) => {
+    const updatedUnits = [...newProperty.unitDetails];
+    updatedUnits[index] = { ...updatedUnits[index], [field]: value };
+    setNewProperty({ ...newProperty, unitDetails: updatedUnits });
+  };
+  
+  // Generate unit details when units count changes
+  const handleUnitsChange = (numUnits) => {
+    const num = parseInt(numUnits) || 1;
+    const currentUnits = newProperty.unitDetails;
+    let newUnits = [];
+    for (let i = 0; i < num; i++) {
+      newUnits.push(currentUnits[i] || { unitName: `Unit ${i + 1}`, beds: 1, baths: 1, rent: '' });
+    }
+    setNewProperty({ ...newProperty, units: num, unitDetails: newUnits });
+  };
 
   // Tenant modals
   const [showAddTenantModal, setShowAddTenantModal] = useState(false);
@@ -1092,7 +1127,9 @@ function MainApp() {
       isSTR: newProperty.isSTR || false,
       // Operating expenses
       taxes, insurance, hoa, utilities, maintenance, propertyMgmt, vacancyRate,
-      totalExpenses
+      totalExpenses,
+      // Unit details for multifamily
+      unitDetails: newProperty.unitDetails || []
     };
     
     // Calculate metrics with actual expenses
@@ -1115,7 +1152,8 @@ function MainApp() {
     setNewProperty({ 
       address: "", type: "single_family", units: 1, rent: "", purchaseDate: "", 
       purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false,
-      taxes: "", insurance: "", hoa: "", utilities: "", maintenance: "", propertyMgmt: "", vacancyRate: "5"
+      taxes: "", insurance: "", hoa: "", utilities: "", maintenance: "", propertyMgmt: "", vacancyRate: "5",
+      unitDetails: []
     });
     
     // Confirmation in chat with ROI info
@@ -1124,10 +1162,16 @@ function MainApp() {
     if (cashOnCash) roiInfo += `\n• Cash-on-Cash: ${cashOnCash}%`;
     if (property.mortgagePayment) roiInfo += `\n• Monthly Cash Flow: ${cashFlow >= 0 ? '+' : ''}$${cashFlow.toLocaleString()}`;
     
+    // Add unit breakdown for multifamily
+    let unitInfo = "";
+    if (property.units > 1 && property.unitDetails.length > 0) {
+      unitInfo = `\n\n**Unit Breakdown:**\n${property.unitDetails.map(u => `• ${u.unitName}: ${u.beds} bed/${u.baths} bath - $${parseInt(u.rent || 0).toLocaleString()}/mo`).join('\n')}`;
+    }
+    
     setMessages(prev => [...prev, {
       role: "assistant",
       id: uid(),
-      content: `🏠 **Property Added!**\n\n• Address: ${property.address}\n• Type: ${property.isSTR ? 'Short-Term Rental' : 'Long-Term Rental'}\n• Units: ${property.units}\n• Rent: $${property.rent.toLocaleString()}/mo${roiInfo}\n\nYou can now log REP hours for this property!`,
+      content: `🏠 **Property Added!**\n\n• Address: ${property.address}\n• Type: ${property.isSTR ? 'Short-Term Rental' : 'Long-Term Rental'}\n• Units: ${property.units}\n• Total Rent: $${property.rent.toLocaleString()}/mo${roiInfo}${unitInfo}\n\nYou can now log REP hours for this property!`,
       activityLogged: true
     }]);
   };
@@ -1495,33 +1539,50 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         .progress-ring { transform: rotate(-90deg); }
       `}</style>
 
-      {/* Header */}
-      <header style={{ background: C.darker, borderBottom: `1px solid ${C.gold}`, padding: "0 24px" }}>
+      {/* Header - LIGHT & ACCESSIBLE */}
+      <header style={{ background: "#FFFFFF", borderBottom: "3px solid #B8860B", padding: "0 24px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
         <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
             <div style={{ padding: "14px 0" }}>
-              <span style={{ fontSize: 22, fontWeight: 700, color: C.goldBright, fontFamily: "'Inter', sans-serif" }}>
-                Rep<span style={{ color: "#fff" }}>Track</span>
+              <span style={{ fontSize: 28, fontWeight: 800, color: "#1a1a2e", fontFamily: "'Inter', sans-serif" }}>
+                Rep<span style={{ color: "#B8860B" }}>Track</span>
               </span>
             </div>
-            <nav style={{ display: "flex", gap: 0 }}>
+            <nav style={{ display: "flex", gap: 4 }}>
               {VIEWS.map(v => (
-                <button key={v.id} className={`nav-item ${view === v.id ? "active" : ""}`} onClick={() => setView(v.id)}>
-                  <span style={{ fontSize: 15 }}>{v.icon}</span>
-                  <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase" }}>{v.label}</span>
+                <button 
+                  key={v.id} 
+                  onClick={() => setView(v.id)}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                    padding: "12px 20px", border: "none", cursor: "pointer",
+                    background: view === v.id ? "#FFF8DC" : "transparent",
+                    borderBottom: view === v.id ? "4px solid #B8860B" : "4px solid transparent",
+                    borderRadius: "8px 8px 0 0",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>{v.icon}</span>
+                  <span style={{ 
+                    fontFamily: "'Inter', sans-serif", 
+                    fontSize: 14, 
+                    fontWeight: view === v.id ? 700 : 500,
+                    color: view === v.id ? "#8B6914" : "#424242",
+                    letterSpacing: 0.5
+                  }}>{v.label}</span>
                 </button>
               ))}
             </nav>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.goldL }}>{displayName}</div>
+              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: "#1a1a2e", fontWeight: 600 }}>{displayName}</div>
               {profile?.companyName && (
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.lighter }}>{profile.companyName}</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#616161" }}>{profile.companyName}</div>
               )}
             </div>
-            <button onClick={() => setShowSettingsModal(true)} style={{ background: "transparent", border: "none", fontSize: 18, cursor: "pointer", padding: 8, color: C.goldL }} title="Settings">⚙️</button>
-            <button onClick={signOut} className="btn-outline" style={{ padding: "6px 14px", fontSize: 10, color: "#aaa", borderColor: "#444" }}>Log Out</button>
+            <button onClick={() => setShowSettingsModal(true)} style={{ background: "#f5f5f5", border: "2px solid #e0e0e0", fontSize: 24, cursor: "pointer", padding: "8px 12px", borderRadius: 8 }} title="Settings">⚙️</button>
+            <button onClick={signOut} style={{ padding: "10px 20px", fontSize: 14, color: "#616161", background: "#f5f5f5", border: "2px solid #e0e0e0", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>Log Out</button>
           </div>
         </div>
       </header>
@@ -3001,39 +3062,113 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               {/* Units and Rent */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                  <label style={{ display: "block", fontSize: 14, color: "#1a1a2e", letterSpacing: 1, fontWeight: 600, marginBottom: 8 }}>
                     Number of Units
                   </label>
                   <input
                     type="number"
                     min="1"
+                    max="20"
                     value={newProperty.units}
-                    onChange={(e) => setNewProperty({...newProperty, units: e.target.value})}
+                    onChange={(e) => handleUnitsChange(e.target.value)}
                     style={{
-                      width: "100%", padding: "12px 14px", fontSize: 14, border: `1px solid ${C.border}`,
-                      borderRadius: 6, background: "white", color: C.text, outline: "none",
-                      fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                      width: "100%", padding: "14px 16px", fontSize: 18, border: "2px solid #e0e0e0",
+                      borderRadius: 8, background: "white", color: "#1a1a2e", outline: "none",
+                      fontFamily: "'Inter', sans-serif", boxSizing: "border-box", fontWeight: 600
                     }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
-                    Monthly Rent ($)
+                  <label style={{ display: "block", fontSize: 14, color: "#1a1a2e", letterSpacing: 1, fontWeight: 600, marginBottom: 8 }}>
+                    {newProperty.units > 1 ? "Total Monthly Rent ($)" : "Monthly Rent ($)"}
                   </label>
                   <input
                     type="number"
                     min="0"
                     value={newProperty.rent}
                     onChange={(e) => setNewProperty({...newProperty, rent: e.target.value})}
-                    placeholder="2500"
+                    placeholder={newProperty.units > 1 ? "Combined rent" : "2500"}
                     style={{
-                      width: "100%", padding: "12px 14px", fontSize: 14, border: `1px solid ${C.border}`,
-                      borderRadius: 6, background: "white", color: C.text, outline: "none",
-                      fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                      width: "100%", padding: "14px 16px", fontSize: 18, border: "2px solid #e0e0e0",
+                      borderRadius: 8, background: "white", color: "#1a1a2e", outline: "none",
+                      fontFamily: "'Inter', sans-serif", boxSizing: "border-box", fontWeight: 600
                     }}
                   />
                 </div>
               </div>
+
+              {/* Multifamily Unit Details */}
+              {newProperty.units > 1 && (
+                <div style={{ marginBottom: 20, background: "#E3F2FD", border: "2px solid #1565C0", borderRadius: 12, padding: 20 }}>
+                  <div style={{ fontSize: 16, color: "#0D47A1", fontWeight: 700, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                    🏢 UNIT DETAILS ({newProperty.units} units)
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 300, overflowY: "auto" }}>
+                    {newProperty.unitDetails.map((unit, idx) => (
+                      <div key={idx} style={{ background: "white", borderRadius: 8, padding: 16, border: "1px solid #BBDEFB" }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#1565C0", marginBottom: 12 }}>
+                          Unit {idx + 1}
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1.5fr", gap: 12 }}>
+                          <div>
+                            <label style={{ display: "block", fontSize: 12, color: "#616161", marginBottom: 4 }}>Unit Name</label>
+                            <input
+                              type="text"
+                              value={unit.unitName || ''}
+                              onChange={(e) => updateUnitDetail(idx, 'unitName', e.target.value)}
+                              placeholder="1A, 2B..."
+                              style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "2px solid #e0e0e0", borderRadius: 6, boxSizing: "border-box" }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: "block", fontSize: 12, color: "#616161", marginBottom: 4 }}>Beds</label>
+                            <select
+                              value={unit.beds || 1}
+                              onChange={(e) => updateUnitDetail(idx, 'beds', e.target.value)}
+                              style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "2px solid #e0e0e0", borderRadius: 6 }}
+                            >
+                              <option value="0">Studio</option>
+                              <option value="1">1 Bed</option>
+                              <option value="2">2 Bed</option>
+                              <option value="3">3 Bed</option>
+                              <option value="4">4 Bed</option>
+                              <option value="5">5+ Bed</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ display: "block", fontSize: 12, color: "#616161", marginBottom: 4 }}>Baths</label>
+                            <select
+                              value={unit.baths || 1}
+                              onChange={(e) => updateUnitDetail(idx, 'baths', e.target.value)}
+                              style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "2px solid #e0e0e0", borderRadius: 6 }}
+                            >
+                              <option value="1">1 Bath</option>
+                              <option value="1.5">1.5 Bath</option>
+                              <option value="2">2 Bath</option>
+                              <option value="2.5">2.5 Bath</option>
+                              <option value="3">3+ Bath</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ display: "block", fontSize: 12, color: "#616161", marginBottom: 4 }}>Rent/mo ($)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={unit.rent || ''}
+                              onChange={(e) => updateUnitDetail(idx, 'rent', e.target.value)}
+                              placeholder="1500"
+                              style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "2px solid #e0e0e0", borderRadius: 6, boxSizing: "border-box" }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 12, fontSize: 14, color: "#1565C0", fontWeight: 600 }}>
+                    💡 Total from units: ${newProperty.unitDetails.reduce((sum, u) => sum + (parseInt(u.rent) || 0), 0).toLocaleString()}/mo
+                  </div>
+                </div>
+              )}
 
               {/* Rental Type - STR vs LTR */}
               <div style={{ marginBottom: 16 }}>
@@ -3913,10 +4048,43 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
             </div>
 
             <div style={{ padding: 24 }}>
+              {/* Font Size Selection */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 14, color: "#1a1a2e", letterSpacing: 2, marginBottom: 12, fontWeight: 700 }}>🔤 TEXT SIZE</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: "#616161", marginBottom: 12 }}>
+                  Make text easier to read
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {[
+                    { id: 'small', name: 'Small', sample: 'Aa', size: 14 },
+                    { id: 'medium', name: 'Medium', sample: 'Aa', size: 18 },
+                    { id: 'large', name: 'Large', sample: 'Aa', size: 24 },
+                    { id: 'xlarge', name: 'Extra Large', sample: 'Aa', size: 30 }
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => saveFontSize(opt.id)}
+                      style={{
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+                        padding: "16px", border: `3px solid ${fontSize === opt.id ? "#B8860B" : "#e0e0e0"}`,
+                        borderRadius: 12, background: fontSize === opt.id ? "#FFF8DC" : "white",
+                        cursor: "pointer"
+                      }}
+                    >
+                      <span style={{ fontSize: opt.size, fontWeight: 700, color: "#1a1a2e" }}>{opt.sample}</span>
+                      <span style={{ fontSize: 16, fontWeight: 600, color: fontSize === opt.id ? "#8B6914" : "#616161" }}>{opt.name}</span>
+                      {fontSize === opt.id && (
+                        <span style={{ color: "#2E7D32", fontSize: 20 }}>✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Email Provider Selection */}
               <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 12 }}>EMAIL PROVIDER</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginBottom: 12 }}>
+                <div style={{ fontSize: 14, color: "#1a1a2e", letterSpacing: 2, marginBottom: 12, fontWeight: 700 }}>📧 EMAIL PROVIDER</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: "#616161", marginBottom: 12 }}>
                   Choose which email app opens when you click "Send Email"
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -3930,18 +4098,18 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                       onClick={() => saveEmailProvider(provider.id)}
                       style={{
                         display: "flex", alignItems: "center", gap: 12,
-                        padding: "12px 16px", border: `2px solid ${emailProvider === provider.id ? C.goldL : C.border}`,
-                        borderRadius: 8, background: emailProvider === provider.id ? C.goldPale : "white",
+                        padding: "14px 18px", border: `3px solid ${emailProvider === provider.id ? "#B8860B" : "#e0e0e0"}`,
+                        borderRadius: 12, background: emailProvider === provider.id ? "#FFF8DC" : "white",
                         cursor: "pointer", textAlign: "left"
                       }}
                     >
-                      <span style={{ fontSize: 20 }}>{provider.icon}</span>
+                      <span style={{ fontSize: 24 }}>{provider.icon}</span>
                       <div>
-                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: C.dark }}>{provider.name}</div>
-                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light }}>{provider.desc}</div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: "#1a1a2e" }}>{provider.name}</div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#616161" }}>{provider.desc}</div>
                       </div>
                       {emailProvider === provider.id && (
-                        <span style={{ marginLeft: "auto", color: C.green, fontSize: 16 }}>✓</span>
+                        <span style={{ marginLeft: "auto", color: "#2E7D32", fontSize: 20 }}>✓</span>
                       )}
                     </button>
                   ))}
