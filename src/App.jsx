@@ -439,7 +439,6 @@ const VIEWS = [
   { id:"dashboard", icon:"◉", label:"Dashboard" },
   { id:"records", icon:"⊟", label:"Records" },
   { id:"properties", icon:"⌂", label:"Properties" },
-  { id:"str", icon:"🏖️", label:"STR" },
   { id:"tenants", icon:"👥", label:"Tenants" },
   { id:"vendors", icon:"🔧", label:"Vendors" },
 ];
@@ -746,7 +745,8 @@ function MainApp() {
   const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
   const [showPropertyDetailModal, setShowPropertyDetailModal] = useState(null);
   const [newProperty, setNewProperty] = useState({
-    address: "", type: "single_family", units: 1, rent: "", purchaseDate: ""
+    address: "", type: "single_family", units: 1, rent: "", purchaseDate: "",
+    purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false
   });
 
   // Tenant modals
@@ -1067,8 +1067,17 @@ function MainApp() {
       type: newProperty.type,
       units: parseInt(newProperty.units) || 1,
       rent: parseInt(newProperty.rent) || 0,
-      purchaseDate: newProperty.purchaseDate || null
+      purchaseDate: newProperty.purchaseDate || null,
+      purchasePrice: parseInt(newProperty.purchasePrice) || 0,
+      downPayment: parseInt(newProperty.downPayment) || 0,
+      mortgagePayment: parseInt(newProperty.mortgagePayment) || 0,
+      isSTR: newProperty.isSTR || false
     };
+    
+    // Calculate metrics
+    const cashFlow = property.rent - property.mortgagePayment;
+    const capRate = property.purchasePrice ? (((property.rent * 12) * 0.6) / property.purchasePrice * 100).toFixed(1) : null;
+    const cashOnCash = property.downPayment ? ((cashFlow * 12) / property.downPayment * 100).toFixed(1) : null;
     
     // Save to Supabase
     const savedProperty = await savePropertyToDb(property);
@@ -1080,13 +1089,18 @@ function MainApp() {
     
     setLocalProperties(prev => [...prev, property]);
     setShowAddPropertyModal(false);
-    setNewProperty({ address: "", type: "single_family", units: 1, rent: "", purchaseDate: "" });
+    setNewProperty({ address: "", type: "single_family", units: 1, rent: "", purchaseDate: "", purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false });
     
-    // Confirmation in chat
+    // Confirmation in chat with ROI info
+    let roiInfo = "";
+    if (capRate) roiInfo += `\n• Cap Rate: ${capRate}%`;
+    if (cashOnCash) roiInfo += `\n• Cash-on-Cash: ${cashOnCash}%`;
+    if (property.mortgagePayment) roiInfo += `\n• Monthly Cash Flow: ${cashFlow >= 0 ? '+' : ''}$${cashFlow.toLocaleString()}`;
+    
     setMessages(prev => [...prev, {
       role: "assistant",
       id: uid(),
-      content: `🏠 **Property Added!**\n\n• Address: ${property.address}\n• Type: ${property.type.replace("_", " ")}\n• Units: ${property.units}\n• Rent: $${property.rent.toLocaleString()}/mo\n\nYou can now log REP hours for this property!`,
+      content: `🏠 **Property Added!**\n\n• Address: ${property.address}\n• Type: ${property.isSTR ? 'Short-Term Rental' : 'Long-Term Rental'}\n• Units: ${property.units}\n• Rent: $${property.rent.toLocaleString()}/mo${roiInfo}\n\nYou can now log REP hours for this property!`,
       activityLogged: true
     }]);
   };
@@ -1523,12 +1537,42 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               </div>
 
               {/* Input */}
-              <div style={{ marginTop: 16, display: "flex", gap: 12 }}>
+              <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "flex-end" }}>
+                {/* File Upload Button */}
+                <label style={{ 
+                  padding: "14px 16px", background: "#f5f5f5", border: `1px solid ${C.border}`,
+                  borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+                  transition: "all 0.15s"
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = "#eee"}
+                onMouseOut={(e) => e.currentTarget.style.background = "#f5f5f5"}
+                title="Upload document (mortgage statement, lease, etc.)"
+                >
+                  <span style={{ fontSize: 18 }}>📎</span>
+                  <input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" style={{ display: "none" }} 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          setInput(prev => prev + `\n\n[Uploaded: ${file.name}]\nPlease analyze this document and extract relevant property/financial information.`);
+                        };
+                        reader.readAsDataURL(file);
+                        // Note: Full file processing would require backend integration
+                        setMessages(prev => [...prev, {
+                          role: "assistant", id: uid(),
+                          content: `📎 **Document Received: ${file.name}**\n\nI noticed you uploaded a document. While I can't directly read file contents in this interface, you can:\n\n1. **Copy/paste** the key information from your mortgage statement\n2. **Tell me** the details like:\n   - Monthly mortgage payment\n   - Purchase price\n   - Down payment amount\n   - Interest rate\n\nI'll help you add it to your property records!`
+                        }]);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Describe your real estate activity... (e.g., 'I spent 2 hours showing properties today')"
+                  placeholder="Describe your activity or paste mortgage/property info... (Press Enter to send)"
                   style={{
                     flex: 1, padding: "14px 16px", fontSize: 14, border: `1px solid ${C.border}`,
                     borderRadius: 8, background: "white", color: C.text, outline: "none", resize: "none",
@@ -1860,72 +1904,142 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 ➕ Add Property
               </button>
             </div>
+
+            {/* Portfolio Summary */}
+            {localProperties.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                <div className="card" style={{ padding: 16, borderLeft: `4px solid ${C.greenB}` }}>
+                  <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>TOTAL MONTHLY RENT</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: C.green, fontFamily: "'Inter', sans-serif" }}>
+                    ${localProperties.reduce((s, p) => s + (p.rent || 0), 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="card" style={{ padding: 16, borderLeft: `4px solid ${C.blueB}` }}>
+                  <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>TOTAL MORTGAGE</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: C.blue, fontFamily: "'Inter', sans-serif" }}>
+                    ${localProperties.reduce((s, p) => s + (p.mortgagePayment || 0), 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="card" style={{ padding: 16, borderLeft: `4px solid ${(() => {
+                  const cashFlow = localProperties.reduce((s, p) => s + (p.rent || 0) - (p.mortgagePayment || 0), 0);
+                  return cashFlow >= 0 ? C.greenB : C.redB;
+                })()}` }}>
+                  <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>NET CASH FLOW</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: (() => {
+                    const cashFlow = localProperties.reduce((s, p) => s + (p.rent || 0) - (p.mortgagePayment || 0), 0);
+                    return cashFlow >= 0 ? C.green : C.red;
+                  })(), fontFamily: "'Inter', sans-serif" }}>
+                    ${localProperties.reduce((s, p) => s + (p.rent || 0) - (p.mortgagePayment || 0), 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="card" style={{ padding: 16, borderLeft: `4px solid ${C.goldL}` }}>
+                  <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>AVG CAP RATE</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, color: C.gold, fontFamily: "'Inter', sans-serif" }}>
+                    {(() => {
+                      const propsWithValue = localProperties.filter(p => p.purchasePrice && p.rent);
+                      if (propsWithValue.length === 0) return "—";
+                      const avgCapRate = propsWithValue.reduce((s, p) => {
+                        const noi = (p.rent * 12) * 0.6; // Assume 40% expenses
+                        return s + (noi / p.purchasePrice * 100);
+                      }, 0) / propsWithValue.length;
+                      return avgCapRate.toFixed(1) + "%";
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              {localProperties.map(p => (
-                <div 
-                  key={p.id} 
-                  className="card" 
-                  onClick={() => setShowPropertyDetailModal(p)}
-                  style={{ 
-                    borderLeft: `4px solid ${p.isSTR ? "#FF5A5F" : C.greenB}`, cursor: "pointer",
-                    transition: "transform 0.15s, box-shadow 0.15s"
-                  }}
-                  onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)"; }}
-                  onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, fontWeight: 600, color: C.dark }}>{p.name}</span>
-                      {p.isSTR && (
-                        <span style={{ padding: "2px 6px", background: "#FF5A5F", color: "white", fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, borderRadius: 3, fontWeight: 600 }}>STR</span>
-                      )}
+              {localProperties.map(p => {
+                const cashFlow = (p.rent || 0) - (p.mortgagePayment || 0);
+                const isPositive = cashFlow >= 0;
+                const capRate = p.purchasePrice && p.rent ? (((p.rent * 12) * 0.6) / p.purchasePrice * 100) : null;
+                const cashOnCash = p.downPayment && cashFlow ? ((cashFlow * 12) / p.downPayment * 100) : null;
+                
+                return (
+                  <div 
+                    key={p.id} 
+                    className="card" 
+                    onClick={() => setShowPropertyDetailModal(p)}
+                    style={{ 
+                      borderLeft: `4px solid ${isPositive ? C.greenB : C.redB}`, cursor: "pointer",
+                      transition: "transform 0.15s, box-shadow 0.15s"
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)"; }}
+                    onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, fontWeight: 600, color: C.dark }}>{p.name}</span>
+                        {p.isSTR ? (
+                          <span style={{ padding: "2px 6px", background: "#FF5A5F", color: "white", fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, borderRadius: 3, fontWeight: 600 }}>STR</span>
+                        ) : (
+                          <span style={{ padding: "2px 6px", background: C.blueB, color: "white", fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, borderRadius: 3, fontWeight: 600 }}>LTR</span>
+                        )}
+                      </div>
+                      <span style={{ padding: "2px 8px", background: "#f0ece4", border: `1px solid ${C.border}`, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid, borderRadius: 2 }}>{p.type?.replace("_", " ") || "Property"}</span>
                     </div>
-                    <span style={{ padding: "2px 8px", background: "#f0ece4", border: `1px solid ${C.border}`, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid, borderRadius: 2 }}>{p.type.replace("_", " ")}</span>
-                  </div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid, marginBottom: 12 }}>{p.address}</div>
-                  <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light }}>{p.units} unit{p.units !== 1 ? "s" : ""}</div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.green, fontWeight: 600 }}>${p.rent?.toLocaleString() || 0}<span style={{ fontSize: 10, color: C.light }}>/mo</span></div>
-                    {/* STR Toggle */}
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setLocalProperties(prev => prev.map(prop => 
-                          prop.id === p.id ? {...prop, isSTR: !prop.isSTR} : prop
-                        ));
-                      }}
-                      style={{ 
-                        marginLeft: "auto", padding: "4px 8px", 
-                        background: p.isSTR ? "#FF5A5F" : "#f0f0f0", 
-                        border: "none", borderRadius: 4, 
-                        fontSize: 10, color: p.isSTR ? "white" : C.mid, 
-                        cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace"
-                      }}
-                    >
-                      {p.isSTR ? "🏖️ STR" : "Set as STR"}
-                    </button>
-                  </div>
-                  {/* Hours logged for this property */}
-                  {repByProperty[p.name] && (
-                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.borderL}` }}>
-                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.green }}>
-                        ✅ {(repByProperty[p.name].minutes / 60).toFixed(1)}h logged • {repByProperty[p.name].count} activities
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid, marginBottom: 12 }}>{p.address}</div>
+                    
+                    {/* Financial Summary */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 9, color: C.light, letterSpacing: 1 }}>RENT</div>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, color: C.green, fontWeight: 600 }}>${(p.rent || 0).toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 9, color: C.light, letterSpacing: 1 }}>MORTGAGE</div>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, color: C.red, fontWeight: 600 }}>${(p.mortgagePayment || 0).toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 9, color: C.light, letterSpacing: 1 }}>CASH FLOW</div>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, color: isPositive ? C.green : C.red, fontWeight: 700 }}>
+                          {isPositive ? "+" : ""}${cashFlow.toLocaleString()}
+                        </div>
                       </div>
                     </div>
-                  )}
-                  {/* STR Platforms if STR */}
-                  {p.isSTR && p.platforms && p.platforms.length > 0 && (
-                    <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
-                      {p.platforms.map(pl => {
-                        const platform = STR_PLATFORMS.find(s => s.id === pl);
-                        return platform ? (
-                          <span key={pl} style={{ fontSize: 12 }} title={platform.name}>{platform.icon}</span>
-                        ) : null;
-                      })}
-                    </div>
-                  )}
-                </div>
-              ))}
+
+                    {/* ROI Metrics */}
+                    {(capRate || cashOnCash) && (
+                      <div style={{ display: "flex", gap: 12, marginBottom: 8 }}>
+                        {capRate && (
+                          <div style={{ padding: "4px 8px", background: C.goldPale, borderRadius: 4 }}>
+                            <span style={{ fontSize: 9, color: C.gold }}>CAP </span>
+                            <span style={{ fontSize: 12, color: C.gold, fontWeight: 600 }}>{capRate.toFixed(1)}%</span>
+                          </div>
+                        )}
+                        {cashOnCash && (
+                          <div style={{ padding: "4px 8px", background: isPositive ? C.greenPale : C.redPale, borderRadius: 4 }}>
+                            <span style={{ fontSize: 9, color: isPositive ? C.green : C.red }}>CoC </span>
+                            <span style={{ fontSize: 12, color: isPositive ? C.green : C.red, fontWeight: 600 }}>{cashOnCash.toFixed(1)}%</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Hours logged for this property */}
+                    {repByProperty[p.name] && (
+                      <div style={{ paddingTop: 8, borderTop: `1px solid ${C.borderL}` }}>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.green }}>
+                          ✅ {(repByProperty[p.name].minutes / 60).toFixed(1)}h logged • {repByProperty[p.name].count} activities
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STR Platforms if STR */}
+                    {p.isSTR && p.platforms && p.platforms.length > 0 && (
+                      <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
+                        {p.platforms.map(pl => {
+                          const platform = STR_PLATFORMS.find(s => s.id === pl);
+                          return platform ? (
+                            <span key={pl} style={{ fontSize: 12 }} title={platform.name}>{platform.icon}</span>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
               
               {/* Add Property Card */}
               <div 
@@ -1934,7 +2048,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 style={{ 
                   borderLeft: `4px solid ${C.border}`, cursor: "pointer",
                   display: "flex", flexDirection: "column", alignItems: "center", 
-                  justifyContent: "center", minHeight: 140, background: "#fafafa",
+                  justifyContent: "center", minHeight: 180, background: "#fafafa",
                   transition: "all 0.15s"
                 }}
                 onMouseOver={(e) => { e.currentTarget.style.borderLeftColor = C.gold; e.currentTarget.style.background = "#faf8f4"; }}
@@ -1944,208 +2058,6 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>Add New Property</div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* STR VIEW */}
-        {view === "str" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
-                  🏖️ Short-Term Rentals
-                </h1>
-                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>
-                  {strProperties.length} STR properties • Manage bookings, turnovers & guest communications
-                </p>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={() => setShowLogSTRTimeModal(true)} className="btn-gold" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  ⏱️ Log STR Time
-                </button>
-                <button onClick={() => setShowAddBookingModal(true)} style={{ padding: "10px 16px", background: "#FF5A5F", color: "white", border: "none", borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                  ➕ Add Booking
-                </button>
-              </div>
-            </div>
-
-            {/* No STR Properties Message */}
-            {strProperties.length === 0 && (
-              <div className="card" style={{ textAlign: "center", padding: 40 }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>🏖️</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, color: C.dark, marginBottom: 8 }}>No STR Properties Yet</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light, marginBottom: 16 }}>
-                  Go to Properties tab and click "Set as STR" on any property to manage it here
-                </div>
-                <button onClick={() => setView("properties")} className="btn-gold">Go to Properties</button>
-              </div>
-            )}
-
-            {/* STR Properties Grid */}
-            {strProperties.length > 0 && (
-              <>
-                {/* Quick Stats */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-                  <div className="card" style={{ borderLeft: "4px solid #FF5A5F" }}>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>STR PROPERTIES</div>
-                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: "#FF5A5F" }}>{strProperties.length}</div>
-                  </div>
-                  <div className="card" style={{ borderLeft: "4px solid #00C853" }}>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>ACTIVE BOOKINGS</div>
-                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: "#00C853" }}>{strBookings.filter(b => new Date(b.checkOut) >= new Date()).length}</div>
-                  </div>
-                  <div className="card" style={{ borderLeft: "4px solid #FFA000" }}>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>CLEANERS</div>
-                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: "#FFA000" }}>{strCleaners.length}</div>
-                  </div>
-                  <div className="card" style={{ borderLeft: `4px solid ${C.greenB}` }}>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>STR HOURS (YTD)</div>
-                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.green }}>
-                      {Math.round(localEntries.filter(e => IRS_CATEGORIES[e.category]?.isSTR && new Date(e.date).getFullYear() === currentYear).reduce((s, e) => s + e.minutes, 0) / 60 * 10) / 10}h
-                    </div>
-                  </div>
-                </div>
-
-                {/* STR Properties */}
-                <div className="card">
-                  <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-                    🏠 Your STR Properties
-                  </h2>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    {strProperties.map(p => (
-                      <div key={p.id} style={{ padding: 16, background: "#fff5f5", border: "1px solid #ffcdd2", borderRadius: 8 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
-                          <div>
-                            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark }}>{p.name}</div>
-                            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{p.address}</div>
-                          </div>
-                          <div style={{ display: "flex", gap: 4 }}>
-                            {STR_PLATFORMS.slice(0, 3).map(pl => (
-                              <button 
-                                key={pl.id}
-                                onClick={() => {
-                                  const platforms = p.platforms || [];
-                                  const newPlatforms = platforms.includes(pl.id) 
-                                    ? platforms.filter(x => x !== pl.id)
-                                    : [...platforms, pl.id];
-                                  setLocalProperties(prev => prev.map(prop => 
-                                    prop.id === p.id ? {...prop, platforms: newPlatforms} : prop
-                                  ));
-                                }}
-                                style={{ 
-                                  padding: "4px 8px", 
-                                  background: (p.platforms || []).includes(pl.id) ? pl.color : "#f0f0f0",
-                                  border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer",
-                                  opacity: (p.platforms || []).includes(pl.id) ? 1 : 0.5
-                                }}
-                                title={pl.name}
-                              >
-                                {pl.icon}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        {/* Upcoming bookings for this property */}
-                        <div style={{ marginTop: 8 }}>
-                          {strBookings.filter(b => b.propertyId === p.id && new Date(b.checkIn) >= new Date()).length > 0 ? (
-                            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#FF5A5F" }}>
-                              📅 {strBookings.filter(b => b.propertyId === p.id && new Date(b.checkIn) >= new Date()).length} upcoming booking(s)
-                            </div>
-                          ) : (
-                            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light }}>No upcoming bookings</div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Bookings */}
-                <div className="card">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                    <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
-                      📅 Bookings
-                    </h2>
-                    <button onClick={() => setShowAddBookingModal(true)} style={{ padding: "6px 12px", background: "#FF5A5F", color: "white", border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
-                      + Add Booking
-                    </button>
-                  </div>
-                  {strBookings.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: 30, color: C.light }}>
-                      <div style={{ fontSize: 24, marginBottom: 8 }}>📅</div>
-                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>No bookings yet. Add your first booking!</div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {strBookings.slice(0, 5).map(b => {
-                        const property = localProperties.find(p => p.id === b.propertyId);
-                        const platform = STR_PLATFORMS.find(p => p.id === b.platform);
-                        return (
-                          <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, background: "#fafafa", borderRadius: 6, border: `1px solid ${C.borderL}` }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                              <span style={{ fontSize: 18 }}>{platform?.icon || "📅"}</span>
-                              <div>
-                                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: C.dark }}>{b.guestName}</div>
-                                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{property?.name} • {b.guests} guest{b.guests !== 1 ? "s" : ""}</div>
-                              </div>
-                            </div>
-                            <div style={{ textAlign: "right" }}>
-                              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.dark }}>{b.checkIn} → {b.checkOut}</div>
-                              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.green, fontWeight: 600 }}>${b.totalAmount}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Cleaning Crew */}
-                <div className="card">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                    <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
-                      🧹 Cleaning Crew
-                    </h2>
-                    <button onClick={() => setShowAddCleanerModal(true)} style={{ padding: "6px 12px", background: C.goldL, color: C.dark, border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
-                      + Add Cleaner
-                    </button>
-                  </div>
-                  {strCleaners.length === 0 ? (
-                    <div style={{ textAlign: "center", padding: 30, color: C.light }}>
-                      <div style={{ fontSize: 24, marginBottom: 8 }}>🧹</div>
-                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>No cleaners yet. Add your cleaning crew!</div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-                      {strCleaners.map(c => (
-                        <div key={c.id} style={{ padding: 12, background: "#fafafa", borderRadius: 6, border: `1px solid ${C.borderL}` }}>
-                          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: C.dark, marginBottom: 4 }}>{c.name}</div>
-                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginBottom: 8 }}>${c.rate}/turnover</div>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button onClick={() => copyToClipboard(c.phone)} style={{ padding: "4px 8px", background: "#f0f0f0", border: "none", borderRadius: 3, fontSize: 12, cursor: "pointer" }}>📱</button>
-                            <a href={getEmailLink(c.email, "Turnover Request")} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 8px", background: "#f0f0f0", border: "none", borderRadius: 3, fontSize: 12, cursor: "pointer", textDecoration: "none" }}>✉️</a>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* STR Time Categories Reference */}
-                <div className="card" style={{ background: "#fff5f5", border: "1px solid #ffcdd2" }}>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: "#FF5A5F", letterSpacing: 2, marginBottom: 12 }}>
-                    ⏱️ STR ACTIVITIES THAT COUNT TOWARD 750 HOURS
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    {Object.entries(IRS_CATEGORIES).filter(([k, v]) => v.isSTR).map(([key, cat]) => (
-                      <div key={key} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>
-                        ✅ {cat.label}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         )}
 
@@ -2975,6 +2887,104 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                       fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
                     }}
                   />
+                </div>
+              </div>
+
+              {/* Rental Type - STR vs LTR */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                  Rental Type
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => setNewProperty({...newProperty, isSTR: false})}
+                    style={{
+                      padding: "12px", border: `2px solid ${!newProperty.isSTR ? C.blueB : C.border}`,
+                      borderRadius: 6, background: !newProperty.isSTR ? C.bluePale : "white",
+                      cursor: "pointer", textAlign: "center"
+                    }}
+                  >
+                    <div style={{ fontSize: 20, marginBottom: 4 }}>🏠</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: C.text }}>Long-Term Rental</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: C.light }}>12+ month leases</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewProperty({...newProperty, isSTR: true})}
+                    style={{
+                      padding: "12px", border: `2px solid ${newProperty.isSTR ? "#FF5A5F" : C.border}`,
+                      borderRadius: 6, background: newProperty.isSTR ? "#fff5f5" : "white",
+                      cursor: "pointer", textAlign: "center"
+                    }}
+                  >
+                    <div style={{ fontSize: 20, marginBottom: 4 }}>🏖️</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: C.text }}>Short-Term Rental</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: C.light }}>Airbnb, VRBO, etc.</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Financial Info Section */}
+              <div style={{ background: "#f8f8f5", border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontSize: 10, color: C.gold, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12, fontWeight: 600 }}>
+                  💰 FINANCIAL INFO (for ROI calculations)
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 6 }}>
+                      Purchase Price ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newProperty.purchasePrice}
+                      onChange={(e) => setNewProperty({...newProperty, purchasePrice: e.target.value})}
+                      placeholder="350000"
+                      style={{
+                        width: "100%", padding: "10px 12px", fontSize: 13, border: `1px solid ${C.border}`,
+                        borderRadius: 4, background: "white", color: C.text, outline: "none",
+                        fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 6 }}>
+                      Down Payment ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newProperty.downPayment}
+                      onChange={(e) => setNewProperty({...newProperty, downPayment: e.target.value})}
+                      placeholder="70000"
+                      style={{
+                        width: "100%", padding: "10px 12px", fontSize: 13, border: `1px solid ${C.border}`,
+                        borderRadius: 4, background: "white", color: C.text, outline: "none",
+                        fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                  <div style={{ gridColumn: "1 / -1" }}>
+                    <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 6 }}>
+                      Monthly Mortgage Payment ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newProperty.mortgagePayment}
+                      onChange={(e) => setNewProperty({...newProperty, mortgagePayment: e.target.value})}
+                      placeholder="1800"
+                      style={{
+                        width: "100%", padding: "10px 12px", fontSize: 13, border: `1px solid ${C.border}`,
+                        borderRadius: 4, background: "white", color: C.text, outline: "none",
+                        fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginTop: 8, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light }}>
+                  💡 Tip: Upload mortgage statement to AI Assistant to auto-fill
                 </div>
               </div>
 
