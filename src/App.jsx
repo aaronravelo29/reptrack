@@ -857,6 +857,275 @@ function MainApp() {
     return Array.from(years).sort((a, b) => b - a);
   };
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PDF EXPORT FOR CPA - IRS-Ready Documentation
+  // ═══════════════════════════════════════════════════════════════════════════
+  const exportPDFForCPA = async () => {
+    // Dynamically load jsPDF
+    if (!window.jspdf) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      document.head.appendChild(script);
+      await new Promise(resolve => script.onload = resolve);
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Colors
+    const navy = [15, 39, 66];
+    const gold = [198, 162, 74];
+    const green = [34, 139, 34];
+    const red = [178, 34, 34];
+    
+    // Get data for selected year
+    const yearEntries = localEntries.filter(e => new Date(e.date).getFullYear() === selectedYear);
+    const repEntries = yearEntries.filter(e => e.qualifies);
+    const nonRepEntries = yearEntries.filter(e => !e.qualifies);
+    const totalRepMinutes = repEntries.reduce((s, e) => s + e.minutes, 0);
+    const totalNonRepMinutes = nonRepEntries.reduce((s, e) => s + e.minutes, 0);
+    const totalMinutes = totalRepMinutes + totalNonRepMinutes;
+    const repHours = (totalRepMinutes / 60).toFixed(1);
+    const nonRepHours = (totalNonRepMinutes / 60).toFixed(1);
+    const repPct = totalMinutes > 0 ? ((totalRepMinutes / totalMinutes) * 100).toFixed(1) : 0;
+    const meetsHours = totalRepMinutes >= 45000; // 750 hours
+    const meetsPct = totalRepMinutes > totalNonRepMinutes;
+    const qualifies = meetsHours && meetsPct;
+    
+    let y = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const contentWidth = pageWidth - (margin * 2);
+    
+    // ═══ HEADER ═══
+    doc.setFillColor(...navy);
+    doc.rect(0, 0, pageWidth, 45, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RepTrack', margin, 25);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Real Estate Professional Tax Documentation', margin, 35);
+    
+    doc.setFontSize(12);
+    doc.text(`Tax Year ${selectedYear}`, pageWidth - margin, 30, { align: 'right' });
+    
+    y = 55;
+    
+    // ═══ TAXPAYER INFO ═══
+    doc.setTextColor(...navy);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TAXPAYER INFORMATION', margin, y);
+    y += 8;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Name: ${profile?.firstName || ''} ${profile?.lastName || ''}`, margin, y);
+    y += 6;
+    doc.text(`Company: ${profile?.companyName || 'N/A'}`, margin, y);
+    y += 6;
+    doc.text(`Email: ${profile?.email || user?.email || 'N/A'}`, margin, y);
+    y += 6;
+    doc.text(`Report Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, margin, y);
+    y += 12;
+    
+    // ═══ QUALIFICATION STATUS ═══
+    doc.setFillColor(...(qualifies ? green : red));
+    doc.rect(margin, y, contentWidth, 25, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text(qualifies ? '✓ QUALIFIES FOR REP STATUS' : '✗ DOES NOT QUALIFY FOR REP STATUS', margin + 10, y + 10);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`IRC §469(c)(7) Real Estate Professional Status for Tax Year ${selectedYear}`, margin + 10, y + 18);
+    y += 35;
+    
+    // ═══ SUMMARY STATISTICS ═══
+    doc.setTextColor(...navy);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('QUALIFICATION SUMMARY', margin, y);
+    y += 10;
+    
+    // Stats box
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(248, 248, 248);
+    doc.rect(margin, y, contentWidth, 40, 'FD');
+    
+    const col1 = margin + 10;
+    const col2 = margin + 60;
+    const col3 = margin + 120;
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('REQUIREMENT', col1, y + 8);
+    doc.text('YOUR STATUS', col2, y + 8);
+    doc.text('RESULT', col3, y + 8);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    
+    // Row 1: 750 hours
+    doc.text('750+ RE Hours', col1, y + 20);
+    doc.text(`${repHours} hours logged`, col2, y + 20);
+    doc.setTextColor(...(meetsHours ? green : red));
+    doc.text(meetsHours ? '✓ MET' : '✗ NOT MET', col3, y + 20);
+    
+    // Row 2: >50%
+    doc.setTextColor(60, 60, 60);
+    doc.text('>50% RE Work', col1, y + 32);
+    doc.text(`${repPct}% real estate`, col2, y + 32);
+    doc.setTextColor(...(meetsPct ? green : red));
+    doc.text(meetsPct ? '✓ MET' : '✗ NOT MET', col3, y + 32);
+    
+    y += 50;
+    
+    // ═══ HOURS BREAKDOWN ═══
+    doc.setTextColor(...navy);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('HOURS BREAKDOWN', margin, y);
+    y += 10;
+    
+    // RE Hours
+    doc.setFillColor(...green);
+    doc.rect(margin, y, contentWidth / 2 - 5, 20, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Real Estate Hours', margin + 5, y + 8);
+    doc.setFontSize(14);
+    doc.text(`${repHours} hrs`, margin + 5, y + 16);
+    
+    // Non-RE Hours
+    doc.setFillColor(...red);
+    doc.rect(margin + contentWidth / 2 + 5, y, contentWidth / 2 - 5, 20, 'F');
+    doc.text('Non-RE Hours', margin + contentWidth / 2 + 10, y + 8);
+    doc.setFontSize(14);
+    doc.text(`${nonRepHours} hrs`, margin + contentWidth / 2 + 10, y + 16);
+    
+    y += 30;
+    
+    // ═══ ACTIVITY LOG ═══
+    doc.setTextColor(...navy);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DETAILED ACTIVITY LOG', margin, y);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text(`${repEntries.length} qualifying activities documented`, margin + 80, y);
+    y += 8;
+    
+    // Table header
+    doc.setFillColor(...navy);
+    doc.rect(margin, y, contentWidth, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DATE', margin + 2, y + 5.5);
+    doc.text('CATEGORY', margin + 28, y + 5.5);
+    doc.text('ACTIVITY & IRS DOCUMENTATION', margin + 65, y + 5.5);
+    doc.text('TIME', pageWidth - margin - 15, y + 5.5);
+    y += 10;
+    
+    // Activity rows (only REP entries for CPA)
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    
+    // Sort by date descending
+    const sortedEntries = [...repEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    for (const entry of sortedEntries) {
+      // Check for page break
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+        
+        // Add header on new page
+        doc.setFillColor(...navy);
+        doc.rect(margin, y, contentWidth, 8, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DATE', margin + 2, y + 5.5);
+        doc.text('CATEGORY', margin + 28, y + 5.5);
+        doc.text('ACTIVITY & IRS DOCUMENTATION', margin + 65, y + 5.5);
+        doc.text('TIME', pageWidth - margin - 15, y + 5.5);
+        y += 10;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+      }
+      
+      // Alternate row colors
+      const rowIndex = sortedEntries.indexOf(entry);
+      if (rowIndex % 2 === 0) {
+        doc.setFillColor(248, 248, 248);
+        doc.rect(margin, y - 3, contentWidth, 10, 'F');
+      }
+      
+      doc.setTextColor(60, 60, 60);
+      doc.text(entry.date || '', margin + 2, y + 3);
+      
+      // Truncate category if needed
+      const category = (entry.categoryLabel || '').substring(0, 18);
+      doc.text(category, margin + 28, y + 3);
+      
+      // Activity with IRS description
+      let activity = entry.activity || '';
+      if (entry.irsDescription) {
+        activity = `${activity.substring(0, 40)}${activity.length > 40 ? '...' : ''} [IRS: ${entry.irsDescription.substring(0, 30)}${entry.irsDescription.length > 30 ? '...' : ''}]`;
+      } else {
+        activity = activity.substring(0, 80);
+      }
+      doc.text(activity, margin + 65, y + 3);
+      
+      // Time
+      const hours = Math.floor(entry.minutes / 60);
+      const mins = entry.minutes % 60;
+      const timeStr = `${hours}h ${mins}m`;
+      doc.text(timeStr, pageWidth - margin - 15, y + 3);
+      
+      y += 8;
+    }
+    
+    // ═══ FOOTER ON LAST PAGE ═══
+    y = Math.max(y + 10, 250);
+    if (y > 260) {
+      doc.addPage();
+      y = 20;
+    }
+    
+    // Legal notice
+    doc.setFillColor(248, 246, 240);
+    doc.rect(margin, y, contentWidth, 25, 'F');
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'italic');
+    doc.text('DISCLAIMER: This report is generated by RepTrack for informational purposes. It documents real estate', margin + 5, y + 6);
+    doc.text('professional activities for potential IRC §469(c)(7) qualification. Consult a qualified tax professional or CPA', margin + 5, y + 11);
+    doc.text('for official tax advice. RepTrack is not a substitute for professional tax guidance.', margin + 5, y + 16);
+    
+    // Footer
+    doc.setTextColor(...gold);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Generated by RepTrack • reptrack.ai', pageWidth / 2, y + 23, { align: 'center' });
+    
+    // Save PDF
+    const fileName = `RepTrack_REP_Report_${selectedYear}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  };
+
   // Filter entries by selected year
   const entriesForYear = localEntries.filter(e => new Date(e.date).getFullYear() === selectedYear);
   const repEntriesForYear = entriesForYear.filter(e => e.qualifies);
@@ -2015,12 +2284,26 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         {/* RECORDS VIEW */}
         {view === "records" && (
           <div className="tab-scroll" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
               <div>
                 <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Activity Records</h1>
                 <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>IRS-compliant documentation for audit protection</p>
               </div>
-              <button className="btn-gold">Export for CPA</button>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light }}>Export Year:</span>
+                <select 
+                  value={selectedYear} 
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                  style={{ padding: "8px 12px", borderRadius: 6, border: `2px solid ${C.gold}`, fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, fontWeight: 600, background: "white", cursor: "pointer", color: C.dark }}
+                >
+                  {getAvailableYears().map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+                <button onClick={exportPDFForCPA} className="btn-gold" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px" }}>
+                  📄 Export PDF for CPA
+                </button>
+              </div>
             </div>
             
             <div className="card" style={{ padding: 0, maxHeight: "calc(100vh - 220px)", display: "flex", flexDirection: "column" }}>
