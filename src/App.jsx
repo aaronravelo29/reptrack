@@ -291,6 +291,7 @@ function AuthScreen() {
 
 // ─── IRS CATEGORIES & RULES ───────────────────────────────────────────────────
 const IRS_CATEGORIES = {
+  // RE Qualifying Categories
   management: { label: "Property Management", qualifies: true, examples: "tenant relations, property oversight, lease enforcement" },
   maintenance: { label: "Maintenance & Repairs", qualifies: true, examples: "coordinating repairs, supervising contractors, property inspections" },
   leasing: { label: "Leasing", qualifies: true, examples: "showings, tenant screening, lease preparation, move-in/out" },
@@ -301,8 +302,21 @@ const IRS_CATEGORIES = {
   construction: { label: "Construction", qualifies: true, examples: "renovation oversight, permits, contractor coordination" },
   travel: { label: "RE Travel", qualifies: true, examples: "driving to properties, travel for RE activities" },
   education: { label: "RE Education", qualifies: true, examples: "RE courses, seminars, studying RE topics" },
-  non_re: { label: "Non-RE Work", qualifies: false, examples: "W-2 job, non-RE business, personal activities" }
+  // Non-RE Categories (for tracking total work hours)
+  w2_employment: { label: "W-2 Employment", qualifies: false, examples: "regular job, employer work, scheduled shifts" },
+  self_employment: { label: "Self-Employment (Non-RE)", qualifies: false, examples: "non-RE business, freelance, side business" },
+  consulting: { label: "Consulting Work", qualifies: false, examples: "professional consulting, advisory work" },
+  other_business: { label: "Other Business Income", qualifies: false, examples: "other business activities, non-RE income work" },
+  non_re: { label: "Non-RE Work (General)", qualifies: false, examples: "other non-qualifying work" }
 };
+
+// Non-RE quick add options
+const NON_RE_QUICK_OPTIONS = [
+  { id: "w2_employment", label: "W-2 Job", icon: "💼" },
+  { id: "self_employment", label: "Self-Employment", icon: "📊" },
+  { id: "consulting", label: "Consulting", icon: "🎯" },
+  { id: "other_business", label: "Other Business", icon: "📁" },
+];
 
 // ─── Sample Data ──────────────────────────────────────────────────────────────
 const SAMPLE_PROPERTIES = [
@@ -421,9 +435,16 @@ IRS-QUALIFYING RE CATEGORIES (IRC §469(c)(7))
 • RE Travel - driving to properties for RE activities
 • RE Education - courses, seminars specifically about real estate
 
-❌ DOES NOT QUALIFY:
-• W-2 employment
-• Non-RE businesses
+❌ DOES NOT QUALIFY (Non-RE Work Categories):
+• w2_employment - W-2 Employment (regular job, employer work)
+• self_employment - Self-Employment Non-RE (freelance, side business)
+• consulting - Consulting Work (professional advisory)
+• other_business - Other Business Income (non-RE business activities)
+
+When logging NON-RE work (like W-2 job hours), use category "w2_employment", "self_employment", "consulting", or "other_business" and set qualifies to false.
+
+Example for non-RE work:
+[[SAVE_ACTIVITY:{"activity":"W-2 work shift","minutes":480,"category":"w2_employment","qualifies":false,"property":null,"irsDescription":null}]]
 • Personal activities
 • Investor activities (passive review of statements)
 
@@ -473,6 +494,46 @@ function MainApp() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Quick-add non-RE modal state
+  const [showNonREModal, setShowNonREModal] = useState(false);
+  const [nonRECategory, setNonRECategory] = useState("w2_employment");
+  const [nonREHours, setNonREHours] = useState("");
+  const [nonREDescription, setNonREDescription] = useState("");
+
+  // Quick add non-RE hours function
+  const addNonREHours = () => {
+    if (!nonREHours || parseFloat(nonREHours) <= 0) return;
+    
+    const minutes = Math.round(parseFloat(nonREHours) * 60);
+    const category = IRS_CATEGORIES[nonRECategory];
+    
+    const newEntry = {
+      id: uid(),
+      date: todayStr(),
+      qualifies: false,
+      category: nonRECategory,
+      categoryLabel: category?.label || "Non-RE Work",
+      activity: nonREDescription || `${category?.label || "Non-RE work"} - ${nonREHours} hours`,
+      minutes: minutes,
+      property: null,
+      irsDescription: null
+    };
+    
+    setLocalEntries(prev => [newEntry, ...prev]);
+    setShowNonREModal(false);
+    setNonREHours("");
+    setNonREDescription("");
+    setNonRECategory("w2_employment");
+    
+    // Add confirmation message to chat
+    setMessages(prev => [...prev, {
+      role: "assistant",
+      id: uid(),
+      content: `✅ **Non-RE Hours Logged**\n\n• Type: ${category?.label}\n• Duration: ${nonREHours} hours\n• Activity: ${nonREDescription || "Work shift"}\n\nThis helps track your RE percentage accurately. Your RE work must exceed 50% of total work time for REP status.`,
+      activityLogged: true
+    }]);
+  };
 
   // Initialize welcome message with profile
   useEffect(() => {
@@ -716,13 +777,12 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               </div>
 
               {/* Quick Actions */}
-              <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                 {[
                   "I spent 2 hours on property management",
                   "Log a 45-min contractor meeting", 
                   "I showed a rental unit for 1 hour",
                   "What qualifies as RE work?",
-                  "How many hours do I need?"
                 ].map(q => (
                   <button key={q} onClick={() => setInput(q)} style={{
                     background: "white", border: `1px solid ${C.border}`, borderRadius: 20,
@@ -732,6 +792,15 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                     {q}
                   </button>
                 ))}
+                <button 
+                  onClick={() => setShowNonREModal(true)} 
+                  style={{
+                    background: C.redPale, border: `1px solid ${C.redB}`, borderRadius: 20,
+                    padding: "6px 14px", fontSize: 11, color: C.red, cursor: "pointer",
+                    fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600
+                  }}>
+                  ➕ Log Non-RE Hours
+                </button>
               </div>
             </div>
 
@@ -913,6 +982,122 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           </div>
         )}
       </main>
+
+      {/* Non-RE Hours Quick Add Modal */}
+      {showNonREModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.85)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000
+        }}>
+          <div style={{
+            background: C.bg, borderRadius: 8, padding: 32, width: "100%",
+            maxWidth: 440, boxShadow: "0 25px 80px rgba(0,0,0,0.4)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: C.dark }}>
+                Log Non-RE Work Hours
+              </h2>
+              <button onClick={() => setShowNonREModal(false)} style={{
+                background: "none", border: "none", fontSize: 24, color: C.light, cursor: "pointer"
+              }}>×</button>
+            </div>
+
+            <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid, marginBottom: 20, lineHeight: 1.6 }}>
+              Track your non-RE work to ensure your RE percentage stays above 50% for REP qualification.
+            </p>
+
+            {/* Category Selection */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 }}>
+                Work Type
+              </label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {NON_RE_QUICK_OPTIONS.map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setNonRECategory(opt.id)}
+                    style={{
+                      padding: "12px 14px", border: `2px solid ${nonRECategory === opt.id ? C.redB : C.border}`,
+                      borderRadius: 6, background: nonRECategory === opt.id ? C.redPale : "white",
+                      cursor: "pointer", textAlign: "left", transition: "all 0.15s"
+                    }}
+                  >
+                    <div style={{ fontSize: 18, marginBottom: 4 }}>{opt.icon}</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: C.dark }}>
+                      {opt.label}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Hours Input */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                Hours Worked
+              </label>
+              <input
+                type="number"
+                step="0.5"
+                min="0.5"
+                value={nonREHours}
+                onChange={(e) => setNonREHours(e.target.value)}
+                placeholder="e.g., 8"
+                style={{
+                  width: "100%", padding: "14px 16px", fontSize: 16, border: `1px solid ${C.border}`,
+                  borderRadius: 6, background: "white", color: C.text, outline: "none",
+                  fontFamily: "'IBM Plex Mono', monospace"
+                }}
+              />
+            </div>
+
+            {/* Description (optional) */}
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                Description (Optional)
+              </label>
+              <input
+                type="text"
+                value={nonREDescription}
+                onChange={(e) => setNonREDescription(e.target.value)}
+                placeholder="e.g., Regular shift at hospital"
+                style={{
+                  width: "100%", padding: "12px 14px", fontSize: 14, border: `1px solid ${C.border}`,
+                  borderRadius: 6, background: "white", color: C.text, outline: "none",
+                  fontFamily: "'IBM Plex Mono', monospace"
+                }}
+              />
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setShowNonREModal(false)}
+                style={{
+                  flex: 1, padding: "14px 20px", background: "white", border: `1px solid ${C.border}`,
+                  borderRadius: 4, color: C.mid, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1, textTransform: "uppercase"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addNonREHours}
+                disabled={!nonREHours || parseFloat(nonREHours) <= 0}
+                style={{
+                  flex: 1, padding: "14px 20px", background: !nonREHours ? C.border : C.redB,
+                  border: "none", borderRadius: 4, color: "white", fontSize: 12, fontWeight: 600,
+                  cursor: !nonREHours ? "not-allowed" : "pointer",
+                  fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1, textTransform: "uppercase"
+                }}
+              >
+                Log Hours
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
