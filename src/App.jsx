@@ -18,21 +18,29 @@ const supabase = {
       }
       return { data: { session: null } };
     },
-    signUp: async ({ email, password }) => {
+    signUp: async ({ email, password, options }) => {
       try {
         const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY 
+            'apikey': SUPABASE_ANON_KEY
           },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({
+            email,
+            password,
+            data: options?.data || {}
+          })
         });
         const data = await res.json();
         if (data.error) return { error: data.error };
         if (data.access_token) {
           localStorage.setItem('sb-token', data.access_token);
           localStorage.setItem('sb-user', JSON.stringify(data.user));
+        }
+        // Also save profile data locally
+        if (options?.data) {
+          localStorage.setItem('sb-profile', JSON.stringify(options.data));
         }
         return { data, error: null };
       } catch (err) {
@@ -43,9 +51,9 @@ const supabase = {
       try {
         const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY 
+            'apikey': SUPABASE_ANON_KEY
           },
           body: JSON.stringify({ email, password })
         });
@@ -63,6 +71,7 @@ const supabase = {
     signOut: async () => {
       localStorage.removeItem('sb-token');
       localStorage.removeItem('sb-user');
+      localStorage.removeItem('sb-profile');
       return { error: null };
     },
     onAuthStateChange: (callback) => {
@@ -71,9 +80,15 @@ const supabase = {
       if (token && user) {
         callback('SIGNED_IN', { access_token: token, user: JSON.parse(user) });
       }
-      return { data: { subscription: { unsubscribe: () => {} } } };
+      return { data: { subscription: { unsubscribe: () => { } } } };
     }
   }
+};
+
+// Get profile from localStorage
+const getProfile = () => {
+  const profile = localStorage.getItem('sb-profile');
+  return profile ? JSON.parse(profile) : null;
 };
 
 // ─── AUTH CONTEXT ─────────────────────────────────────────────────────────────
@@ -81,40 +96,54 @@ const AuthContext = createContext({});
 
 function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      setProfile(getProfile());
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setProfile(getProfile());
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email, password) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (!error && data?.user) setUser(data.user);
+  const signUp = async (email, password, profileData) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: profileData }
+    });
+    if (!error && data?.user) {
+      setUser(data.user);
+      setProfile(profileData);
+    }
     return { data, error };
   };
 
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error && data?.user) setUser(data.user);
+    if (!error && data?.user) {
+      setUser(data.user);
+      setProfile(getProfile());
+    }
     return { data, error };
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setProfile(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
@@ -127,10 +156,36 @@ function AuthScreen() {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const { signIn, signUp } = useAuth();
+
+  const inputStyle = {
+    width: "100%",
+    padding: "12px 14px",
+    fontSize: 14,
+    border: "1px solid #d4cfbd",
+    borderRadius: 4,
+    background: "#faf8f4",
+    color: "#0F2742",
+    outline: "none",
+    fontFamily: "'IBM Plex Mono', monospace",
+    boxSizing: "border-box"
+  };
+
+  const labelStyle = {
+    display: "block",
+    fontSize: 10,
+    color: "#4D6785",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginBottom: 6
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -142,7 +197,22 @@ function AuthScreen() {
       const { error } = await signIn(email, password);
       if (error) setError(error.message);
     } else {
-      const { data, error } = await signUp(email, password);
+      // Validate required fields for signup
+      if (!firstName.trim() || !lastName.trim()) {
+        setError("Please enter your first and last name.");
+        setLoading(false);
+        return;
+      }
+
+      const profileData = {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        companyName: companyName.trim(),
+        phone: phone.trim(),
+        createdAt: new Date().toISOString()
+      };
+
+      const { data, error } = await signUp(email, password, profileData);
       if (error) {
         setError(error.message);
       } else if (data?.user?.identities?.length === 0) {
@@ -167,16 +237,17 @@ function AuthScreen() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
       `}</style>
-      
+
       <div style={{
         background: "#F7F5EA",
         borderRadius: 8,
-        padding: "48px 40px",
+        padding: "40px 36px",
         width: "100%",
-        maxWidth: 420,
-        boxShadow: "0 25px 80px rgba(0,0,0,0.4)"
+        maxWidth: mode === "signup" ? 480 : 420,
+        boxShadow: "0 25px 80px rgba(0,0,0,0.4)",
+        transition: "max-width 0.3s ease"
       }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{ fontSize: 32, fontWeight: 700, color: "#0F2742", fontFamily: "'Inter', sans-serif", letterSpacing: -1 }}>
             Rep<span style={{ color: "#C6A24A" }}>Track</span>
           </div>
@@ -185,7 +256,7 @@ function AuthScreen() {
           </div>
         </div>
 
-        <div style={{ display: "flex", marginBottom: 28, borderBottom: "1px solid #d4cfbd" }}>
+        <div style={{ display: "flex", marginBottom: 24, borderBottom: "1px solid #d4cfbd" }}>
           {["login", "signup"].map(m => (
             <button
               key={m}
@@ -204,26 +275,87 @@ function AuthScreen() {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 18 }}>
-            <label style={{ display: "block", fontSize: 10, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Email</label>
+          {/* Signup-only fields */}
+          {mode === "signup" && (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+                <div>
+                  <label style={labelStyle}>First Name *</label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required={mode === "signup"}
+                    style={inputStyle}
+                    placeholder="John"
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Last Name *</label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required={mode === "signup"}
+                    style={inputStyle}
+                    placeholder="Smith"
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>Company Name</label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  style={inputStyle}
+                  placeholder="Smith Properties LLC"
+                />
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>Phone Number</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  style={inputStyle}
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+
+              <div style={{ borderTop: "1px solid #d4cfbd", margin: "20px 0", paddingTop: 16 }}>
+                <div style={{ fontSize: 10, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>
+                  Account Credentials
+                </div>
+              </div>
+            </>
+          )}
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={labelStyle}>Email *</label>
             <input
               type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-              style={{ width: "100%", padding: "12px 14px", fontSize: 14, border: "1px solid #d4cfbd", borderRadius: 4, background: "#faf8f4", color: "#0F2742", outline: "none", fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }}
+              style={inputStyle}
               placeholder="you@example.com"
             />
           </div>
 
-          <div style={{ marginBottom: 24 }}>
-            <label style={{ display: "block", fontSize: 10, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Password</label>
+          <div style={{ marginBottom: 20 }}>
+            <label style={labelStyle}>Password *</label>
             <input
               type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
-              style={{ width: "100%", padding: "12px 14px", fontSize: 14, border: "1px solid #d4cfbd", borderRadius: 4, background: "#faf8f4", color: "#0F2742", outline: "none", fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }}
+              style={inputStyle}
               placeholder="••••••••"
             />
+            {mode === "signup" && (
+              <div style={{ fontSize: 10, color: "#7a96b0", marginTop: 4 }}>Minimum 6 characters</div>
+            )}
           </div>
 
-          {error && <div style={{ background: "#f5e4e4", border: "1px solid #993030", borderRadius: 4, padding: "10px 14px", marginBottom: 18, fontSize: 12, color: "#7a1a1a" }}>{error}</div>}
-          {message && <div style={{ background: "#e4f2ea", border: "1px solid #256b45", borderRadius: 4, padding: "10px 14px", marginBottom: 18, fontSize: 12, color: "#1a5c38" }}>{message}</div>}
+          {error && <div style={{ background: "#f5e4e4", border: "1px solid #993030", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#7a1a1a" }}>{error}</div>}
+          {message && <div style={{ background: "#e4f2ea", border: "1px solid #256b45", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#1a5c38" }}>{message}</div>}
 
           <button type="submit" disabled={loading}
             style={{ width: "100%", padding: "14px 20px", background: loading ? "#8a9aaa" : "#C6A24A", border: "none", borderRadius: 4, color: "#0F2742", fontSize: 12, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase", cursor: loading ? "not-allowed" : "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
@@ -231,7 +363,7 @@ function AuthScreen() {
           </button>
         </form>
 
-        <div style={{ marginTop: 28, paddingTop: 20, borderTop: "1px solid #d4cfbd", textAlign: "center", fontSize: 11, color: "#7a96b0" }}>
+        <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid #d4cfbd", textAlign: "center", fontSize: 11, color: "#7a96b0" }}>
           {mode === "login" ? (
             <>Don't have an account? <span onClick={() => setMode("signup")} style={{ color: "#C6A24A", cursor: "pointer" }}>Sign up</span></>
           ) : (
@@ -245,43 +377,48 @@ function AuthScreen() {
 
 // ─── Sample Data ──────────────────────────────────────────────────────────────
 const SAMPLE_PROPERTIES = [
-  { id:"p1", name:"Oak Street Duplex", address:"123 Oak St, Pittsburgh PA 15213", type:"multi_family", units:2, rent:3400 },
-  { id:"p2", name:"Downtown Studio", address:"88 Fifth Ave #4C, Pittsburgh PA 15219", type:"single_family", units:1, rent:1650 },
-  { id:"p3", name:"Squirrel Hill 4-Plex", address:"501 Murray Ave, Pittsburgh PA 15217", type:"multi_family", units:4, rent:6800 },
-  { id:"p4", name:"Lawrenceville Commercial", address:"4200 Butler St, Pittsburgh PA 15201", type:"commercial", units:1, rent:4200 },
+  { id: "p1", name: "Oak Street Duplex", address: "123 Oak St, Pittsburgh PA 15213", type: "multi_family", units: 2, rent: 3400 },
+  { id: "p2", name: "Downtown Studio", address: "88 Fifth Ave #4C, Pittsburgh PA 15219", type: "single_family", units: 1, rent: 1650 },
+  { id: "p3", name: "Squirrel Hill 4-Plex", address: "501 Murray Ave, Pittsburgh PA 15217", type: "multi_family", units: 4, rent: 6800 },
+  { id: "p4", name: "Lawrenceville Commercial", address: "4200 Butler St, Pittsburgh PA 15201", type: "commercial", units: 1, rent: 4200 },
 ];
 
 const SAMPLE_ENTRIES = [
-  { id:"e1", date:"2024-11-01", qualifies:true, category:"management", categoryLabel:"Property Management", activity:"Called tenant re maintenance request — Oak St Unit A", minutes:30 },
-  { id:"e2", date:"2024-11-01", qualifies:false, category:"non_re", categoryLabel:"Non-RE Work", activity:"W-2 work shift", minutes:480 },
-  { id:"e3", date:"2024-11-02", qualifies:true, category:"maintenance", categoryLabel:"Maintenance & Repairs", activity:"Supervised plumber — Oak St hot water heater repair", minutes:90 },
-  { id:"e4", date:"2024-11-04", qualifies:true, category:"leasing", categoryLabel:"Leasing", activity:"Showed vacant unit — Downtown Studio #4C", minutes:120 },
-  { id:"e5", date:"2024-11-05", qualifies:true, category:"financial_mgmt", categoryLabel:"Financial Management", activity:"Reviewed monthly rent rolls and P&L", minutes:75 },
+  { id: "e1", date: "2024-11-01", qualifies: true, category: "management", categoryLabel: "Property Management", activity: "Called tenant re maintenance request — Oak St Unit A", minutes: 30 },
+  { id: "e2", date: "2024-11-01", qualifies: false, category: "non_re", categoryLabel: "Non-RE Work", activity: "W-2 work shift", minutes: 480 },
+  { id: "e3", date: "2024-11-02", qualifies: true, category: "maintenance", categoryLabel: "Maintenance & Repairs", activity: "Supervised plumber — Oak St hot water heater repair", minutes: 90 },
+  { id: "e4", date: "2024-11-04", qualifies: true, category: "leasing", categoryLabel: "Leasing", activity: "Showed vacant unit — Downtown Studio #4C", minutes: 120 },
+  { id: "e5", date: "2024-11-05", qualifies: true, category: "financial_mgmt", categoryLabel: "Financial Management", activity: "Reviewed monthly rent rolls and P&L", minutes: 75 },
 ];
 
-const fmtH = (m) => { const h=Math.floor(m/60),mn=m%60; return !h&&!mn?"0h":`${h>0?h+"h":""}${mn>0?" "+mn+"m":""}`.trim(); };
-const uid = () => Date.now()+Math.random().toString(36).slice(2);
+const fmtH = (m) => { const h = Math.floor(m / 60), mn = m % 60; return !h && !mn ? "0h" : `${h > 0 ? h + "h" : ""}${mn > 0 ? " " + mn + "m" : ""}`.trim(); };
+const uid = () => Date.now() + Math.random().toString(36).slice(2);
 const todayStr = () => new Date().toISOString().split("T")[0];
 
 const C = {
-  bg:"#F7F5EA", white:"#ffffff", dark:"#0F2742", darker:"#091e33", text:"#0F2742",
-  mid:"#2d4a6a", light:"#4D6785", lighter:"#7a96b0", border:"#d4cfbd", borderL:"#e8e4d4",
-  gold:"#9a7830", goldL:"#C6A24A", goldPale:"#faf3dc", goldBright:"#e8c870",
-  green:"#1a5c38", greenPale:"#e4f2ea", greenB:"#256b45",
-  red:"#7a1a1a", redPale:"#f5e4e4", redB:"#993030",
-  blue:"#2d4f6e", bluePale:"#e4edf5", blueB:"#3d6080",
-  purple:"#3a2060", purpleB:"#5a3a90",
+  bg: "#F7F5EA", white: "#ffffff", dark: "#0F2742", darker: "#091e33", text: "#0F2742",
+  mid: "#2d4a6a", light: "#4D6785", lighter: "#7a96b0", border: "#d4cfbd", borderL: "#e8e4d4",
+  gold: "#9a7830", goldL: "#C6A24A", goldPale: "#faf3dc", goldBright: "#e8c870",
+  green: "#1a5c38", greenPale: "#e4f2ea", greenB: "#256b45",
+  red: "#7a1a1a", redPale: "#f5e4e4", redB: "#993030",
+  blue: "#2d4f6e", bluePale: "#e4edf5", blueB: "#3d6080",
+  purple: "#3a2060", purpleB: "#5a3a90",
 };
 
 const VIEWS = [
-  { id:"assistant", icon:"◈", label:"Assistant" },
-  { id:"dashboard", icon:"◉", label:"Dashboard" },
-  { id:"records", icon:"⊟", label:"Records" },
-  { id:"properties", icon:"⌂", label:"Properties" },
+  { id: "assistant", icon: "◈", label: "Assistant" },
+  { id: "dashboard", icon: "◉", label: "Dashboard" },
+  { id: "records", icon: "⊟", label: "Records" },
+  { id: "properties", icon: "⌂", label: "Properties" },
 ];
 
 // ─── CLAUDE AI SYSTEM PROMPT ──────────────────────────────────────────────────
-const getSystemPrompt = (reHrs, rePct, entries) => `You are an AI assistant for RepTrack, a Real Estate Professional (REP) tax documentation platform. Your role is to help users log their real estate activities, organize records, and draft communications.
+const getSystemPrompt = (reHrs, rePct, entries, profile) => `You are an AI assistant for RepTrack, a Real Estate Professional (REP) tax documentation platform. Your role is to help users log their real estate activities, organize records, and draft communications.
+
+USER PROFILE:
+- Name: ${profile?.firstName || 'User'} ${profile?.lastName || ''}
+- Company: ${profile?.companyName || 'Not specified'}
+- Phone: ${profile?.phone || 'Not specified'}
 
 CURRENT USER STATUS:
 - RE hours logged: ${reHrs} hours (need 750 for REP status)
@@ -309,6 +446,7 @@ YOUR CAPABILITIES:
 
 RESPONSE FORMAT:
 - Be concise and professional
+- Address the user by their first name when appropriate
 - When logging an activity, confirm the details
 - If you need clarification, ask specific questions
 - Don't give tax advice - remind users to consult their CPA
@@ -317,13 +455,13 @@ IMPORTANT: You are NOT a tax advisor. You help with DOCUMENTATION only.`;
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 function MainApp() {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [view, setView] = useState("assistant");
   const [localEntries, setLocalEntries] = useState(SAMPLE_ENTRIES);
-  
+
   // Chat state
   const [messages, setMessages] = useState([
-    { role: "assistant", id: "welcome", content: "Hi! I'm your RepTrack assistant. I can help you:\n\n• Log real estate activities\n• Track your hours toward REP status\n• Draft emails to tenants and vendors\n• Answer questions about documentation\n\nWhat did you work on today?" }
+    { role: "assistant", id: "welcome", content: `Hi${profile?.firstName ? ` ${profile.firstName}` : ''}! I'm your RepTrack assistant. I can help you:\n\n• Log real estate activities\n• Track your hours toward REP status\n• Draft emails to tenants and vendors\n• Answer questions about documentation\n\nWhat did you work on today?` }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -335,6 +473,11 @@ function MainApp() {
   const nonREMins = localEntries.filter(e => !e.qualifies).reduce((s, e) => s + e.minutes, 0);
   const totalMins = totalREMins + nonREMins;
   const rePct = totalMins > 0 ? (totalREMins / totalMins) * 100 : 0;
+
+  // Display name
+  const displayName = profile?.firstName && profile?.lastName
+    ? `${profile.firstName} ${profile.lastName}`
+    : user?.email;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -360,13 +503,13 @@ function MainApp() {
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1024,
-          system: getSystemPrompt(reHrs, rePct, localEntries),
+          system: getSystemPrompt(reHrs, rePct, localEntries, profile),
           messages: [...messages.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })), { role: "user", content: input.trim() }]
         })
       });
 
       const data = await response.json();
-      
+
       if (data.error) {
         throw new Error(data.error.message);
       }
@@ -430,7 +573,12 @@ function MainApp() {
             </nav>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.goldL }}>{user?.email}</span>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.goldL }}>{displayName}</div>
+              {profile?.companyName && (
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.lighter }}>{profile.companyName}</div>
+              )}
+            </div>
             <button onClick={signOut} className="btn-outline" style={{ padding: "6px 14px", fontSize: 10, color: "#aaa", borderColor: "#444" }}>Log Out</button>
           </div>
         </div>
@@ -438,7 +586,7 @@ function MainApp() {
 
       {/* Main Content */}
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "24px" }}>
-        
+
         {/* ASSISTANT VIEW */}
         {view === "assistant" && (
           <div style={{ display: "flex", gap: 24, height: "calc(100vh - 140px)" }}>
@@ -505,7 +653,7 @@ function MainApp() {
                 <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.green }}>{reHrs}h</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>of 750h threshold</div>
                 <div style={{ marginTop: 8, height: 6, background: C.borderL, borderRadius: 3 }}>
-                  <div style={{ height: "100%", width: `${Math.min((reHrs/750)*100, 100)}%`, background: C.greenB, borderRadius: 3 }} />
+                  <div style={{ height: "100%", width: `${Math.min((reHrs / 750) * 100, 100)}%`, background: C.greenB, borderRadius: 3 }} />
                 </div>
               </div>
 
@@ -531,8 +679,12 @@ function MainApp() {
         {view === "dashboard" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div>
-              <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Dashboard</h1>
-              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>Track your real estate professional status</p>
+              <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
+                Dashboard {profile?.firstName && <span style={{ fontWeight: 400, color: C.light }}>— {profile.firstName}</span>}
+              </h1>
+              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>
+                {profile?.companyName || 'Track your real estate professional status'}
+              </p>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
