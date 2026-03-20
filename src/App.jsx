@@ -767,89 +767,12 @@ function MainApp() {
   // Property modals
   const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
   const [showPropertyDetailModal, setShowPropertyDetailModal] = useState(null);
-  const [showEditPropertyModal, setShowEditPropertyModal] = useState(null);
   const [newProperty, setNewProperty] = useState({
     address: "", type: "single_family", units: 1, rent: "", purchaseDate: "",
     purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false,
     taxes: "", insurance: "", hoa: "", utilities: "", maintenance: "", propertyMgmt: "", vacancyRate: "5",
     unitDetails: [] // Array of { unitName, beds, baths, rent }
   });
-  
-  // Edit property handler
-  const startEditProperty = (property) => {
-    setShowPropertyDetailModal(null);
-    setShowEditPropertyModal({
-      ...property,
-      taxes: property.taxes || "",
-      insurance: property.insurance || "",
-      hoa: property.hoa || "",
-      utilities: property.utilities || "",
-      maintenance: property.maintenance || "",
-      propertyMgmt: property.propertyMgmt || "",
-      vacancyRate: property.vacancyRate || "5"
-    });
-  };
-  
-  // Save edited property
-  const saveEditedProperty = async () => {
-    if (!showEditPropertyModal) return;
-    
-    const taxes = parseInt(showEditPropertyModal.taxes) || 0;
-    const insurance = parseInt(showEditPropertyModal.insurance) || 0;
-    const hoa = parseInt(showEditPropertyModal.hoa) || 0;
-    const utilities = parseInt(showEditPropertyModal.utilities) || 0;
-    const maintenance = parseInt(showEditPropertyModal.maintenance) || 0;
-    const propertyMgmt = parseInt(showEditPropertyModal.propertyMgmt) || 0;
-    const totalExpenses = taxes + insurance + hoa + utilities + maintenance + propertyMgmt;
-    const vacancyRate = parseInt(showEditPropertyModal.vacancyRate) || 5;
-    
-    const updatedProperty = {
-      ...showEditPropertyModal,
-      rent: parseInt(showEditPropertyModal.rent) || 0,
-      units: parseInt(showEditPropertyModal.units) || 1,
-      purchasePrice: parseInt(showEditPropertyModal.purchasePrice) || 0,
-      downPayment: parseInt(showEditPropertyModal.downPayment) || 0,
-      mortgagePayment: parseInt(showEditPropertyModal.mortgagePayment) || 0,
-      taxes, insurance, hoa, utilities, maintenance, propertyMgmt, vacancyRate, totalExpenses
-    };
-    
-    // Update local state
-    setLocalProperties(prev => prev.map(p => p.id === updatedProperty.id ? updatedProperty : p));
-    
-    // Update in Supabase
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${updatedProperty.id}`, {
-        method: 'PATCH',
-        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({
-          name: updatedProperty.name, address: updatedProperty.address, type: updatedProperty.type,
-          units: updatedProperty.units, rent: updatedProperty.rent
-        })
-      });
-    } catch (err) {
-      console.error("Error updating property:", err);
-    }
-    
-    setShowEditPropertyModal(null);
-  };
-  
-  // Delete property
-  const deleteProperty = async (propertyId) => {
-    if (!confirm("Are you sure you want to delete this property?")) return;
-    
-    setLocalProperties(prev => prev.filter(p => p.id !== propertyId));
-    setShowPropertyDetailModal(null);
-    setShowEditPropertyModal(null);
-    
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${propertyId}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-    } catch (err) {
-      console.error("Error deleting property:", err);
-    }
-  };
   
   // Helper to update unit details for multifamily
   const updateUnitDetail = (index, field, value) => {
@@ -1871,117 +1794,6 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
-        /* ═══════════════════════════════════════════════════════════════════════
-           MOBILE-FRIENDLY SCROLLING - Touch optimized
-           ═══════════════════════════════════════════════════════════════════════ */
-        
-        /* Enable smooth touch scrolling everywhere */
-        html, body, div, main, section {
-          -webkit-overflow-scrolling: touch !important;
-        }
-        
-        /* Desktop scrollbars - visible but not too wide */
-        @media (min-width: 769px) {
-          ::-webkit-scrollbar { 
-            width: 14px !important; 
-            height: 14px !important; 
-          }
-          ::-webkit-scrollbar-track { 
-            background: #e8e8e8 !important; 
-            border-radius: 8px !important;
-          }
-          ::-webkit-scrollbar-thumb { 
-            background: linear-gradient(180deg, #B8860B 0%, #8B6914 100%) !important; 
-            border-radius: 8px !important; 
-            border: 2px solid #e8e8e8 !important;
-            min-height: 50px !important;
-          }
-          ::-webkit-scrollbar-thumb:hover { 
-            background: linear-gradient(180deg, #DAA520 0%, #B8860B 100%) !important;
-          }
-        }
-        
-        /* Mobile - thin scrollbars, rely on touch */
-        @media (max-width: 768px) {
-          ::-webkit-scrollbar { 
-            width: 6px !important; 
-            height: 6px !important; 
-          }
-          ::-webkit-scrollbar-track { 
-            background: transparent !important;
-          }
-          ::-webkit-scrollbar-thumb { 
-            background: rgba(184, 134, 11, 0.5) !important; 
-            border-radius: 3px !important;
-          }
-        }
-        
-        /* Firefox scrollbar */
-        * { 
-          scrollbar-width: thin !important; 
-          scrollbar-color: #B8860B #e8e8e8 !important; 
-        }
-        
-        /* Ensure scrolling is enabled everywhere */
-        html, body { 
-          overflow-y: auto !important; 
-          overflow-x: hidden !important;
-          height: 100% !important;
-        }
-        
-        /* Main app scrollable area */
-        .main-scroll {
-          overflow-y: auto !important;
-          overflow-x: hidden !important;
-          max-height: calc(100vh - 70px) !important;
-          -webkit-overflow-scrolling: touch !important;
-          padding-bottom: 20px !important;
-        }
-        
-        /* Modal scrollable content */
-        .modal-scroll { 
-          overflow-y: auto !important; 
-          overflow-x: hidden !important;
-          max-height: 70vh !important;
-          -webkit-overflow-scrolling: touch !important;
-          padding-right: 10px !important;
-        }
-        
-        /* Tab content scrollable */
-        .tab-scroll {
-          overflow-y: auto !important;
-          overflow-x: hidden !important;
-          max-height: calc(100vh - 130px) !important;
-          -webkit-overflow-scrolling: touch !important;
-          padding-bottom: 80px !important;
-        }
-        
-        /* Card content scrollable */
-        .card-scroll {
-          overflow-y: auto !important;
-          max-height: 400px !important;
-          -webkit-overflow-scrolling: touch !important;
-        }
-        
-        /* ═══════════════════════════════════════════════════════════════════════
-           MOBILE RESPONSIVE STYLES
-           ═══════════════════════════════════════════════════════════════════════ */
-        
-        @media (max-width: 768px) {
-          .main-scroll {
-            padding: 12px !important;
-            max-height: calc(100vh - 60px) !important;
-          }
-          .tab-scroll {
-            max-height: calc(100vh - 100px) !important;
-            padding-bottom: 100px !important;
-          }
-          .modal-scroll {
-            max-height: 60vh !important;
-          }
-        }
-        }
-        
         .nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 18px; cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; transition:all .15s; color:#6a5830; }
         .nav-item:hover { color:#e8c870; }
         .nav-item.active { color:#e8c870; border-bottom-color:#C6A24A; }
@@ -1993,147 +1805,67 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         .msg-assistant { background: white; border: 1px solid ${C.border}; color: ${C.text}; margin-right: auto; border-bottom-left-radius: 4px; }
         .msg-logged { border-left: 3px solid ${C.greenB}; }
         .progress-ring { transform: rotate(-90deg); }
-        
-        /* ═══════════════════════════════════════════════════════════════════════
-           MOBILE RESPONSIVE STYLES
-           ═══════════════════════════════════════════════════════════════════════ */
-        
-        /* Mobile nav - icon only */
-        @media (max-width: 768px) {
-          .mobile-hide { display: none !important; }
-          .mobile-show { display: flex !important; }
-          .mobile-full { width: 100% !important; }
-          .mobile-col { flex-direction: column !important; }
-          .mobile-gap { gap: 8px !important; }
-          .mobile-pad { padding: 12px !important; }
-          .mobile-text-sm { font-size: 12px !important; }
-          .mobile-text-lg { font-size: 18px !important; }
-          
-          /* Stack grids on mobile */
-          .mobile-stack {
-            grid-template-columns: 1fr !important;
-          }
-          
-          /* Bigger touch targets */
-          button, select, input {
-            min-height: 44px !important;
-            font-size: 16px !important;
-          }
-          
-          /* Full width cards */
-          .card {
-            padding: 16px !important;
-          }
-          
-          /* Modal adjustments */
-          .modal-scroll {
-            max-height: 75vh !important;
-          }
-        }
-        
-        @media (max-width: 480px) {
-          .tiny-hide { display: none !important; }
-        }
-        
-        /* Responsive grids */
-        .grid-2 {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-        }
-        .grid-3 {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 12px;
-        }
-        @media (max-width: 768px) {
-          .grid-2, .grid-3 {
-            grid-template-columns: 1fr !important;
-          }
-        }
       `}</style>
 
-      {/* Header - MOBILE RESPONSIVE */}
-      <header style={{ 
-        background: "#FFFFFF", 
-        borderBottom: "3px solid #B8860B", 
-        padding: "0 12px", 
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        position: "sticky",
-        top: 0,
-        zIndex: 100
-      }}>
-        <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-          {/* Logo - always visible */}
-          <div style={{ padding: "10px 0" }}>
-            <span style={{ fontSize: 24, fontWeight: 800, color: "#1a1a2e", fontFamily: "'Inter', sans-serif" }}>
-              Rep<span style={{ color: "#B8860B" }}>Track</span>
-            </span>
+      {/* Header - CLEAN & SIMPLE */}
+      <header style={{ background: "#FFFFFF", borderBottom: "3px solid #B8860B", padding: "0 24px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+            <div style={{ padding: "14px 0" }}>
+              <span style={{ fontSize: 28, fontWeight: 800, color: "#1a1a2e", fontFamily: "'Inter', sans-serif" }}>
+                Rep<span style={{ color: "#B8860B" }}>Track</span>
+              </span>
+            </div>
+            <nav style={{ display: "flex", gap: 4 }}>
+              {VIEWS.map(v => (
+                <button 
+                  key={v.id} 
+                  onClick={() => setView(v.id)}
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                    padding: "12px 20px", border: "none", cursor: "pointer",
+                    background: view === v.id ? "#FFF8DC" : "transparent",
+                    borderBottom: view === v.id ? "4px solid #B8860B" : "4px solid transparent",
+                    borderRadius: "8px 8px 0 0",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  <span style={{ fontSize: 22 }}>{v.icon}</span>
+                  <span style={{ 
+                    fontFamily: "'Inter', sans-serif", 
+                    fontSize: 14, 
+                    fontWeight: view === v.id ? 700 : 500,
+                    color: view === v.id ? "#8B6914" : "#424242",
+                    letterSpacing: 0.5
+                  }}>{v.label}</span>
+                </button>
+              ))}
+            </nav>
           </div>
-          
-          {/* Right side buttons - compact on mobile */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={() => setShowSettingsModal(true)} style={{ background: "#f5f5f5", border: "2px solid #e0e0e0", fontSize: 20, cursor: "pointer", padding: "8px 10px", borderRadius: 8, minHeight: 44 }} title="Settings">⚙️</button>
-            <button onClick={signOut} style={{ padding: "8px 12px", fontSize: 12, color: "#616161", background: "#f5f5f5", border: "2px solid #e0e0e0", borderRadius: 8, cursor: "pointer", fontWeight: 600, minHeight: 44 }}>Log Out</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: "#1a1a2e", fontWeight: 600 }}>{displayName}</div>
+              {profile?.companyName && (
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#616161" }}>{profile.companyName}</div>
+              )}
+            </div>
+            <button onClick={() => setShowSettingsModal(true)} style={{ background: "#f5f5f5", border: "2px solid #e0e0e0", fontSize: 24, cursor: "pointer", padding: "8px 12px", borderRadius: 8 }} title="Settings">⚙️</button>
+            <button onClick={signOut} style={{ padding: "10px 20px", fontSize: 14, color: "#616161", background: "#f5f5f5", border: "2px solid #e0e0e0", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>Log Out</button>
           </div>
         </div>
-        
-        {/* Navigation - scrollable on mobile */}
-        <nav style={{ 
-          display: "flex", 
-          gap: 2, 
-          overflowX: "auto", 
-          WebkitOverflowScrolling: "touch",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          paddingBottom: 2
-        }}>
-          {VIEWS.map(v => (
-            <button 
-              key={v.id} 
-              onClick={() => setView(v.id)}
-              style={{
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                padding: "8px 14px", border: "none", cursor: "pointer",
-                background: view === v.id ? "#FFF8DC" : "transparent",
-                borderBottom: view === v.id ? "4px solid #B8860B" : "4px solid transparent",
-                borderRadius: "6px 6px 0 0",
-                transition: "all 0.2s",
-                flexShrink: 0,
-                minWidth: 60
-              }}
-            >
-              <span style={{ fontSize: 20 }}>{v.icon}</span>
-              <span style={{ 
-                fontFamily: "'Inter', sans-serif", 
-                fontSize: 11, 
-                fontWeight: view === v.id ? 700 : 500,
-                color: view === v.id ? "#8B6914" : "#424242",
-                whiteSpace: "nowrap"
-              }}>{v.label}</span>
-            </button>
-          ))}
-        </nav>
       </header>
 
-      {/* Main Content - SCROLLABLE with touch support */}
-      <main className="main-scroll" style={{ 
-        maxWidth: 1400, 
-        margin: "0 auto", 
-        padding: "16px", 
-        overflowY: "auto", 
-        WebkitOverflowScrolling: "touch",
-        maxHeight: "calc(100vh - 110px)"
-      }}>
+      {/* Main Content */}
+      <main style={{ maxWidth: 1400, margin: "0 auto", padding: "24px" }}>
         
         {/* ASSISTANT VIEW */}
         {view === "assistant" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "calc(100vh - 160px)" }}>
+          <div style={{ display: "flex", gap: 24, height: "calc(100vh - 140px)" }}>
             {/* Chat Area */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-              <div style={{ marginBottom: 12 }}>
-                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: C.dark, marginBottom: 4 }}>AI Assistant</h1>
-                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light }}>IRS-compliant activity logging</p>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+              <div style={{ marginBottom: 16 }}>
+                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>AI Documentation Assistant</h1>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>Powered by Claude • IRS-compliant activity logging • Smart documentation</p>
               </div>
 
               {/* Messages */}
@@ -4122,38 +3854,12 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                   )}
                 </div>
               </div>
-              
-              {/* Edit & Delete Buttons */}
-              <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
-                <button 
-                  onClick={() => startEditProperty(showPropertyDetailModal)}
-                  style={{ 
-                    flex: 1, padding: "16px", background: "#B8860B", color: "white", 
-                    border: "none", borderRadius: 8, fontSize: 16, fontWeight: 700, 
-                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                    minHeight: 54
-                  }}
-                >
-                  ✏️ Edit Property
-                </button>
-                <button 
-                  onClick={() => deleteProperty(showPropertyDetailModal.id)}
-                  style={{ 
-                    padding: "16px 24px", background: "#FFEBEE", color: "#C62828", 
-                    border: "2px solid #C62828", borderRadius: 8, fontSize: 16, fontWeight: 700, 
-                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                    minHeight: 54
-                  }}
-                >
-                  🗑️ Delete
-                </button>
-              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ═══ EDIT PROPERTY MODAL ═══ */}
+      {/* ═══ ADD TENANT MODAL ═══ */}
       {showEditPropertyModal && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
