@@ -2025,28 +2025,30 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               <button className="btn-gold">Export for CPA</button>
             </div>
             
-            <div className="card" style={{ padding: 0 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "100px 80px 1fr 140px 70px", padding: "12px 16px", background: "#f5f0e8", borderBottom: `1px solid ${C.border}` }}>
+            <div className="card" style={{ padding: 0, maxHeight: "calc(100vh - 220px)", display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "100px 80px 1fr 140px 70px", padding: "12px 16px", background: "#f5f0e8", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
                 {["Date", "Type", "Activity & IRS Documentation", "Category", "Time"].map(h => (
                   <div key={h} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 1.5, textTransform: "uppercase" }}>{h}</div>
                 ))}
               </div>
-              {localEntries.map(e => (
-                <div key={e.id} style={{ display: "grid", gridTemplateColumns: "100px 80px 1fr 140px 70px", padding: "14px 16px", borderBottom: `1px solid ${C.borderL}`, alignItems: "start" }}>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>{e.date}</div>
-                  <div><span style={{ padding: "2px 8px", borderRadius: 2, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", background: e.qualifies ? C.greenPale : C.redPale, color: e.qualifies ? C.green : C.red }}>{e.qualifies ? "RE" : "Non-REP"}</span></div>
-                  <div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.text, marginBottom: 4 }}>{e.activity}</div>
-                    {e.irsDescription && (
-                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid, padding: "6px 8px", background: "#f8f6f0", borderRadius: 3, borderLeft: `2px solid ${C.goldL}` }}>
-                        <strong style={{ color: C.gold }}>IRS Doc:</strong> {e.irsDescription}
-                      </div>
-                    )}
+              <div style={{ overflowY: "auto", flex: 1 }}>
+                {localEntries.map(e => (
+                  <div key={e.id} style={{ display: "grid", gridTemplateColumns: "100px 80px 1fr 140px 70px", padding: "14px 16px", borderBottom: `1px solid ${C.borderL}`, alignItems: "start" }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>{e.date}</div>
+                    <div><span style={{ padding: "2px 8px", borderRadius: 2, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", background: e.qualifies ? C.greenPale : C.redPale, color: e.qualifies ? C.green : C.red }}>{e.qualifies ? "RE" : "Non-REP"}</span></div>
+                    <div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.text, marginBottom: 4 }}>{e.activity}</div>
+                      {e.irsDescription && (
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid, padding: "6px 8px", background: "#f8f6f0", borderRadius: 3, borderLeft: `2px solid ${C.goldL}` }}>
+                          <strong style={{ color: C.gold }}>IRS Doc:</strong> {e.irsDescription}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{e.categoryLabel}</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.gold, fontWeight: 600 }}>{fmtH(e.minutes)}</div>
                   </div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{e.categoryLabel}</div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.gold, fontWeight: 600 }}>{fmtH(e.minutes)}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -2192,30 +2194,31 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              {localProperties.map(p => {
-                // Calculate with actual expenses
-                const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
-                const noi = effectiveRent - (p.totalExpenses || 0);
-                const cashFlow = noi - (p.mortgagePayment || 0);
-                const isPositive = cashFlow >= 0;
-                const capRate = p.purchasePrice && p.rent ? ((noi * 12) / p.purchasePrice * 100) : null;
-                const cashOnCash = p.downPayment && cashFlow ? ((cashFlow * 12) / p.downPayment * 100) : null;
-                
-                // NPV Calculation (10-year horizon, 8% discount rate, 3% annual appreciation)
-                const discountRate = 0.08;
-                const appreciationRate = 0.03;
-                const holdingPeriod = 10; // years
-                const annualCashFlow = cashFlow * 12;
-                let npv = -(p.downPayment || 0); // Initial investment (negative)
-                
-                if (p.downPayment && p.purchasePrice) {
-                  for (let year = 1; year <= holdingPeriod; year++) {
-                    const yearCashFlow = annualCashFlow * Math.pow(1.02, year - 1);
-                    npv += yearCashFlow / Math.pow(1 + discountRate, year);
-                  }
-                  const futureValue = (p.purchasePrice || 0) * Math.pow(1 + appreciationRate, holdingPeriod);
-                  const equityAtSale = futureValue * 0.94;
+            <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 400px)", paddingRight: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                {localProperties.map(p => {
+                  // Calculate with actual expenses
+                  const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                  const noi = effectiveRent - (p.totalExpenses || 0);
+                  const cashFlow = noi - (p.mortgagePayment || 0);
+                  const isPositive = cashFlow >= 0;
+                  const capRate = p.purchasePrice && p.rent ? ((noi * 12) / p.purchasePrice * 100) : null;
+                  const cashOnCash = p.downPayment && cashFlow ? ((cashFlow * 12) / p.downPayment * 100) : null;
+                  
+                  // NPV Calculation (10-year horizon, 8% discount rate, 3% annual appreciation)
+                  const discountRate = 0.08;
+                  const appreciationRate = 0.03;
+                  const holdingPeriod = 10; // years
+                  const annualCashFlow = cashFlow * 12;
+                  let npv = -(p.downPayment || 0); // Initial investment (negative)
+                  
+                  if (p.downPayment && p.purchasePrice) {
+                    for (let year = 1; year <= holdingPeriod; year++) {
+                      const yearCashFlow = annualCashFlow * Math.pow(1.02, year - 1);
+                      npv += yearCashFlow / Math.pow(1 + discountRate, year);
+                    }
+                    const futureValue = (p.purchasePrice || 0) * Math.pow(1 + appreciationRate, holdingPeriod);
+                    const equityAtSale = futureValue * 0.94;
                   npv += equityAtSale / Math.pow(1 + discountRate, holdingPeriod);
                 }
                 const npvPositive = npv >= 0;
@@ -2340,6 +2343,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 <div style={{ fontSize: 32, color: C.light, marginBottom: 8 }}>🏠</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>Add New Property</div>
               </div>
+              </div>
             </div>
           </div>
         )}
@@ -2365,55 +2369,57 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               </div>
             </div>
 
-            {/* Group by property */}
-            {localProperties.map(property => {
-              const propertyTenants = localTenants.filter(t => t.propertyId === property.id || t.propertyName === property.name);
-              if (propertyTenants.length === 0) return null;
-              
-              return (
-                <div key={property.id} style={{ marginBottom: 16 }}>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: C.dark, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                    🏠 {property.name}
-                    <span style={{ fontSize: 11, color: C.light, fontWeight: 400 }}>• {property.address}</span>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    {propertyTenants.map(tenant => (
-                      <div 
-                        key={tenant.id} 
-                        className="card" 
-                        onClick={() => setShowTenantDetailModal(tenant)}
-                        style={{ borderLeft: `4px solid ${C.blueB}`, cursor: "pointer", transition: "transform 0.15s" }}
-                        onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.01)"}
-                        onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
-                          <div>
-                            <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark }}>
-                              {tenant.firstName} {tenant.lastName}
+            {/* Scrollable Tenants List */}
+            <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 280px)", paddingRight: 10 }}>
+              {/* Group by property */}
+              {localProperties.map(property => {
+                const propertyTenants = localTenants.filter(t => t.propertyId === property.id || t.propertyName === property.name);
+                if (propertyTenants.length === 0) return null;
+                
+                return (
+                  <div key={property.id} style={{ marginBottom: 16 }}>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: C.dark, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                      🏠 {property.name}
+                      <span style={{ fontSize: 11, color: C.light, fontWeight: 400 }}>• {property.address}</span>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      {propertyTenants.map(tenant => (
+                        <div 
+                          key={tenant.id} 
+                          className="card" 
+                          onClick={() => setShowTenantDetailModal(tenant)}
+                          style={{ borderLeft: `4px solid ${C.blueB}`, cursor: "pointer", transition: "transform 0.15s" }}
+                          onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.01)"}
+                          onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
+                            <div>
+                              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark }}>
+                                {tenant.firstName} {tenant.lastName}
+                              </div>
+                              {tenant.unit && (
+                                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>Unit {tenant.unit}</div>
+                              )}
                             </div>
-                            {tenant.unit && (
-                              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>Unit {tenant.unit}</div>
-                            )}
-                          </div>
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <span style={{ 
-                              padding: "2px 8px", fontSize: 10, borderRadius: 10,
-                              background: tenant.hasInsurance ? C.greenPale : C.orangePale,
-                              color: tenant.hasInsurance ? C.green : C.orange,
-                              fontFamily: "'IBM Plex Mono', monospace"
-                            }}>
-                              {tenant.hasInsurance ? "✓ Ins" : "⚠️"}
-                            </span>
-                            {tenant.latePayments > 0 && (
-                              <span style={{ padding: "2px 8px", fontSize: 10, borderRadius: 10, background: C.redPale, color: C.red, fontFamily: "'IBM Plex Mono', monospace" }}>
-                                {tenant.latePayments} late
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <span style={{ 
+                                padding: "2px 8px", fontSize: 10, borderRadius: 10,
+                                background: tenant.hasInsurance ? C.greenPale : C.orangePale,
+                                color: tenant.hasInsurance ? C.green : C.orange,
+                                fontFamily: "'IBM Plex Mono', monospace"
+                              }}>
+                                {tenant.hasInsurance ? "✓ Ins" : "⚠️"}
                               </span>
-                            )}
+                              {tenant.latePayments > 0 && (
+                                <span style={{ padding: "2px 8px", fontSize: 10, borderRadius: 10, background: C.redPale, color: C.red, fontFamily: "'IBM Plex Mono', monospace" }}>
+                                  {tenant.latePayments} late
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        
-                        {/* Icon-only action buttons */}
-                        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                          
+                          {/* Icon-only action buttons */}
+                          <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                           <a 
                             href={getEmailLink(tenant.email, `Regarding Your Lease at ${tenant.propertyName}`)}
                             target="_blank"
@@ -2474,6 +2480,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 <button onClick={() => setShowAddTenantModal(true)} className="btn-gold">Add First Tenant</button>
               </div>
             )}
+            </div>
           </div>
         )}
 
@@ -2490,46 +2497,48 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               </button>
             </div>
 
-            {/* Group by city first, then category */}
-            {[...new Set(localVendors.map(v => v.city || "Other"))].map(city => {
-              const cityVendors = localVendors.filter(v => (v.city || "Other") === city);
-              if (cityVendors.length === 0) return null;
-              
-              return (
-                <div key={city} style={{ marginBottom: 16 }}>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 16, paddingBottom: 8, borderBottom: `2px solid ${C.gold}` }}>
-                    📍 {city}
-                    <span style={{ fontSize: 12, color: C.light, fontWeight: 400, marginLeft: 8 }}>• {cityVendors.length} vendor{cityVendors.length !== 1 ? 's' : ''}</span>
-                  </div>
-                  
-                  {/* Group by category within city */}
-                  {VENDOR_CATEGORIES.map(category => {
-                    const categoryVendors = cityVendors.filter(v => v.category === category.id);
-                    if (categoryVendors.length === 0) return null;
+            {/* Scrollable Vendors List */}
+            <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 220px)", paddingRight: 10 }}>
+              {/* Group by city first, then category */}
+              {[...new Set(localVendors.map(v => v.city || "Other"))].map(city => {
+                const cityVendors = localVendors.filter(v => (v.city || "Other") === city);
+                if (cityVendors.length === 0) return null;
+                
+                return (
+                  <div key={city} style={{ marginBottom: 16 }}>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 16, paddingBottom: 8, borderBottom: `2px solid ${C.gold}` }}>
+                      📍 {city}
+                      <span style={{ fontSize: 12, color: C.light, fontWeight: 400, marginLeft: 8 }}>• {cityVendors.length} vendor{cityVendors.length !== 1 ? 's' : ''}</span>
+                    </div>
                     
-                    return (
-                      <div key={category.id} style={{ marginBottom: 12, marginLeft: 12 }}>
-                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, color: C.mid, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                          {category.icon} {category.label}
-                        </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                          {categoryVendors.map(vendor => (
-                            <div 
-                              key={vendor.id} 
-                              className="card" 
-                              onClick={() => setShowVendorDetailModal(vendor)}
-                              style={{ borderLeft: `4px solid ${C.goldL}`, cursor: "pointer", transition: "transform 0.15s" }}
-                              onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.01)"}
-                              onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
-                            >
-                              <div style={{ marginBottom: 8 }}>
-                                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark }}>
-                                  {vendor.companyName}
+                    {/* Group by category within city */}
+                    {VENDOR_CATEGORIES.map(category => {
+                      const categoryVendors = cityVendors.filter(v => v.category === category.id);
+                      if (categoryVendors.length === 0) return null;
+                      
+                      return (
+                        <div key={category.id} style={{ marginBottom: 12, marginLeft: 12 }}>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, color: C.mid, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                            {category.icon} {category.label}
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                            {categoryVendors.map(vendor => (
+                              <div 
+                                key={vendor.id} 
+                                className="card" 
+                                onClick={() => setShowVendorDetailModal(vendor)}
+                                style={{ borderLeft: `4px solid ${C.goldL}`, cursor: "pointer", transition: "transform 0.15s" }}
+                                onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.01)"}
+                                onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
+                              >
+                                <div style={{ marginBottom: 8 }}>
+                                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark }}>
+                                    {vendor.companyName}
+                                  </div>
+                                  {vendor.contactName && (
+                                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{vendor.contactName}</div>
+                                  )}
                                 </div>
-                                {vendor.contactName && (
-                                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{vendor.contactName}</div>
-                                )}
-                              </div>
                               
                               {/* Icon-only action buttons */}
                               <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
@@ -2594,9 +2603,10 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 <button onClick={() => setShowAddVendorModal(true)} className="btn-gold">Add First Vendor</button>
               </div>
             )}
+            </div>
 
             {/* IRS 469(c) Qualifications Reference */}
-            <div className="card" style={{ background: C.goldPale, border: `1px solid ${C.gold}` }}>
+            <div className="card" style={{ background: C.goldPale, border: `1px solid ${C.gold}`, marginTop: 16 }}>
               <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.gold, letterSpacing: 2, marginBottom: 12 }}>
                 📋 IRS §469(c)(7) QUALIFYING ACTIVITIES
               </div>
