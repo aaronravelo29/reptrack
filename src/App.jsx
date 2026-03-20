@@ -38,7 +38,6 @@ const supabase = {
           localStorage.setItem('sb-token', data.access_token);
           localStorage.setItem('sb-user', JSON.stringify(data.user));
         }
-        // Also save profile data locally
         if (options?.data) {
           localStorage.setItem('sb-profile', JSON.stringify(options.data));
         }
@@ -85,7 +84,6 @@ const supabase = {
   }
 };
 
-// Get profile from localStorage
 const getProfile = () => {
   const profile = localStorage.getItem('sb-profile');
   return profile ? JSON.parse(profile) : null;
@@ -166,44 +164,29 @@ function AuthScreen() {
   const { signIn, signUp } = useAuth();
 
   const inputStyle = { 
-    width: "100%", 
-    padding: "12px 14px", 
-    fontSize: 14, 
-    border: "1px solid #d4cfbd", 
-    borderRadius: 4, 
-    background: "#faf8f4", 
-    color: "#0F2742", 
-    outline: "none", 
-    fontFamily: "'IBM Plex Mono', monospace", 
-    boxSizing: "border-box" 
+    width: "100%", padding: "12px 14px", fontSize: 14, 
+    border: "1px solid #d4cfbd", borderRadius: 4, 
+    background: "#faf8f4", color: "#0F2742", outline: "none", 
+    fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" 
   };
-
   const labelStyle = { 
-    display: "block", 
-    fontSize: 10, 
-    color: "#4D6785", 
-    letterSpacing: 2, 
-    textTransform: "uppercase", 
-    marginBottom: 6 
+    display: "block", fontSize: 10, color: "#4D6785", 
+    letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setMessage("");
-    setLoading(true);
+    setError(""); setMessage(""); setLoading(true);
 
     if (mode === "login") {
       const { error } = await signIn(email, password);
       if (error) setError(error.message);
     } else {
-      // Validate required fields for signup
       if (!firstName.trim() || !lastName.trim()) {
         setError("Please enter your first and last name.");
         setLoading(false);
         return;
       }
-
       const profileData = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -211,7 +194,6 @@ function AuthScreen() {
         phone: phone.trim(),
         createdAt: new Date().toISOString()
       };
-
       const { data, error } = await signUp(email, password, profileData);
       if (error) {
         setError(error.message);
@@ -225,133 +207,65 @@ function AuthScreen() {
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 50%, #0F2742 100%)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 20,
-      fontFamily: "'IBM Plex Mono', monospace"
-    }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
-      `}</style>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 50%, #0F2742 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'IBM Plex Mono', monospace" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');`}</style>
       
-      <div style={{
-        background: "#F7F5EA",
-        borderRadius: 8,
-        padding: "40px 36px",
-        width: "100%",
-        maxWidth: mode === "signup" ? 480 : 420,
-        boxShadow: "0 25px 80px rgba(0,0,0,0.4)",
-        transition: "max-width 0.3s ease"
-      }}>
+      <div style={{ background: "#F7F5EA", borderRadius: 8, padding: "40px 36px", width: "100%", maxWidth: mode === "signup" ? 480 : 420, boxShadow: "0 25px 80px rgba(0,0,0,0.4)" }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{ fontSize: 32, fontWeight: 700, color: "#0F2742", fontFamily: "'Inter', sans-serif", letterSpacing: -1 }}>
             Rep<span style={{ color: "#C6A24A" }}>Track</span>
           </div>
-          <div style={{ fontSize: 11, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginTop: 6 }}>
-            Real Estate Professional Tracker
-          </div>
+          <div style={{ fontSize: 11, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginTop: 6 }}>Real Estate Professional Tracker</div>
         </div>
 
         <div style={{ display: "flex", marginBottom: 24, borderBottom: "1px solid #d4cfbd" }}>
           {["login", "signup"].map(m => (
-            <button
-              key={m}
-              onClick={() => { setMode(m); setError(""); setMessage(""); }}
-              style={{
-                flex: 1, padding: "12px 0", background: "none", border: "none",
+            <button key={m} onClick={() => { setMode(m); setError(""); setMessage(""); }}
+              style={{ flex: 1, padding: "12px 0", background: "none", border: "none",
                 borderBottom: mode === m ? "2px solid #C6A24A" : "2px solid transparent",
                 color: mode === m ? "#C6A24A" : "#4D6785",
                 fontSize: 12, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase",
-                cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace"
-              }}
-            >
+                cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
               {m === "login" ? "Log In" : "Sign Up"}
             </button>
           ))}
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* Signup-only fields */}
           {mode === "signup" && (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
                 <div>
                   <label style={labelStyle}>First Name *</label>
-                  <input
-                    type="text" 
-                    value={firstName} 
-                    onChange={(e) => setFirstName(e.target.value)} 
-                    required={mode === "signup"}
-                    style={inputStyle}
-                    placeholder="John"
-                  />
+                  <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} required={mode === "signup"} style={inputStyle} placeholder="John" />
                 </div>
                 <div>
                   <label style={labelStyle}>Last Name *</label>
-                  <input
-                    type="text" 
-                    value={lastName} 
-                    onChange={(e) => setLastName(e.target.value)} 
-                    required={mode === "signup"}
-                    style={inputStyle}
-                    placeholder="Smith"
-                  />
+                  <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} required={mode === "signup"} style={inputStyle} placeholder="Smith" />
                 </div>
               </div>
-
               <div style={{ marginBottom: 14 }}>
                 <label style={labelStyle}>Company Name</label>
-                <input
-                  type="text" 
-                  value={companyName} 
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  style={inputStyle}
-                  placeholder="Smith Properties LLC"
-                />
+                <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} style={inputStyle} placeholder="Smith Properties LLC" />
               </div>
-
               <div style={{ marginBottom: 14 }}>
                 <label style={labelStyle}>Phone Number</label>
-                <input
-                  type="tel" 
-                  value={phone} 
-                  onChange={(e) => setPhone(e.target.value)}
-                  style={inputStyle}
-                  placeholder="(555) 123-4567"
-                />
+                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} placeholder="(555) 123-4567" />
               </div>
-
               <div style={{ borderTop: "1px solid #d4cfbd", margin: "20px 0", paddingTop: 16 }}>
-                <div style={{ fontSize: 10, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>
-                  Account Credentials
-                </div>
+                <div style={{ fontSize: 10, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Account Credentials</div>
               </div>
             </>
           )}
 
           <div style={{ marginBottom: 14 }}>
             <label style={labelStyle}>Email *</label>
-            <input
-              type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
-              style={inputStyle}
-              placeholder="you@example.com"
-            />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required style={inputStyle} placeholder="you@example.com" />
           </div>
-
           <div style={{ marginBottom: 20 }}>
             <label style={labelStyle}>Password *</label>
-            <input
-              type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6}
-              style={inputStyle}
-              placeholder="••••••••"
-            />
-            {mode === "signup" && (
-              <div style={{ fontSize: 10, color: "#7a96b0", marginTop: 4 }}>Minimum 6 characters</div>
-            )}
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} style={inputStyle} placeholder="••••••••" />
+            {mode === "signup" && <div style={{ fontSize: 10, color: "#7a96b0", marginTop: 4 }}>Minimum 6 characters</div>}
           </div>
 
           {error && <div style={{ background: "#f5e4e4", border: "1px solid #993030", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#7a1a1a" }}>{error}</div>}
@@ -375,6 +289,21 @@ function AuthScreen() {
   );
 }
 
+// ─── IRS CATEGORIES & RULES ───────────────────────────────────────────────────
+const IRS_CATEGORIES = {
+  management: { label: "Property Management", qualifies: true, examples: "tenant relations, property oversight, lease enforcement" },
+  maintenance: { label: "Maintenance & Repairs", qualifies: true, examples: "coordinating repairs, supervising contractors, property inspections" },
+  leasing: { label: "Leasing", qualifies: true, examples: "showings, tenant screening, lease preparation, move-in/out" },
+  financial: { label: "Financial Management", qualifies: true, examples: "rent collection, bookkeeping, P&L review, expense tracking" },
+  legal: { label: "Legal & Administrative", qualifies: true, examples: "lease review, compliance, eviction process, insurance" },
+  vendor: { label: "Vendor Coordination", qualifies: true, examples: "contractor meetings, getting bids, supervising work" },
+  acquisition: { label: "Acquisition", qualifies: true, examples: "property tours, due diligence, market research, negotiations" },
+  construction: { label: "Construction", qualifies: true, examples: "renovation oversight, permits, contractor coordination" },
+  travel: { label: "RE Travel", qualifies: true, examples: "driving to properties, travel for RE activities" },
+  education: { label: "RE Education", qualifies: true, examples: "RE courses, seminars, studying RE topics" },
+  non_re: { label: "Non-RE Work", qualifies: false, examples: "W-2 job, non-RE business, personal activities" }
+};
+
 // ─── Sample Data ──────────────────────────────────────────────────────────────
 const SAMPLE_PROPERTIES = [
   { id:"p1", name:"Oak Street Duplex", address:"123 Oak St, Pittsburgh PA 15213", type:"multi_family", units:2, rent:3400 },
@@ -384,15 +313,15 @@ const SAMPLE_PROPERTIES = [
 ];
 
 const SAMPLE_ENTRIES = [
-  { id:"e1", date:"2024-11-01", qualifies:true, category:"management", categoryLabel:"Property Management", activity:"Called tenant re maintenance request — Oak St Unit A", minutes:30 },
-  { id:"e2", date:"2024-11-01", qualifies:false, category:"non_re", categoryLabel:"Non-RE Work", activity:"W-2 work shift", minutes:480 },
-  { id:"e3", date:"2024-11-02", qualifies:true, category:"maintenance", categoryLabel:"Maintenance & Repairs", activity:"Supervised plumber — Oak St hot water heater repair", minutes:90 },
-  { id:"e4", date:"2024-11-04", qualifies:true, category:"leasing", categoryLabel:"Leasing", activity:"Showed vacant unit — Downtown Studio #4C", minutes:120 },
-  { id:"e5", date:"2024-11-05", qualifies:true, category:"financial_mgmt", categoryLabel:"Financial Management", activity:"Reviewed monthly rent rolls and P&L", minutes:75 },
+  { id:"e1", date:"2024-11-01", qualifies:true, category:"management", categoryLabel:"Property Management", activity:"Called tenant re maintenance request — Oak St Unit A", minutes:30, irsDescription: "Coordinated tenant maintenance request for Oak Street Duplex Unit A. Documented issue, contacted service provider, and followed up with tenant on resolution timeline." },
+  { id:"e2", date:"2024-11-01", qualifies:false, category:"non_re", categoryLabel:"Non-RE Work", activity:"W-2 work shift", minutes:480, irsDescription: null },
+  { id:"e3", date:"2024-11-02", qualifies:true, category:"maintenance", categoryLabel:"Maintenance & Repairs", activity:"Supervised plumber — Oak St hot water heater repair", minutes:90, irsDescription: "On-site supervision of licensed plumber performing hot water heater replacement at Oak Street Duplex. Verified work quality, approved invoice, and documented repair for property records." },
+  { id:"e4", date:"2024-11-04", qualifies:true, category:"leasing", categoryLabel:"Leasing", activity:"Showed vacant unit — Downtown Studio #4C", minutes:120, irsDescription: "Conducted property showing for prospective tenant at Downtown Studio Unit 4C. Discussed lease terms, property features, and tenant requirements. Collected rental application." },
+  { id:"e5", date:"2024-11-05", qualifies:true, category:"financial", categoryLabel:"Financial Management", activity:"Reviewed monthly rent rolls and P&L", minutes:75, irsDescription: "Monthly financial review for rental portfolio. Analyzed rent collection status, reviewed profit and loss statements, and reconciled property expenses across all units." },
 ];
 
 const fmtH = (m) => { const h=Math.floor(m/60),mn=m%60; return !h&&!mn?"0h":`${h>0?h+"h":""}${mn>0?" "+mn+"m":""}`.trim(); };
-const uid = () => Date.now()+Math.random().toString(36).slice(2);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const todayStr = () => new Date().toISOString().split("T")[0];
 
 const C = {
@@ -403,6 +332,7 @@ const C = {
   red:"#7a1a1a", redPale:"#f5e4e4", redB:"#993030",
   blue:"#2d4f6e", bluePale:"#e4edf5", blueB:"#3d6080",
   purple:"#3a2060", purpleB:"#5a3a90",
+  orange:"#8a5a20", orangePale:"#fdf4e4", orangeB:"#b87820",
 };
 
 const VIEWS = [
@@ -412,46 +342,125 @@ const VIEWS = [
   { id:"properties", icon:"⌂", label:"Properties" },
 ];
 
-// ─── CLAUDE AI SYSTEM PROMPT ──────────────────────────────────────────────────
-const getSystemPrompt = (reHrs, rePct, entries, profile) => `You are an AI assistant for RepTrack, a Real Estate Professional (REP) tax documentation platform. Your role is to help users log their real estate activities, organize records, and draft communications.
+// ─── ENHANCED CLAUDE AI SYSTEM PROMPT ─────────────────────────────────────────
+const getSystemPrompt = (reHrs, rePct, entries, profile, properties) => `You are RepTrack AI, an intelligent Real Estate Professional (REP) tax documentation assistant. You help real estate investors document their activities to qualify for REP status under IRC §469(c)(7).
 
-USER PROFILE:
-- Name: ${profile?.firstName || 'User'} ${profile?.lastName || ''}
-- Company: ${profile?.companyName || 'Not specified'}
-- Phone: ${profile?.phone || 'Not specified'}
+═══════════════════════════════════════════════════════════════════════════════
+USER PROFILE
+═══════════════════════════════════════════════════════════════════════════════
+Name: ${profile?.firstName || 'User'} ${profile?.lastName || ''}
+Company: ${profile?.companyName || 'Not specified'}
 
-CURRENT USER STATUS:
-- RE hours logged: ${reHrs} hours (need 750 for REP status)
-- RE percentage of work: ${rePct.toFixed(1)}% (need >50% for REP status)
-- Total entries: ${entries.length}
+═══════════════════════════════════════════════════════════════════════════════
+CURRENT REP STATUS
+═══════════════════════════════════════════════════════════════════════════════
+• RE Hours Logged: ${reHrs} hours (NEED 750+ for REP status)
+• RE % of Total Work: ${rePct.toFixed(1)}% (NEED >50% for REP status)
+• Total Entries: ${entries.length}
+• Progress: ${Math.min(100, (reHrs/750*100)).toFixed(0)}% toward 750-hour threshold
 
-YOUR CAPABILITIES:
-1. LOG ACTIVITIES: When users describe real estate work, help them log it. Extract: activity description, duration (in minutes), category, and whether it qualifies as RE work.
+${reHrs >= 750 && rePct > 50 ? "✅ ON TRACK: User appears to meet REP requirements!" : 
+  reHrs < 750 ? `⚠️ NEEDS ${750 - reHrs} MORE HOURS to reach 750-hour threshold` :
+  "⚠️ RE percentage below 50% - may not qualify"}
 
-2. CATEGORIES for RE work:
-- Property Management (tenant relations, oversight)
-- Maintenance & Repairs (coordinating/supervising repairs)
-- Leasing (showings, applications, lease prep)
-- Financial Management (rent collection, bookkeeping, P&L)
-- Legal & Administrative (lease review, compliance)
-- Vendor Coordination (contractor meetings, bids)
-- Acquisition (property tours, due diligence)
-- Construction (renovation oversight)
+═══════════════════════════════════════════════════════════════════════════════
+USER'S PROPERTIES
+═══════════════════════════════════════════════════════════════════════════════
+${properties.map(p => `• ${p.name} (${p.address})`).join('\n')}
 
-3. NON-RE WORK: W-2 jobs, non-real-estate businesses, etc.
+═══════════════════════════════════════════════════════════════════════════════
+YOUR CORE FUNCTION: ACTIVITY LOGGING
+═══════════════════════════════════════════════════════════════════════════════
+When a user describes ANY real estate activity, you MUST:
 
-4. DRAFT EMAILS: Help draft professional emails to tenants, vendors, etc.
+1. EXTRACT the activity details:
+   - What they did (specific task)
+   - Duration (in minutes)
+   - Which property (if mentioned)
+   - Category (see below)
 
-5. ANSWER QUESTIONS: About REP status requirements, documentation best practices, etc.
+2. GENERATE an IRS-ready description that:
+   - Uses professional, specific language
+   - Includes the property address when known
+   - Describes the actual work performed
+   - Is suitable for audit documentation
 
-RESPONSE FORMAT:
-- Be concise and professional
-- Address the user by their first name when appropriate
-- When logging an activity, confirm the details
-- If you need clarification, ask specific questions
-- Don't give tax advice - remind users to consult their CPA
+3. RESPOND with a structured activity card using this EXACT format:
 
-IMPORTANT: You are NOT a tax advisor. You help with DOCUMENTATION only.`;
+───────────────────────────────────────
+📋 ACTIVITY LOGGED
+───────────────────────────────────────
+Activity: [Brief description]
+Duration: [X hours Y minutes]
+Category: [Category name]
+Property: [Property name or "General"]
+Qualifies: [✅ Yes - RE Work] or [❌ No - Non-RE]
+
+📝 IRS Documentation:
+"[Professional, audit-ready description of the activity that would satisfy IRS requirements. 2-3 sentences.]"
+
+💡 Progress Update:
+• New RE Total: [X] hours ([Y]% toward 750h)
+• RE Percentage: [Z]% of total work
+───────────────────────────────────────
+
+[[SAVE_ACTIVITY:{"activity":"brief description","minutes":X,"category":"category_key","qualifies":true/false,"property":"property name or null","irsDescription":"full IRS description"}]]
+
+═══════════════════════════════════════════════════════════════════════════════
+IRS-QUALIFYING RE CATEGORIES (IRC §469(c)(7))
+═══════════════════════════════════════════════════════════════════════════════
+✅ QUALIFIES as RE Work:
+• Property Management - tenant relations, oversight, lease enforcement
+• Maintenance & Repairs - coordinating repairs, supervising contractors
+• Leasing - showings, tenant screening, lease prep, move-in/out
+• Financial Management - rent collection, bookkeeping, P&L review
+• Legal & Administrative - lease review, compliance, eviction process
+• Vendor Coordination - contractor meetings, bids, supervising work
+• Acquisition - property tours, due diligence, negotiations
+• Construction - renovation oversight, permits, contractor coordination
+• RE Travel - driving to properties for RE activities
+• RE Education - courses, seminars specifically about real estate
+
+❌ DOES NOT QUALIFY:
+• W-2 employment
+• Non-RE businesses
+• Personal activities
+• Investor activities (passive review of statements)
+
+═══════════════════════════════════════════════════════════════════════════════
+RED FLAGS - ALWAYS WARN ABOUT THESE
+═══════════════════════════════════════════════════════════════════════════════
+⚠️ WARN if:
+• Single activity exceeds 4 hours (ask for breakdown)
+• Vague descriptions without specific tasks
+• No property mentioned for property-specific work
+• Activities that sound passive (just "reviewing" without action)
+• Round numbers (exactly 2 hours, 4 hours) - suggest more precision
+• Activities that may not qualify being logged as RE work
+
+EXAMPLE WARNING:
+"⚠️ 6 hours for 'reviewing documents' seems high and vague. For audit protection:
+• What specific documents? (leases, financials, applications?)
+• Which properties?
+• What decisions or actions resulted?
+Can you break this down into specific tasks?"
+
+═══════════════════════════════════════════════════════════════════════════════
+OTHER CAPABILITIES
+═══════════════════════════════════════════════════════════════════════════════
+• Draft professional emails to tenants, vendors, contractors
+• Answer questions about REP requirements
+• Explain IRS rules and documentation best practices
+• Review logged activities for audit readiness
+• Generate summary reports
+
+═══════════════════════════════════════════════════════════════════════════════
+IMPORTANT DISCLAIMERS
+═══════════════════════════════════════════════════════════════════════════════
+• You are NOT a tax advisor - remind users to consult their CPA
+• You help with DOCUMENTATION only
+• When in doubt about whether something qualifies, be conservative
+• Always prioritize audit-defensible documentation`;
 
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 function MainApp() {
@@ -460,12 +469,39 @@ function MainApp() {
   const [localEntries, setLocalEntries] = useState(SAMPLE_ENTRIES);
   
   // Chat state
-  const [messages, setMessages] = useState([
-    { role: "assistant", id: "welcome", content: `Hi${profile?.firstName ? ` ${profile.firstName}` : ''}! I'm your RepTrack assistant. I can help you:\n\n• Log real estate activities\n• Track your hours toward REP status\n• Draft emails to tenants and vendors\n• Answer questions about documentation\n\nWhat did you work on today?` }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Initialize welcome message with profile
+  useEffect(() => {
+    if (profile && messages.length === 0) {
+      const reEntries = SAMPLE_ENTRIES.filter(e => e.qualifies);
+      const totalREMins = reEntries.reduce((s, e) => s + e.minutes, 0);
+      const reHrs = Math.round(totalREMins / 60 * 10) / 10;
+      
+      setMessages([{
+        role: "assistant",
+        id: "welcome",
+        content: `Hi ${profile?.firstName || 'there'}! I'm your RepTrack AI assistant. 🏠
+
+**Your Current Status:**
+• RE Hours: ${reHrs}h of 750h needed
+• Progress: ${Math.min(100, (reHrs/750*100)).toFixed(0)}% toward REP qualification
+
+**I can help you:**
+• Log real estate activities with IRS-ready documentation
+• Track your progress toward 750-hour threshold
+• Draft professional emails to tenants and vendors
+• Answer questions about REP requirements
+
+**Just tell me what you worked on today!**
+
+For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"`
+      }]);
+    }
+  }, [profile]);
 
   const reEntries = localEntries.filter(e => e.qualifies);
   const totalREMins = reEntries.reduce((s, e) => s + e.minutes, 0);
@@ -474,7 +510,6 @@ function MainApp() {
   const totalMins = totalREMins + nonREMins;
   const rePct = totalMins > 0 ? (totalREMins / totalMins) * 100 : 0;
 
-  // Display name
   const displayName = profile?.firstName && profile?.lastName 
     ? `${profile.firstName} ${profile.lastName}` 
     : user?.email;
@@ -482,6 +517,24 @@ function MainApp() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Parse AI response for activity data
+  const parseActivityFromResponse = (text) => {
+    const match = text.match(/\[\[SAVE_ACTIVITY:(.*?)\]\]/);
+    if (match) {
+      try {
+        return JSON.parse(match[1]);
+      } catch (e) {
+        console.error("Failed to parse activity:", e);
+      }
+    }
+    return null;
+  };
+
+  // Remove the SAVE_ACTIVITY tag from displayed message
+  const cleanResponseText = (text) => {
+    return text.replace(/\[\[SAVE_ACTIVITY:.*?\]\]/g, '').trim();
+  };
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -494,11 +547,9 @@ function MainApp() {
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system: getSystemPrompt(reHrs, rePct, localEntries, profile),
+          system: getSystemPrompt(reHrs, rePct, localEntries, profile, SAMPLE_PROPERTIES),
           messages: [...messages.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })), { role: "user", content: input.trim() }]
         })
       });
@@ -509,10 +560,30 @@ function MainApp() {
         throw new Error(data.error);
       }
 
+      const responseText = data.content[0].text;
+      
+      // Check for activity to save
+      const activityData = parseActivityFromResponse(responseText);
+      if (activityData) {
+        const newEntry = {
+          id: uid(),
+          date: todayStr(),
+          qualifies: activityData.qualifies,
+          category: activityData.category,
+          categoryLabel: IRS_CATEGORIES[activityData.category]?.label || activityData.category,
+          activity: activityData.activity,
+          minutes: activityData.minutes,
+          property: activityData.property,
+          irsDescription: activityData.irsDescription
+        };
+        setLocalEntries(prev => [newEntry, ...prev]);
+      }
+
       const assistantMessage = {
         role: "assistant",
         id: uid(),
-        content: data.content[0].text
+        content: cleanResponseText(responseText),
+        activityLogged: !!activityData
       };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
@@ -533,6 +604,14 @@ function MainApp() {
     }
   };
 
+  // Calculate days/weeks remaining in year
+  const now = new Date();
+  const endOfYear = new Date(now.getFullYear(), 11, 31);
+  const daysRemaining = Math.ceil((endOfYear - now) / (1000 * 60 * 60 * 24));
+  const weeksRemaining = Math.ceil(daysRemaining / 7);
+  const hoursNeeded = Math.max(0, 750 - reHrs);
+  const hoursPerWeek = weeksRemaining > 0 ? (hoursNeeded / weeksRemaining).toFixed(1) : 0;
+
   return (
     <div style={{ fontFamily: "Georgia, serif", background: C.bg, minHeight: "100vh", color: C.text }}>
       <style>{`
@@ -544,9 +623,11 @@ function MainApp() {
         .card { background:#fff; border:1px solid ${C.border}; border-radius:3px; padding:20px; }
         .btn-gold { background:#C6A24A; border:none; color:#0F2742; font-weight:600; padding:10px 22px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; border-radius:2px; }
         .btn-outline { background:#fff; border:1px solid ${C.border}; color:${C.mid}; padding:9px 18px; font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer; border-radius:2px; }
-        .msg-bubble { max-width: 80%; padding: 12px 16px; border-radius: 12px; margin-bottom: 12px; }
+        .msg-bubble { max-width: 85%; padding: 14px 18px; border-radius: 12px; margin-bottom: 12px; }
         .msg-user { background: ${C.dark}; color: ${C.goldBright}; margin-left: auto; border-bottom-right-radius: 4px; }
         .msg-assistant { background: white; border: 1px solid ${C.border}; color: ${C.text}; margin-right: auto; border-bottom-left-radius: 4px; }
+        .msg-logged { border-left: 3px solid ${C.greenB}; }
+        .progress-ring { transform: rotate(-90deg); }
       `}</style>
 
       {/* Header */}
@@ -588,22 +669,29 @@ function MainApp() {
             {/* Chat Area */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <div style={{ marginBottom: 16 }}>
-                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>AI Assistant</h1>
-                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>Powered by Claude • Log activities, draft emails, get answers</p>
+                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>AI Documentation Assistant</h1>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>Powered by Claude • IRS-compliant activity logging • Smart documentation</p>
               </div>
 
               {/* Messages */}
               <div className="card" style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column" }}>
                 {messages.map(msg => (
-                  <div key={msg.id} className={`msg-bubble ${msg.role === "user" ? "msg-user" : "msg-assistant"}`}>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+                  <div key={msg.id} className={`msg-bubble ${msg.role === "user" ? "msg-user" : "msg-assistant"} ${msg.activityLogged ? "msg-logged" : ""}`}>
+                    {msg.activityLogged && (
+                      <div style={{ fontSize: 10, color: C.green, fontFamily: "'IBM Plex Mono', monospace", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                        <span>✓</span> ACTIVITY SAVED TO RECORDS
+                      </div>
+                    )}
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
                       {msg.content}
                     </div>
                   </div>
                 ))}
                 {loading && (
                   <div className="msg-bubble msg-assistant">
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.light }}>Thinking...</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.light }}>
+                      🔍 Analyzing activity and generating IRS documentation...
+                    </div>
                   </div>
                 )}
                 <div ref={messagesEndRef} />
@@ -615,7 +703,7 @@ function MainApp() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Tell me what you worked on, or ask a question..."
+                  placeholder="Describe your real estate activity... (e.g., 'I spent 2 hours showing properties today')"
                   style={{
                     flex: 1, padding: "14px 16px", fontSize: 14, border: `1px solid ${C.border}`,
                     borderRadius: 8, background: "white", color: C.text, outline: "none", resize: "none",
@@ -629,7 +717,13 @@ function MainApp() {
 
               {/* Quick Actions */}
               <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {["I reviewed leases for 2 hours", "Log a 45-min contractor call", "Draft email to tenant about rent", "What counts as RE work?"].map(q => (
+                {[
+                  "I spent 2 hours on property management",
+                  "Log a 45-min contractor meeting", 
+                  "I showed a rental unit for 1 hour",
+                  "What qualifies as RE work?",
+                  "How many hours do I need?"
+                ].map(q => (
                   <button key={q} onClick={() => setInput(q)} style={{
                     background: "white", border: `1px solid ${C.border}`, borderRadius: 20,
                     padding: "6px 14px", fontSize: 11, color: C.mid, cursor: "pointer",
@@ -642,29 +736,60 @@ function MainApp() {
             </div>
 
             {/* Sidebar Stats */}
-            <div style={{ width: 280, display: "flex", flexDirection: "column", gap: 12 }}>
-              <div className="card" style={{ borderLeft: `4px solid ${C.greenB}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>RE HOURS</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.green }}>{reHrs}h</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>of 750h threshold</div>
-                <div style={{ marginTop: 8, height: 6, background: C.borderL, borderRadius: 3 }}>
-                  <div style={{ height: "100%", width: `${Math.min((reHrs/750)*100, 100)}%`, background: C.greenB, borderRadius: 3 }} />
+            <div style={{ width: 300, display: "flex", flexDirection: "column", gap: 12 }}>
+              {/* REP Status Card */}
+              <div className="card" style={{ borderLeft: `4px solid ${reHrs >= 750 && rePct > 50 ? C.greenB : C.orangeB}`, padding: 16 }}>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 12 }}>REP STATUS</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  {/* Progress Circle */}
+                  <svg width="70" height="70" viewBox="0 0 70 70">
+                    <circle cx="35" cy="35" r="30" fill="none" stroke={C.borderL} strokeWidth="6" />
+                    <circle cx="35" cy="35" r="30" fill="none" stroke={reHrs >= 750 ? C.greenB : C.goldL} strokeWidth="6" 
+                      strokeDasharray={`${Math.min(100, (reHrs/750*100)) * 1.885} 188.5`}
+                      className="progress-ring" />
+                    <text x="35" y="38" textAnchor="middle" style={{ fontSize: 14, fontWeight: 700, fill: C.dark, fontFamily: "'Inter', sans-serif" }}>
+                      {Math.min(100, (reHrs/750*100)).toFixed(0)}%
+                    </text>
+                  </svg>
+                  <div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: reHrs >= 750 ? C.green : C.gold }}>{reHrs}h</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>of 750h threshold</div>
+                  </div>
                 </div>
+                {reHrs < 750 && (
+                  <div style={{ marginTop: 12, padding: "8px 10px", background: C.orangePale, borderRadius: 4 }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.orange }}>
+                      Need <strong>{hoursNeeded}h more</strong> ({hoursPerWeek}h/week for {weeksRemaining} weeks)
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="card" style={{ borderLeft: `4px solid ${C.goldL}` }}>
+              {/* RE Percentage */}
+              <div className="card" style={{ borderLeft: `4px solid ${rePct > 50 ? C.greenB : C.redB}` }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>RE PERCENTAGE</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.gold }}>{rePct.toFixed(0)}%</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>of total work time</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, fontWeight: 700, color: rePct > 50 ? C.green : C.red }}>{rePct.toFixed(0)}%</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>of total work time {rePct > 50 ? "✓" : "(need >50%)"}</div>
                 <div style={{ marginTop: 8, height: 6, background: C.borderL, borderRadius: 3 }}>
-                  <div style={{ height: "100%", width: `${Math.min(rePct, 100)}%`, background: C.goldL, borderRadius: 3 }} />
+                  <div style={{ height: "100%", width: `${Math.min(rePct, 100)}%`, background: rePct > 50 ? C.greenB : C.redB, borderRadius: 3 }} />
                 </div>
               </div>
 
+              {/* Entries */}
               <div className="card" style={{ borderLeft: `4px solid ${C.blueB}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>ENTRIES</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.blue }}>{localEntries.length}</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>activities logged</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>DOCUMENTED ENTRIES</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, fontWeight: 700, color: C.blue }}>{localEntries.length}</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{localEntries.filter(e => e.qualifies).length} qualifying RE activities</div>
+              </div>
+
+              {/* IRS Requirements */}
+              <div className="card" style={{ background: C.goldPale, border: `1px solid ${C.gold}` }}>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.gold, letterSpacing: 2, marginBottom: 8 }}>IRS REP REQUIREMENTS</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, lineHeight: 1.6 }}>
+                  <div style={{ marginBottom: 6 }}>✓ 750+ hours in RE activities</div>
+                  <div style={{ marginBottom: 6 }}>✓ RE work > 50% of total work</div>
+                  <div>✓ Material participation in RE</div>
+                </div>
               </div>
             </div>
           </div>
@@ -677,16 +802,14 @@ function MainApp() {
               <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
                 Dashboard {profile?.firstName && <span style={{ fontWeight: 400, color: C.light }}>— {profile.firstName}</span>}
               </h1>
-              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>
-                {profile?.companyName || 'Track your real estate professional status'}
-              </p>
+              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>{profile?.companyName || 'Track your real estate professional status'}</p>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
               <div className="card" style={{ borderLeft: `4px solid ${C.greenB}` }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>RE HOURS</div>
                 <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.green }}>{reHrs}h</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>of 750 hr threshold</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>of 750h threshold</div>
               </div>
               <div className="card" style={{ borderLeft: `4px solid ${C.goldL}` }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>RE PERCENTAGE</div>
@@ -709,11 +832,16 @@ function MainApp() {
               <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Recent Activity</h2>
               {localEntries.slice(0, 5).map(e => (
                 <div key={e.id} style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderBottom: `1px solid ${C.borderL}` }}>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.text }}>{e.activity}</div>
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light, marginTop: 2 }}>{e.date} · {e.categoryLabel}</div>
+                    {e.irsDescription && (
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid, marginTop: 6, padding: "6px 8px", background: C.greenPale, borderRadius: 3, borderLeft: `2px solid ${C.greenB}` }}>
+                        📝 {e.irsDescription.substring(0, 100)}...
+                      </div>
+                    )}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginLeft: 16 }}>
                     <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.gold, fontWeight: 600 }}>{fmtH(e.minutes)}</span>
                     <span style={{ padding: "2px 8px", borderRadius: 2, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", background: e.qualifies ? C.greenPale : C.redPale, color: e.qualifies ? C.green : C.red }}>{e.qualifies ? "RE" : "Non-RE"}</span>
                   </div>
@@ -726,21 +854,32 @@ function MainApp() {
         {/* RECORDS VIEW */}
         {view === "records" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <div>
-              <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Records</h1>
-              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>All your logged activities</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Activity Records</h1>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>IRS-compliant documentation for audit protection</p>
+              </div>
+              <button className="btn-gold">Export for CPA</button>
             </div>
+            
             <div className="card" style={{ padding: 0 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "100px 80px 1fr 160px 80px", padding: "12px 16px", background: "#f5f0e8", borderBottom: `1px solid ${C.border}` }}>
-                {["Date", "Type", "Activity", "Category", "Time"].map(h => (
+              <div style={{ display: "grid", gridTemplateColumns: "100px 80px 1fr 140px 70px", padding: "12px 16px", background: "#f5f0e8", borderBottom: `1px solid ${C.border}` }}>
+                {["Date", "Type", "Activity & IRS Documentation", "Category", "Time"].map(h => (
                   <div key={h} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 1.5, textTransform: "uppercase" }}>{h}</div>
                 ))}
               </div>
               {localEntries.map(e => (
-                <div key={e.id} style={{ display: "grid", gridTemplateColumns: "100px 80px 1fr 160px 80px", padding: "12px 16px", borderBottom: `1px solid ${C.borderL}`, alignItems: "center" }}>
+                <div key={e.id} style={{ display: "grid", gridTemplateColumns: "100px 80px 1fr 140px 70px", padding: "14px 16px", borderBottom: `1px solid ${C.borderL}`, alignItems: "start" }}>
                   <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>{e.date}</div>
                   <div><span style={{ padding: "2px 8px", borderRadius: 2, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", background: e.qualifies ? C.greenPale : C.redPale, color: e.qualifies ? C.green : C.red }}>{e.qualifies ? "RE" : "Non-RE"}</span></div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.text }}>{e.activity}</div>
+                  <div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.text, marginBottom: 4 }}>{e.activity}</div>
+                    {e.irsDescription && (
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid, padding: "6px 8px", background: "#f8f6f0", borderRadius: 3, borderLeft: `2px solid ${C.goldL}` }}>
+                        <strong style={{ color: C.gold }}>IRS Doc:</strong> {e.irsDescription}
+                      </div>
+                    )}
+                  </div>
                   <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{e.categoryLabel}</div>
                   <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.gold, fontWeight: 600 }}>{fmtH(e.minutes)}</div>
                 </div>
