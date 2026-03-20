@@ -158,6 +158,9 @@ function AuthScreen() {
   const [lastName, setLastName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
+  // Job info
+  const [jobType, setJobType] = useState("w2");
+  const [employerName, setEmployerName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -173,6 +176,13 @@ function AuthScreen() {
     display: "block", fontSize: 10, color: "#4D6785", 
     letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 
   };
+
+  const jobTypes = [
+    { id: "w2", label: "W-2 Employee", icon: "💼" },
+    { id: "1099", label: "1099 Contractor", icon: "📋" },
+    { id: "self", label: "Self-Employed", icon: "🏢" },
+    { id: "multiple", label: "Multiple Jobs", icon: "📊" },
+  ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -192,6 +202,8 @@ function AuthScreen() {
         lastName: lastName.trim(),
         companyName: companyName.trim(),
         phone: phone.trim(),
+        jobType: jobType,
+        employerName: employerName.trim(),
         createdAt: new Date().toISOString()
       };
       const { data, error } = await signUp(email, password, profileData);
@@ -252,6 +264,45 @@ function AuthScreen() {
                 <label style={labelStyle}>Phone Number</label>
                 <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} placeholder="(555) 123-4567" />
               </div>
+
+              {/* Job Type Selection */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>Primary Job Type *</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {jobTypes.map(job => (
+                    <button
+                      key={job.id}
+                      type="button"
+                      onClick={() => setJobType(job.id)}
+                      style={{
+                        padding: "10px 12px", border: `2px solid ${jobType === job.id ? "#C6A24A" : "#d4cfbd"}`,
+                        borderRadius: 6, background: jobType === job.id ? "#faf3dc" : "white",
+                        cursor: "pointer", textAlign: "left", transition: "all 0.15s"
+                      }}
+                    >
+                      <div style={{ fontSize: 16, marginBottom: 2 }}>{job.icon}</div>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600, color: "#0F2742" }}>
+                        {job.label}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Employer/Company Name based on job type */}
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>
+                  {jobType === "w2" ? "Employer Name" : jobType === "1099" ? "Client/Company Name" : jobType === "self" ? "Business Name" : "Primary Employer/Client"}
+                </label>
+                <input 
+                  type="text" 
+                  value={employerName} 
+                  onChange={(e) => setEmployerName(e.target.value)} 
+                  style={inputStyle} 
+                  placeholder={jobType === "w2" ? "ABC Hospital" : jobType === "1099" ? "XYZ Consulting Inc" : jobType === "self" ? "My Business LLC" : "Primary employer name"}
+                />
+              </div>
+
               <div style={{ borderTop: "1px solid #d4cfbd", margin: "20px 0", paddingTop: 16 }}>
                 <div style={{ fontSize: 10, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Account Credentials</div>
               </div>
@@ -488,6 +539,7 @@ function MainApp() {
   const { user, profile, signOut } = useAuth();
   const [view, setView] = useState("assistant");
   const [localEntries, setLocalEntries] = useState(SAMPLE_ENTRIES);
+  const [localProperties, setLocalProperties] = useState(SAMPLE_PROPERTIES);
   
   // Chat state
   const [messages, setMessages] = useState([]);
@@ -504,6 +556,40 @@ function MainApp() {
   // Detail modals
   const [showREPDetailModal, setShowREPDetailModal] = useState(false);
   const [showNonREPDetailModal, setShowNonREPDetailModal] = useState(false);
+
+  // Property modals
+  const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
+  const [showPropertyDetailModal, setShowPropertyDetailModal] = useState(null);
+  const [newProperty, setNewProperty] = useState({
+    address: "", type: "single_family", units: 1, rent: "", purchaseDate: ""
+  });
+
+  // Add property function
+  const addProperty = () => {
+    if (!newProperty.address.trim()) return;
+    
+    const property = {
+      id: uid(),
+      name: newProperty.address.split(",")[0].trim(),
+      address: newProperty.address.trim(),
+      type: newProperty.type,
+      units: parseInt(newProperty.units) || 1,
+      rent: parseInt(newProperty.rent) || 0,
+      purchaseDate: newProperty.purchaseDate || null
+    };
+    
+    setLocalProperties(prev => [...prev, property]);
+    setShowAddPropertyModal(false);
+    setNewProperty({ address: "", type: "single_family", units: 1, rent: "", purchaseDate: "" });
+    
+    // Confirmation in chat
+    setMessages(prev => [...prev, {
+      role: "assistant",
+      id: uid(),
+      content: `🏠 **Property Added!**\n\n• Address: ${property.address}\n• Type: ${property.type.replace("_", " ")}\n• Units: ${property.units}\n• Rent: $${property.rent.toLocaleString()}/mo\n\nYou can now log REP hours for this property!`,
+      activityLogged: true
+    }]);
+  };
 
   // Calculate REP stats for modals
   const repEntries = localEntries.filter(e => e.qualifies);
@@ -1086,13 +1172,32 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         {/* PROPERTIES VIEW */}
         {view === "properties" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <div>
-              <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Properties</h1>
-              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>Your real estate portfolio</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Properties</h1>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>Your real estate portfolio • {localProperties.length} properties</p>
+              </div>
+              <button 
+                onClick={() => setShowAddPropertyModal(true)}
+                className="btn-gold"
+                style={{ display: "flex", alignItems: "center", gap: 8 }}
+              >
+                ➕ Add Property
+              </button>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              {SAMPLE_PROPERTIES.map(p => (
-                <div key={p.id} className="card" style={{ borderLeft: `4px solid ${C.greenB}` }}>
+              {localProperties.map(p => (
+                <div 
+                  key={p.id} 
+                  className="card" 
+                  onClick={() => setShowPropertyDetailModal(p)}
+                  style={{ 
+                    borderLeft: `4px solid ${C.greenB}`, cursor: "pointer",
+                    transition: "transform 0.15s, box-shadow 0.15s"
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)"; }}
+                  onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
+                >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                     <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, fontWeight: 600, color: C.dark }}>{p.name}</div>
                     <span style={{ padding: "2px 8px", background: "#f0ece4", border: `1px solid ${C.border}`, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid, borderRadius: 2 }}>{p.type.replace("_", " ")}</span>
@@ -1102,8 +1207,33 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light }}>{p.units} unit{p.units !== 1 ? "s" : ""}</div>
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.green, fontWeight: 600 }}>${p.rent.toLocaleString()}<span style={{ fontSize: 10, color: C.light }}>/mo</span></div>
                   </div>
+                  {/* Hours logged for this property */}
+                  {repByProperty[p.name] && (
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.borderL}` }}>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.green }}>
+                        ✅ {(repByProperty[p.name].minutes / 60).toFixed(1)}h logged • {repByProperty[p.name].count} activities
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
+              
+              {/* Add Property Card */}
+              <div 
+                onClick={() => setShowAddPropertyModal(true)}
+                className="card" 
+                style={{ 
+                  borderLeft: `4px solid ${C.border}`, cursor: "pointer",
+                  display: "flex", flexDirection: "column", alignItems: "center", 
+                  justifyContent: "center", minHeight: 140, background: "#fafafa",
+                  transition: "all 0.15s"
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.borderLeftColor = C.gold; e.currentTarget.style.background = "#faf8f4"; }}
+                onMouseOut={(e) => { e.currentTarget.style.borderLeftColor = C.border; e.currentTarget.style.background = "#fafafa"; }}
+              >
+                <div style={{ fontSize: 32, color: C.light, marginBottom: 8 }}>🏠</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>Add New Property</div>
+              </div>
             </div>
           </div>
         )}
