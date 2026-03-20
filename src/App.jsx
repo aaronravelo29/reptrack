@@ -921,7 +921,7 @@ function MainApp() {
           id: t.id, firstName: t.first_name, lastName: t.last_name, email: t.email,
           phone: t.phone, propertyId: t.property_id, propertyName: t.property_name,
           unit: t.unit, leaseStart: t.lease_start, leaseEnd: t.lease_end, rent: t.rent,
-          dob: t.dob, hasInsurance: t.has_insurance, bio: t.bio, deductible: t.deductible,
+          dob: t.dob, hasInsurance: t.has_insurance, bio: t.bio,
           latePayments: t.late_payments
         })));
       }
@@ -997,7 +997,7 @@ function MainApp() {
           property_name: tenant.propertyName, unit: tenant.unit,
           lease_start: tenant.leaseStart || null, lease_end: tenant.leaseEnd || null,
           rent: tenant.rent || 0, dob: tenant.dob || null, has_insurance: tenant.hasInsurance,
-          bio: tenant.bio, deductible: tenant.deductible || 250, late_payments: tenant.latePayments || 0
+          bio: tenant.bio, late_payments: tenant.latePayments || 0
         })
       });
       const data = await res.json();
@@ -1051,7 +1051,6 @@ function MainApp() {
       ...newTenant,
       propertyName: property?.name || "",
       rent: parseInt(newTenant.rent) || 0,
-      deductible: 250,
       latePayments: 0
     };
     
@@ -1461,7 +1460,6 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           rent: tenantData.rent || 0,
           dob: tenantData.dob || "",
           hasInsurance: tenantData.hasInsurance || false,
-          deductible: 250,
           latePayments: 0
         };
         // Save to Supabase
@@ -2361,16 +2359,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               </button>
             </div>
 
-            {/* Deductible Info Banner */}
-            <div style={{ background: C.goldPale, border: `1px solid ${C.gold}`, borderRadius: 8, padding: 12, display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 20 }}>💰</span>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>
-                <strong>Maintenance Coverage:</strong> First $250 covered by landlord. Repairs exceeding $250 are tenant responsibility per lease agreement.
-              </div>
-            </div>
 
             {/* Scrollable Tenants List */}
-            <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 280px)", paddingRight: 10 }}>
+            <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 220px)", paddingRight: 10 }}>
               {/* Group by property */}
               {localProperties.map(property => {
                 const propertyTenants = localTenants.filter(t => t.propertyId === property.id || t.propertyName === property.name);
@@ -2444,9 +2435,6 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                           >
                             📱
                           </button>
-                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
-                            <span style={{ fontSize: 10, color: C.light, fontFamily: "'IBM Plex Mono', monospace" }}>${tenant.deductible || 250} deductible</span>
-                          </div>
                         </div>
                         
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.light, fontFamily: "'IBM Plex Mono', monospace" }}>
@@ -3886,17 +3874,13 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 </div>
               </div>
 
-              {/* Deductible & Late Payments */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-                <div style={{ background: C.goldPale, border: `1px solid ${C.gold}`, borderRadius: 8, padding: 12, textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: C.gold, letterSpacing: 1, marginBottom: 4 }}>DEDUCTIBLE</div>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: C.gold }}>${showTenantDetailModal.deductible || 250}</div>
-                  <div style={{ fontSize: 9, color: C.mid, fontFamily: "'IBM Plex Mono', monospace" }}>Landlord covers first ${showTenantDetailModal.deductible || 250}</div>
-                </div>
-                <div style={{ background: showTenantDetailModal.latePayments > 0 ? C.redPale : C.greenPale, border: `1px solid ${showTenantDetailModal.latePayments > 0 ? C.redB : C.greenB}`, borderRadius: 8, padding: 12, textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: showTenantDetailModal.latePayments > 0 ? C.red : C.green, letterSpacing: 1, marginBottom: 4 }}>LATE PAYMENTS</div>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: showTenantDetailModal.latePayments > 0 ? C.red : C.green }}>{showTenantDetailModal.latePayments || 0}</div>
-                  <div style={{ fontSize: 9, color: C.mid, fontFamily: "'IBM Plex Mono', monospace" }}>{showTenantDetailModal.latePayments > 0 ? "Payment history" : "Good standing"}</div>
+              {/* Late Payments */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ background: showTenantDetailModal.latePayments > 0 ? C.redPale : C.greenPale, border: `1px solid ${showTenantDetailModal.latePayments > 0 ? C.redB : C.greenB}`, borderRadius: 8, padding: 16, textAlign: "center" }}>
+                  <div style={{ fontSize: 12, color: showTenantDetailModal.latePayments > 0 ? C.red : C.green, letterSpacing: 1, marginBottom: 4, fontWeight: 600 }}>PAYMENT STATUS</div>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: showTenantDetailModal.latePayments > 0 ? C.red : C.green }}>
+                    {showTenantDetailModal.latePayments > 0 ? `${showTenantDetailModal.latePayments} Late Payment${showTenantDetailModal.latePayments > 1 ? 's' : ''}` : "Good Standing ✓"}
+                  </div>
                 </div>
               </div>
 
