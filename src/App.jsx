@@ -438,7 +438,10 @@ const SAMPLE_TENANTS = [
     leaseEnd: "2024-12-31",
     rent: 1700,
     dob: "1985-03-15",
-    hasInsurance: true
+    hasInsurance: true,
+    bio: "Works in tech, quiet tenant. Has a small dog (approved).",
+    deductible: 250,
+    latePayments: 0
   },
   { 
     id: "t2", 
@@ -453,7 +456,10 @@ const SAMPLE_TENANTS = [
     leaseEnd: "2025-02-28",
     rent: 1700,
     dob: "1990-07-22",
-    hasInsurance: true
+    hasInsurance: true,
+    bio: "Nurse at UPMC. Very responsible tenant.",
+    deductible: 250,
+    latePayments: 1
   },
 ];
 
@@ -466,7 +472,9 @@ const SAMPLE_VENDORS = [
     category: "plumber",
     email: "mike@pghplumbing.com",
     phone: "(412) 555-9876",
+    city: "Pittsburgh",
     propertyIds: ["p1", "p3"],
+    serviceHistory: ["Oak Street Duplex - Water heater 2024", "Squirrel Hill 4-Plex - Pipe repair 2024"],
     notes: "24/7 emergency service available"
   },
   {
@@ -476,7 +484,9 @@ const SAMPLE_VENDORS = [
     category: "electrician",
     email: "tom@sparkselectric.com",
     phone: "(412) 555-4321",
+    city: "Pittsburgh",
     propertyIds: ["p1", "p2", "p3", "p4"],
+    serviceHistory: ["Oak Street Duplex - Panel upgrade 2023", "Downtown Studio - Outlet repair 2024"],
     notes: "Licensed and insured"
   },
 ];
@@ -1564,6 +1574,14 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               </button>
             </div>
 
+            {/* Deductible Info Banner */}
+            <div style={{ background: C.goldPale, border: `1px solid ${C.gold}`, borderRadius: 8, padding: 12, display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 20 }}>💰</span>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>
+                <strong>Maintenance Coverage:</strong> First $250 covered by landlord. Repairs exceeding $250 are tenant responsibility per lease agreement.
+              </div>
+            </div>
+
             {/* Group by property */}
             {localProperties.map(property => {
               const propertyTenants = localTenants.filter(t => t.propertyId === property.id || t.propertyName === property.name);
@@ -1594,33 +1612,54 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                               <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>Unit {tenant.unit}</div>
                             )}
                           </div>
-                          <span style={{ 
-                            padding: "2px 8px", fontSize: 10, borderRadius: 10,
-                            background: tenant.hasInsurance ? C.greenPale : C.orangePale,
-                            color: tenant.hasInsurance ? C.green : C.orange,
-                            fontFamily: "'IBM Plex Mono', monospace"
-                          }}>
-                            {tenant.hasInsurance ? "✓ Insured" : "No Insurance"}
-                          </span>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <span style={{ 
+                              padding: "2px 8px", fontSize: 10, borderRadius: 10,
+                              background: tenant.hasInsurance ? C.greenPale : C.orangePale,
+                              color: tenant.hasInsurance ? C.green : C.orange,
+                              fontFamily: "'IBM Plex Mono', monospace"
+                            }}>
+                              {tenant.hasInsurance ? "✓ Ins" : "⚠️"}
+                            </span>
+                            {tenant.latePayments > 0 && (
+                              <span style={{ padding: "2px 8px", fontSize: 10, borderRadius: 10, background: C.redPale, color: C.red, fontFamily: "'IBM Plex Mono', monospace" }}>
+                                {tenant.latePayments} late
+                              </span>
+                            )}
+                          </div>
                         </div>
                         
-                        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); copyToClipboard(tenant.email, 'email'); }}
-                            style={{ flex: 1, padding: "6px 10px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 10, color: C.mid, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace", display: "flex", alignItems: "center", gap: 4 }}
+                        {/* Icon-only action buttons */}
+                        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                          <a 
+                            href={`mailto:${tenant.email}?subject=Regarding Your Lease at ${tenant.propertyName}`}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ padding: "8px 12px", background: C.blueB, border: "none", borderRadius: 4, color: "white", cursor: "pointer", textDecoration: "none", fontSize: 14 }}
+                            title="Send Email"
                           >
-                            📧 {tenant.email}
+                            ✉️
+                          </a>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); copyToClipboard(tenant.email); }}
+                            style={{ padding: "8px 12px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 4, cursor: "pointer", fontSize: 14 }}
+                            title="Copy Email"
+                          >
+                            📋
                           </button>
                           <button 
-                            onClick={(e) => { e.stopPropagation(); copyToClipboard(tenant.phone, 'phone'); }}
-                            style={{ padding: "6px 10px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 10, color: C.mid, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}
+                            onClick={(e) => { e.stopPropagation(); copyToClipboard(tenant.phone); }}
+                            style={{ padding: "8px 12px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 4, cursor: "pointer", fontSize: 14 }}
+                            title="Copy Phone"
                           >
-                            📱 Copy
+                            📱
                           </button>
+                          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+                            <span style={{ fontSize: 10, color: C.light, fontFamily: "'IBM Plex Mono', monospace" }}>${tenant.deductible || 250} deductible</span>
+                          </div>
                         </div>
                         
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.light, fontFamily: "'IBM Plex Mono', monospace" }}>
-                          <span>Lease: {tenant.leaseStart} - {tenant.leaseEnd}</span>
+                          <span>Lease: {tenant.leaseStart?.slice(5)} - {tenant.leaseEnd?.slice(5)}</span>
                           <span style={{ color: C.green, fontWeight: 600 }}>${tenant.rent}/mo</span>
                         </div>
                       </div>
@@ -1666,59 +1705,94 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               </button>
             </div>
 
-            {/* Group by category */}
-            {VENDOR_CATEGORIES.map(category => {
-              const categoryVendors = localVendors.filter(v => v.category === category.id);
-              if (categoryVendors.length === 0) return null;
+            {/* Group by city first, then category */}
+            {[...new Set(localVendors.map(v => v.city || "Other"))].map(city => {
+              const cityVendors = localVendors.filter(v => (v.city || "Other") === city);
+              if (cityVendors.length === 0) return null;
               
               return (
-                <div key={category.id} style={{ marginBottom: 8 }}>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: C.dark, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                    {category.icon} {category.label}
-                    <span style={{ fontSize: 11, color: C.light, fontWeight: 400 }}>• {categoryVendors.length} vendor{categoryVendors.length !== 1 ? 's' : ''}</span>
+                <div key={city} style={{ marginBottom: 16 }}>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 700, color: C.dark, marginBottom: 16, paddingBottom: 8, borderBottom: `2px solid ${C.gold}` }}>
+                    📍 {city}
+                    <span style={{ fontSize: 12, color: C.light, fontWeight: 400, marginLeft: 8 }}>• {cityVendors.length} vendor{cityVendors.length !== 1 ? 's' : ''}</span>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    {categoryVendors.map(vendor => (
-                      <div 
-                        key={vendor.id} 
-                        className="card" 
-                        onClick={() => setShowVendorDetailModal(vendor)}
-                        style={{ borderLeft: `4px solid ${C.goldL}`, cursor: "pointer", transition: "transform 0.15s" }}
-                        onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.01)"}
-                        onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
-                      >
-                        <div style={{ marginBottom: 8 }}>
-                          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark }}>
-                            {vendor.companyName}
-                          </div>
-                          {vendor.contactName && (
-                            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>Contact: {vendor.contactName}</div>
-                          )}
+                  
+                  {/* Group by category within city */}
+                  {VENDOR_CATEGORIES.map(category => {
+                    const categoryVendors = cityVendors.filter(v => v.category === category.id);
+                    if (categoryVendors.length === 0) return null;
+                    
+                    return (
+                      <div key={category.id} style={{ marginBottom: 12, marginLeft: 12 }}>
+                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, color: C.mid, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                          {category.icon} {category.label}
                         </div>
-                        
-                        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); copyToClipboard(vendor.email, 'email'); }}
-                            style={{ flex: 1, padding: "6px 10px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 10, color: C.mid, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace", display: "flex", alignItems: "center", gap: 4 }}
-                          >
-                            📧 {vendor.email}
-                          </button>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); copyToClipboard(vendor.phone, 'phone'); }}
-                            style={{ padding: "6px 10px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 10, color: C.mid, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}
-                          >
-                            📱 Copy
-                          </button>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          {categoryVendors.map(vendor => (
+                            <div 
+                              key={vendor.id} 
+                              className="card" 
+                              onClick={() => setShowVendorDetailModal(vendor)}
+                              style={{ borderLeft: `4px solid ${C.goldL}`, cursor: "pointer", transition: "transform 0.15s" }}
+                              onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.01)"}
+                              onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
+                            >
+                              <div style={{ marginBottom: 8 }}>
+                                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark }}>
+                                  {vendor.companyName}
+                                </div>
+                                {vendor.contactName && (
+                                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{vendor.contactName}</div>
+                                )}
+                              </div>
+                              
+                              {/* Icon-only action buttons */}
+                              <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+                                <a 
+                                  href={`mailto:${vendor.email}?subject=Service Request`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  style={{ padding: "8px 12px", background: C.goldL, border: "none", borderRadius: 4, color: C.dark, cursor: "pointer", textDecoration: "none", fontSize: 14 }}
+                                  title="Send Email"
+                                >
+                                  ✉️
+                                </a>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); copyToClipboard(vendor.email); }}
+                                  style={{ padding: "8px 12px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 4, cursor: "pointer", fontSize: 14 }}
+                                  title="Copy Email"
+                                >
+                                  📋
+                                </button>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); copyToClipboard(vendor.phone); }}
+                                  style={{ padding: "8px 12px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 4, cursor: "pointer", fontSize: 14 }}
+                                  title="Copy Phone"
+                                >
+                                  📱
+                                </button>
+                              </div>
+                              
+                              {/* Service History */}
+                              {vendor.serviceHistory && vendor.serviceHistory.length > 0 && (
+                                <div style={{ fontSize: 10, color: C.mid, fontFamily: "'IBM Plex Mono', monospace", marginBottom: 6 }}>
+                                  <div style={{ color: C.light, marginBottom: 2 }}>Service History:</div>
+                                  {vendor.serviceHistory.slice(0, 2).map((s, i) => (
+                                    <div key={i}>• {s}</div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {vendor.notes && (
+                                <div style={{ fontSize: 10, color: C.green, fontFamily: "'IBM Plex Mono', monospace", fontStyle: "italic" }}>
+                                  ✓ {vendor.notes}
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
-                        
-                        {vendor.notes && (
-                          <div style={{ fontSize: 10, color: C.light, fontFamily: "'IBM Plex Mono', monospace", fontStyle: "italic" }}>
-                            {vendor.notes}
-                          </div>
-                        )}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               );
             })}
@@ -2580,6 +2654,15 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 </div>
               </div>
 
+              {/* Bio / Notes */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>BIO / NOTES</label>
+                <textarea value={newTenant.bio || ""} onChange={(e) => setNewTenant({...newTenant, bio: e.target.value})}
+                  placeholder="Occupation, pets, special notes..."
+                  rows={2}
+                  style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box", resize: "none" }} />
+              </div>
+
               {/* Insurance */}
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
@@ -2614,7 +2697,8 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         }}>
           <div style={{
             background: C.bg, borderRadius: 12, padding: 0, width: "100%",
-            maxWidth: 500, boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+            maxWidth: 550, maxHeight: "90vh", overflowY: "auto",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
           }}>
             <div style={{ 
               background: C.blueB, padding: "20px 24px", 
@@ -2636,20 +2720,40 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
             </div>
 
             <div style={{ padding: 24 }}>
-              {/* Quick Actions */}
-              <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+              {/* Quick Actions - Icon buttons + Send Email */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                <a 
+                  href={`mailto:${showTenantDetailModal.email}?subject=Regarding Your Lease at ${showTenantDetailModal.propertyName}`}
+                  style={{ flex: 1, padding: "12px", background: C.blueB, border: "none", borderRadius: 6, color: "white", fontSize: 12, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace", textDecoration: "none", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                >
+                  ✉️ Send Email
+                </a>
                 <button onClick={() => copyToClipboard(showTenantDetailModal.email)}
-                  style={{ flex: 1, padding: "12px", background: C.blueB, border: "none", borderRadius: 6, color: "white", fontSize: 11, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
-                  📧 Copy Email
+                  style={{ padding: "12px 16px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", fontSize: 16 }}
+                  title="Copy Email"
+                >
+                  📋
                 </button>
                 <button onClick={() => copyToClipboard(showTenantDetailModal.phone)}
-                  style={{ flex: 1, padding: "12px", background: C.greenB, border: "none", borderRadius: 6, color: "white", fontSize: 11, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
-                  📱 Copy Phone
+                  style={{ padding: "12px 16px", background: "#f5f5f5", border: `1px solid ${C.border}`, borderRadius: 6, cursor: "pointer", fontSize: 16 }}
+                  title="Copy Phone"
+                >
+                  📱
                 </button>
               </div>
 
+              {/* Bio Section */}
+              {showTenantDetailModal.bio && (
+                <div style={{ background: C.bluePale || "#e8f4fc", border: `1px solid ${C.blueB}`, borderRadius: 8, padding: 14, marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, color: C.blueB, letterSpacing: 1, marginBottom: 6 }}>BIO / NOTES</div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.text, lineHeight: 1.5 }}>
+                    {showTenantDetailModal.bio}
+                  </div>
+                </div>
+              )}
+
               {/* Info Grid */}
-              <div style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 8, padding: 16 }}>
+              <div style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                   <div>
                     <div style={{ fontSize: 10, color: C.light, letterSpacing: 1, marginBottom: 4 }}>EMAIL</div>
@@ -2685,11 +2789,25 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 </div>
               </div>
 
+              {/* Deductible & Late Payments */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <div style={{ background: C.goldPale, border: `1px solid ${C.gold}`, borderRadius: 8, padding: 12, textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: C.gold, letterSpacing: 1, marginBottom: 4 }}>DEDUCTIBLE</div>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: C.gold }}>${showTenantDetailModal.deductible || 250}</div>
+                  <div style={{ fontSize: 9, color: C.mid, fontFamily: "'IBM Plex Mono', monospace" }}>Landlord covers first ${showTenantDetailModal.deductible || 250}</div>
+                </div>
+                <div style={{ background: showTenantDetailModal.latePayments > 0 ? C.redPale : C.greenPale, border: `1px solid ${showTenantDetailModal.latePayments > 0 ? C.redB : C.greenB}`, borderRadius: 8, padding: 12, textAlign: "center" }}>
+                  <div style={{ fontSize: 10, color: showTenantDetailModal.latePayments > 0 ? C.red : C.green, letterSpacing: 1, marginBottom: 4 }}>LATE PAYMENTS</div>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: showTenantDetailModal.latePayments > 0 ? C.red : C.green }}>{showTenantDetailModal.latePayments || 0}</div>
+                  <div style={{ fontSize: 9, color: C.mid, fontFamily: "'IBM Plex Mono', monospace" }}>{showTenantDetailModal.latePayments > 0 ? "Payment history" : "Good standing"}</div>
+                </div>
+              </div>
+
               {/* AI Communication Help */}
-              <div style={{ marginTop: 16, padding: 16, background: C.goldPale, border: `1px solid ${C.gold}`, borderRadius: 8 }}>
+              <div style={{ padding: 16, background: C.goldPale, border: `1px solid ${C.gold}`, borderRadius: 8 }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.gold, letterSpacing: 1, marginBottom: 8 }}>💡 AI ASSISTANT</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>
-                  Ask the AI to draft formal communications to this tenant, such as lease renewal notices, maintenance updates, or rent reminders.
+                  Ask the AI to draft formal communications: lease renewal notices, maintenance updates, rent reminders, or late payment notices.
                 </div>
               </div>
             </div>
@@ -2772,6 +2890,14 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                     placeholder="(412) 555-1234"
                     style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
                 </div>
+              </div>
+
+              {/* City */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>CITY / SERVICE AREA</label>
+                <input type="text" value={newVendor.city || ""} onChange={(e) => setNewVendor({...newVendor, city: e.target.value})}
+                  placeholder="Pittsburgh"
+                  style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: `1px solid ${C.border}`, borderRadius: 6, fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" }} />
               </div>
 
               {/* Notes */}
