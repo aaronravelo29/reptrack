@@ -11,6 +11,38 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = {
   auth: {
     getSession: async () => {
+      // Check URL for email confirmation token (from email link)
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get('access_token');
+        
+        if (accessToken) {
+          try {
+            // Get user info from token
+            const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'apikey': SUPABASE_ANON_KEY
+              }
+            });
+            const userData = await res.json();
+            if (userData && userData.id) {
+              localStorage.setItem('sb-token', accessToken);
+              localStorage.setItem('sb-user', JSON.stringify(userData));
+              if (userData.user_metadata) {
+                localStorage.setItem('sb-profile', JSON.stringify(userData.user_metadata));
+              }
+              // Clean URL - remove hash
+              window.history.replaceState(null, '', window.location.pathname);
+              return { data: { session: { user: userData, access_token: accessToken } } };
+            }
+          } catch (err) {
+            console.error("Error getting user from confirmation token:", err);
+          }
+        }
+      }
+      
       const token = localStorage.getItem('sb-token');
       const user = localStorage.getItem('sb-user');
       if (token && user) {
@@ -29,7 +61,10 @@ const supabase = {
           body: JSON.stringify({ 
             email, 
             password,
-            data: options?.data || {}
+            data: options?.data || {},
+            options: {
+              emailRedirectTo: window.location.origin
+            }
           })
         });
         const data = await res.json();
@@ -61,6 +96,10 @@ const supabase = {
         if (data.access_token) {
           localStorage.setItem('sb-token', data.access_token);
           localStorage.setItem('sb-user', JSON.stringify(data.user));
+          // Save profile from user_metadata
+          if (data.user?.user_metadata) {
+            localStorage.setItem('sb-profile', JSON.stringify(data.user.user_metadata));
+          }
         }
         return { data, error: null };
       } catch (err) {
@@ -71,6 +110,7 @@ const supabase = {
       localStorage.removeItem('sb-token');
       localStorage.removeItem('sb-user');
       localStorage.removeItem('sb-profile');
+      localStorage.removeItem('reptrack-chat-history');
       return { error: null };
     },
     onAuthStateChange: (callback) => {
@@ -662,11 +702,27 @@ function MainApp() {
   const [localVendors, setLocalVendors] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   
-  // Chat state
-  const [messages, setMessages] = useState([]);
+  // Chat state - load from localStorage
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem('reptrack-chat-history');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Save chat messages to localStorage when they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Only keep last 50 messages to avoid localStorage limits
+      const toSave = messages.slice(-50);
+      localStorage.setItem('reptrack-chat-history', JSON.stringify(toSave));
+    }
+  }, [messages]);
 
   // Quick-add non-REP modal state
   const [showNonREModal, setShowNonREModal] = useState(false);
@@ -1124,9 +1180,21 @@ function MainApp() {
     }]);
   };
 
-  // Initialize welcome message with profile
+  // Initialize welcome message with profile (only if no saved messages)
   useEffect(() => {
     if (profile && messages.length === 0 && !dataLoading) {
+      // Check if there are saved messages first
+      const savedMessages = localStorage.getItem('reptrack-chat-history');
+      if (savedMessages) {
+        try {
+          const parsed = JSON.parse(savedMessages);
+          if (parsed.length > 0) {
+            setMessages(parsed);
+            return;
+          }
+        } catch {}
+      }
+      
       const reEntries = localEntries.filter(e => e.qualifies);
       const totalREMins = reEntries.reduce((s, e) => s + e.minutes, 0);
       const reHrs = Math.round(totalREMins / 60 * 10) / 10;
@@ -1151,7 +1219,7 @@ function MainApp() {
 For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"`
       }]);
     }
-  }, [profile]);
+  }, [profile, dataLoading]);
 
   const reEntries = localEntries.filter(e => e.qualifies);
   const totalREMins = reEntries.reduce((s, e) => s + e.minutes, 0);
@@ -3617,6 +3685,28 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                     {profile.companyName}
                   </div>
                 )}
+              </div>
+
+              {/* Chat History */}
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 12 }}>CHAT HISTORY</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 12, background: "#f5f5f5", borderRadius: 6 }}>
+                  <div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.text }}>{messages.length} messages saved</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light }}>Chat history persists across sessions</div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if (confirm("Clear all chat history? This cannot be undone.")) {
+                        setMessages([]);
+                        localStorage.removeItem('reptrack-chat-history');
+                      }
+                    }}
+                    style={{ padding: "6px 12px", background: C.redB, color: "white", border: "none", borderRadius: 4, fontSize: 10, cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}
+                  >
+                    Clear Chat
+                  </button>
+                </div>
               </div>
 
               {/* Close Button */}
