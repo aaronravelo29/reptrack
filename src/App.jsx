@@ -568,6 +568,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
   const totalREMins = reEntries.reduce((s, e) => s + e.minutes, 0);
   const reHrs = Math.round(totalREMins / 60 * 10) / 10;
   const nonREMins = localEntries.filter(e => !e.qualifies).reduce((s, e) => s + e.minutes, 0);
+  const nonREHrs = Math.round(nonREMins / 60 * 10) / 10;
   const totalMins = totalREMins + nonREMins;
   const rePct = totalMins > 0 ? (totalREMins / totalMins) * 100 : 0;
 
@@ -844,6 +845,13 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 </div>
               </div>
 
+              {/* Non-RE Hours */}
+              <div className="card" style={{ borderLeft: `4px solid ${C.redB}` }}>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>NON-RE HOURS</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, fontWeight: 700, color: C.red }}>{nonREHrs}h</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>W-2, consulting, other work</div>
+              </div>
+
               {/* Entries */}
               <div className="card" style={{ borderLeft: `4px solid ${C.blueB}` }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>DOCUMENTED ENTRIES</div>
@@ -874,11 +882,16 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>{profile?.companyName || 'Track your real estate professional status'}</p>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
               <div className="card" style={{ borderLeft: `4px solid ${C.greenB}` }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>RE HOURS</div>
                 <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.green }}>{reHrs}h</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>of 750h threshold</div>
+              </div>
+              <div className="card" style={{ borderLeft: `4px solid ${C.redB}` }}>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>NON-RE HOURS</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.red }}>{nonREHrs}h</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>W-2 & other work</div>
               </div>
               <div className="card" style={{ borderLeft: `4px solid ${C.goldL}` }}>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>RE PERCENTAGE</div>
