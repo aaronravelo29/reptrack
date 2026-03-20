@@ -501,6 +501,62 @@ function MainApp() {
   const [nonREHours, setNonREHours] = useState("");
   const [nonREDescription, setNonREDescription] = useState("");
 
+  // Detail modals
+  const [showREPDetailModal, setShowREPDetailModal] = useState(false);
+  const [showNonREPDetailModal, setShowNonREPDetailModal] = useState(false);
+
+  // Calculate REP stats for modals
+  const repEntries = localEntries.filter(e => e.qualifies);
+  const nonRepEntries = localEntries.filter(e => !e.qualifies);
+  
+  // Group REP entries by category
+  const repByCategory = repEntries.reduce((acc, e) => {
+    const cat = e.categoryLabel || e.category;
+    if (!acc[cat]) acc[cat] = { minutes: 0, count: 0 };
+    acc[cat].minutes += e.minutes;
+    acc[cat].count += 1;
+    return acc;
+  }, {});
+
+  // Group REP entries by property
+  const repByProperty = repEntries.reduce((acc, e) => {
+    const prop = e.property || "General";
+    if (!acc[prop]) acc[prop] = { minutes: 0, count: 0 };
+    acc[prop].minutes += e.minutes;
+    acc[prop].count += 1;
+    return acc;
+  }, {});
+
+  // Group Non-REP entries by category
+  const nonRepByCategory = nonRepEntries.reduce((acc, e) => {
+    const cat = e.categoryLabel || e.category;
+    if (!acc[cat]) acc[cat] = { minutes: 0, count: 0 };
+    acc[cat].minutes += e.minutes;
+    acc[cat].count += 1;
+    return acc;
+  }, {});
+
+  // Group entries by date (last 7 days)
+  const getLast7Days = () => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      days.push(d.toISOString().split('T')[0]);
+    }
+    return days;
+  };
+  
+  const repByDay = getLast7Days().map(date => ({
+    date,
+    minutes: repEntries.filter(e => e.date === date).reduce((s, e) => s + e.minutes, 0)
+  }));
+  
+  const nonRepByDay = getLast7Days().map(date => ({
+    date,
+    minutes: nonRepEntries.filter(e => e.date === date).reduce((s, e) => s + e.minutes, 0)
+  }));
+
   // Quick add non-RE hours function
   const addNonREHours = () => {
     if (!nonREHours || parseFloat(nonREHours) <= 0) return;
@@ -821,8 +877,13 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
                 {/* REP vs Non-REP Side by Side */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-                  {/* REP Hours */}
-                  <div style={{ background: C.greenPale, borderRadius: 8, padding: 14, textAlign: "center", border: `1px solid ${C.greenB}` }}>
+                  {/* REP Hours - Clickable */}
+                  <div 
+                    onClick={() => setShowREPDetailModal(true)}
+                    style={{ background: C.greenPale, borderRadius: 8, padding: 14, textAlign: "center", border: `1px solid ${C.greenB}`, cursor: "pointer", transition: "transform 0.15s, box-shadow 0.15s" }}
+                    onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(37,107,69,0.2)"; }}
+                    onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
+                  >
                     <div style={{ fontSize: 11, color: C.green, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, marginBottom: 6 }}>
                       ✅ REP HOURS
                     </div>
@@ -832,10 +893,18 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                     <div style={{ fontSize: 10, color: C.mid, fontFamily: "'IBM Plex Mono', monospace", marginTop: 4 }}>
                       Real Estate Work
                     </div>
+                    <div style={{ fontSize: 9, color: C.green, fontFamily: "'IBM Plex Mono', monospace", marginTop: 6 }}>
+                      📊 Click for details
+                    </div>
                   </div>
 
-                  {/* Non-REP Hours */}
-                  <div style={{ background: C.redPale, borderRadius: 8, padding: 14, textAlign: "center", border: `1px solid ${C.redB}` }}>
+                  {/* Non-REP Hours - Clickable */}
+                  <div 
+                    onClick={() => setShowNonREPDetailModal(true)}
+                    style={{ background: C.redPale, borderRadius: 8, padding: 14, textAlign: "center", border: `1px solid ${C.redB}`, cursor: "pointer", transition: "transform 0.15s, box-shadow 0.15s" }}
+                    onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(153,48,48,0.2)"; }}
+                    onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
+                  >
                     <div style={{ fontSize: 11, color: C.red, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, marginBottom: 6 }}>
                       💼 NON-REP
                     </div>
@@ -844,6 +913,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                     </div>
                     <div style={{ fontSize: 10, color: C.mid, fontFamily: "'IBM Plex Mono', monospace", marginTop: 4 }}>
                       W-2 & Other Work
+                    </div>
+                    <div style={{ fontSize: 9, color: C.red, fontFamily: "'IBM Plex Mono', monospace", marginTop: 6 }}>
+                      📊 Click for details
                     </div>
                   </div>
                 </div>
@@ -1148,6 +1220,334 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               >
                 Log Hours
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ REP HOURS DETAIL MODAL ═══ */}
+      {showREPDetailModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.9)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000,
+          padding: 20, overflowY: "auto"
+        }}>
+          <div style={{
+            background: C.bg, borderRadius: 12, padding: 0, width: "100%",
+            maxWidth: 700, maxHeight: "90vh", overflowY: "auto",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+          }}>
+            {/* Header */}
+            <div style={{ 
+              background: C.greenB, padding: "20px 24px", 
+              borderRadius: "12px 12px 0 0", display: "flex", 
+              justifyContent: "space-between", alignItems: "center",
+              position: "sticky", top: 0, zIndex: 1
+            }}>
+              <div>
+                <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 22, fontWeight: 700, color: "white", margin: 0 }}>
+                  ✅ REP Hours Breakdown
+                </h2>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>
+                  Real Estate Professional Activities
+                </div>
+              </div>
+              <button onClick={() => setShowREPDetailModal(false)} style={{
+                background: "rgba(255,255,255,0.2)", border: "none", fontSize: 20, color: "white", 
+                cursor: "pointer", width: 36, height: 36, borderRadius: "50%", display: "flex",
+                alignItems: "center", justifyContent: "center"
+              }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {/* Total Summary */}
+              <div style={{ 
+                background: C.greenPale, border: `2px solid ${C.greenB}`, borderRadius: 8, 
+                padding: 20, marginBottom: 24, textAlign: "center" 
+              }}>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 48, fontWeight: 700, color: C.green }}>
+                  {reHrs}h
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>
+                  Total REP Hours • {repEntries.length} activities logged
+                </div>
+                <div style={{ marginTop: 12, height: 8, background: C.border, borderRadius: 4 }}>
+                  <div style={{ width: `${Math.min((reHrs/750)*100, 100)}%`, height: "100%", background: C.greenB, borderRadius: 4 }} />
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.green, marginTop: 8 }}>
+                  {reHrs >= 750 ? "✅ 750h threshold met!" : `${Math.max(0, 750 - reHrs).toFixed(1)}h more needed for 750h threshold`}
+                </div>
+              </div>
+
+              {/* Breakdown by Category */}
+              <div style={{ marginBottom: 24 }}>
+                <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
+                  📂 Hours by Category
+                </h3>
+                <div style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+                  {Object.entries(repByCategory).length > 0 ? Object.entries(repByCategory)
+                    .sort((a, b) => b[1].minutes - a[1].minutes)
+                    .map(([cat, data], i) => (
+                      <div key={cat} style={{ 
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "12px 16px", borderBottom: i < Object.entries(repByCategory).length - 1 ? `1px solid ${C.borderL}` : "none"
+                      }}>
+                        <div>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.text }}>{cat}</div>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light }}>{data.count} activities</div>
+                        </div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 700, color: C.green }}>
+                          {(data.minutes / 60).toFixed(1)}h
+                        </div>
+                      </div>
+                    )) : (
+                      <div style={{ padding: 16, textAlign: "center", color: C.light, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>
+                        No REP activities logged yet
+                      </div>
+                    )}
+                </div>
+              </div>
+
+              {/* Breakdown by Property */}
+              <div style={{ marginBottom: 24 }}>
+                <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
+                  🏠 Hours by Property
+                </h3>
+                <div style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+                  {Object.entries(repByProperty).length > 0 ? Object.entries(repByProperty)
+                    .sort((a, b) => b[1].minutes - a[1].minutes)
+                    .map(([prop, data], i) => (
+                      <div key={prop} style={{ 
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "12px 16px", borderBottom: i < Object.entries(repByProperty).length - 1 ? `1px solid ${C.borderL}` : "none"
+                      }}>
+                        <div>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.text }}>{prop}</div>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light }}>{data.count} activities</div>
+                        </div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 700, color: C.green }}>
+                          {(data.minutes / 60).toFixed(1)}h
+                        </div>
+                      </div>
+                    )) : (
+                      <div style={{ padding: 16, textAlign: "center", color: C.light, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>
+                        No property data available
+                      </div>
+                    )}
+                </div>
+              </div>
+
+              {/* Daily Summary (Last 7 Days) */}
+              <div style={{ marginBottom: 24 }}>
+                <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
+                  📅 Last 7 Days
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
+                  {repByDay.map((day, i) => (
+                    <div key={day.date} style={{ 
+                      background: day.minutes > 0 ? C.greenPale : "white", 
+                      border: `1px solid ${day.minutes > 0 ? C.greenB : C.border}`,
+                      borderRadius: 6, padding: 10, textAlign: "center"
+                    }}>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: C.light }}>
+                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                      </div>
+                      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 700, color: day.minutes > 0 ? C.green : C.border }}>
+                        {(day.minutes / 60).toFixed(1)}h
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Activities */}
+              <div>
+                <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
+                  📝 Recent REP Activities
+                </h3>
+                <div style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+                  {repEntries.slice(0, 5).map((e, i) => (
+                    <div key={e.id} style={{ 
+                      padding: "12px 16px", 
+                      borderBottom: i < Math.min(repEntries.length, 5) - 1 ? `1px solid ${C.borderL}` : "none"
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.text }}>{e.activity}</div>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, marginTop: 2 }}>
+                            {e.date} • {e.categoryLabel}
+                          </div>
+                        </div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 700, color: C.green, marginLeft: 12 }}>
+                          {fmtH(e.minutes)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ NON-REP HOURS DETAIL MODAL ═══ */}
+      {showNonREPDetailModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.9)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000,
+          padding: 20, overflowY: "auto"
+        }}>
+          <div style={{
+            background: C.bg, borderRadius: 12, padding: 0, width: "100%",
+            maxWidth: 700, maxHeight: "90vh", overflowY: "auto",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+          }}>
+            {/* Header */}
+            <div style={{ 
+              background: C.redB, padding: "20px 24px", 
+              borderRadius: "12px 12px 0 0", display: "flex", 
+              justifyContent: "space-between", alignItems: "center",
+              position: "sticky", top: 0, zIndex: 1
+            }}>
+              <div>
+                <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 22, fontWeight: 700, color: "white", margin: 0 }}>
+                  💼 Non-REP Hours Breakdown
+                </h2>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 4 }}>
+                  W-2 Employment & Other Work
+                </div>
+              </div>
+              <button onClick={() => setShowNonREPDetailModal(false)} style={{
+                background: "rgba(255,255,255,0.2)", border: "none", fontSize: 20, color: "white", 
+                cursor: "pointer", width: 36, height: 36, borderRadius: "50%", display: "flex",
+                alignItems: "center", justifyContent: "center"
+              }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {/* Total Summary */}
+              <div style={{ 
+                background: C.redPale, border: `2px solid ${C.redB}`, borderRadius: 8, 
+                padding: 20, marginBottom: 24, textAlign: "center" 
+              }}>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 48, fontWeight: 700, color: C.red }}>
+                  {nonREHrs}h
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>
+                  Total Non-REP Hours • {nonRepEntries.length} activities logged
+                </div>
+              </div>
+
+              {/* Impact on REP Status */}
+              <div style={{ 
+                background: rePct > 50 ? C.greenPale : C.orangePale, 
+                border: `2px solid ${rePct > 50 ? C.greenB : C.orange}`, 
+                borderRadius: 8, padding: 16, marginBottom: 24 
+              }}>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 600, color: rePct > 50 ? C.green : C.orange, marginBottom: 8 }}>
+                  {rePct > 50 ? "✅ REP Percentage OK" : "⚠️ REP Percentage Warning"}
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid, lineHeight: 1.6 }}>
+                  Your RE work is <strong>{rePct.toFixed(1)}%</strong> of total work time.
+                  {rePct > 50 
+                    ? " You're above the 50% threshold needed for REP status."
+                    : ` You need RE work to exceed 50%. Consider logging more RE activities or reducing non-RE hours.`
+                  }
+                </div>
+                <div style={{ marginTop: 12, height: 12, background: C.redPale, borderRadius: 6, overflow: "hidden" }}>
+                  <div style={{ width: `${rePct}%`, height: "100%", background: C.greenB, borderRadius: 6 }} />
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                  <span style={{ fontSize: 10, color: C.green, fontFamily: "'IBM Plex Mono', monospace" }}>RE: {rePct.toFixed(0)}%</span>
+                  <span style={{ fontSize: 10, color: C.red, fontFamily: "'IBM Plex Mono', monospace" }}>Non-RE: {(100-rePct).toFixed(0)}%</span>
+                </div>
+              </div>
+
+              {/* Breakdown by Type */}
+              <div style={{ marginBottom: 24 }}>
+                <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
+                  📂 Hours by Type
+                </h3>
+                <div style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+                  {Object.entries(nonRepByCategory).length > 0 ? Object.entries(nonRepByCategory)
+                    .sort((a, b) => b[1].minutes - a[1].minutes)
+                    .map(([cat, data], i) => (
+                      <div key={cat} style={{ 
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "12px 16px", borderBottom: i < Object.entries(nonRepByCategory).length - 1 ? `1px solid ${C.borderL}` : "none"
+                      }}>
+                        <div>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.text }}>{cat}</div>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light }}>{data.count} entries</div>
+                        </div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 700, color: C.red }}>
+                          {(data.minutes / 60).toFixed(1)}h
+                        </div>
+                      </div>
+                    )) : (
+                      <div style={{ padding: 16, textAlign: "center", color: C.light, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>
+                        No Non-REP hours logged yet
+                      </div>
+                    )}
+                </div>
+              </div>
+
+              {/* Daily Summary (Last 7 Days) */}
+              <div style={{ marginBottom: 24 }}>
+                <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
+                  📅 Last 7 Days
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 8 }}>
+                  {nonRepByDay.map((day, i) => (
+                    <div key={day.date} style={{ 
+                      background: day.minutes > 0 ? C.redPale : "white", 
+                      border: `1px solid ${day.minutes > 0 ? C.redB : C.border}`,
+                      borderRadius: 6, padding: 10, textAlign: "center"
+                    }}>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, color: C.light }}>
+                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}
+                      </div>
+                      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 700, color: day.minutes > 0 ? C.red : C.border }}>
+                        {(day.minutes / 60).toFixed(1)}h
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Activities */}
+              <div>
+                <h3 style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 600, color: C.dark, marginBottom: 12 }}>
+                  📝 Recent Non-REP Activities
+                </h3>
+                <div style={{ background: "white", border: `1px solid ${C.border}`, borderRadius: 8, overflow: "hidden" }}>
+                  {nonRepEntries.length > 0 ? nonRepEntries.slice(0, 5).map((e, i) => (
+                    <div key={e.id} style={{ 
+                      padding: "12px 16px", 
+                      borderBottom: i < Math.min(nonRepEntries.length, 5) - 1 ? `1px solid ${C.borderL}` : "none"
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.text }}>{e.activity}</div>
+                          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, marginTop: 2 }}>
+                            {e.date} • {e.categoryLabel}
+                          </div>
+                        </div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 700, color: C.red, marginLeft: 12 }}>
+                          {fmtH(e.minutes)}
+                        </div>
+                      </div>
+                    </div>
+                  )) : (
+                    <div style={{ padding: 16, textAlign: "center", color: C.light, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>
+                      No Non-REP activities logged yet
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
