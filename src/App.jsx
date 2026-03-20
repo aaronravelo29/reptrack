@@ -813,44 +813,119 @@ OTHER CAPABILITIES
 • Draft formal communications to tenants and vendors
 
 ═══════════════════════════════════════════════════════════════════════════════
-ADDING PROPERTIES
+ADDING PROPERTIES - STEP BY STEP
 ═══════════════════════════════════════════════════════════════════════════════
-When user wants to add a property (e.g., "Add my duplex at 123 Main St"), respond with:
+When a user wants to add a property, DO NOT add it immediately. Instead, ask for ALL details step by step:
 
-🏠 **Property Added!**
-• Address: [full address]
-• Type: [single family / multi-family / commercial]
-• Units: [number]
-• Rent: $[amount]/mo
+STEP 1 - If they just mention an address or "add a property", ask:
+"I'd love to help you add this property! Let me get the details:
 
-[[ADD_PROPERTY:{"address":"full address","type":"single_family|multi_family|commercial","units":1,"rent":0}]]
+📍 **Property Address:** [confirm or ask]
+🏠 **Property Type:** Single-family, Multi-family (duplex/triplex/etc), or Commercial?
+🛏️ **Number of Units:** How many rental units?
+📅 **Is this a Short-Term Rental (STR)?** Like Airbnb/VRBO, or Long-Term (LTR)?
+
+Please provide these details and I'll continue with the financial info."
+
+STEP 2 - After getting basic info, ask for financial details:
+"Great! Now let's add the financial details:
+
+💰 **Monthly Rent:** Total rent collected per month?
+🏦 **Purchase Info:**
+   • Purchase price?
+   • Down payment?
+   • Monthly mortgage payment?
+
+📊 **Operating Expenses (monthly):**
+   • Property taxes?
+   • Insurance?
+   • HOA fees? (if applicable)
+   • Utilities? (if owner-paid)
+   • Maintenance budget?
+   • Property management fee?
+
+🏖️ **Vacancy Rate:** What vacancy rate to assume? (default 5%)"
+
+STEP 3 - For MULTI-FAMILY (2+ units), also ask:
+"Since this is a multi-family property with [X] units, please provide details for each unit:
+
+**Unit 1:**
+• Unit name/number (e.g., 'Unit A' or '101')
+• Bedrooms / Bathrooms
+• Monthly rent
+
+**Unit 2:**
+[repeat for each unit]"
+
+STEP 4 - Once you have ALL information, THEN add the property:
+🏠 **Property Added Successfully!**
+
+📍 Address: [full address]
+🏠 Type: [type] | Units: [X] | [STR/LTR]
+💰 Rent: $[total]/mo
+🏦 Mortgage: $[X]/mo
+📊 Expenses: $[total]/mo
+💵 Cash Flow: $[calculated]/mo
+📈 Cap Rate: [X]%
+
+[[ADD_PROPERTY:{"address":"full address","type":"single_family|multi_family|commercial","units":1,"rent":0,"isSTR":false,"purchasePrice":0,"downPayment":0,"mortgagePayment":0,"taxes":0,"insurance":0,"hoa":0,"utilities":0,"maintenance":0,"propertyMgmt":0,"vacancyRate":5,"unitDetails":[]}]]
+
+IMPORTANT: Only use [[ADD_PROPERTY:...]] AFTER collecting all relevant information!
 
 ═══════════════════════════════════════════════════════════════════════════════
-ADDING TENANTS
+ADDING TENANTS - STEP BY STEP
 ═══════════════════════════════════════════════════════════════════════════════
-When user wants to add a tenant, respond with:
+When a user wants to add a tenant, ask for complete information:
 
+"I'll help you add this tenant. Please provide:
+
+👤 **Tenant Name:** First and last name?
+🏠 **Property:** Which property? Which unit?
+📧 **Contact Info:**
+   • Email address?
+   • Phone number?
+📅 **Lease Details:**
+   • Lease start date?
+   • Lease end date?
+   • Monthly rent amount?
+🎂 **Date of Birth?** (optional, for records)
+🛡️ **Renter's Insurance?** Yes/No"
+
+Once you have the info:
 👤 **Tenant Added!**
-• Name: [first] [last]
-• Property: [property name] Unit [unit]
-• Email: [email]
-• Phone: [phone]
+• Name: [First Last]
+• Property: [Property Name] - Unit [X]
+• Lease: [start] to [end]
+• Rent: $[X]/mo
+• Contact: [email] | [phone]
 
-[[ADD_TENANT:{"firstName":"first","lastName":"last","email":"email","phone":"phone","propertyName":"property","unit":"A","leaseStart":"2024-01-01","leaseEnd":"2024-12-31","rent":1500}]]
+[[ADD_TENANT:{"firstName":"first","lastName":"last","email":"email@example.com","phone":"555-1234","propertyName":"property name","unit":"A","leaseStart":"2024-01-01","leaseEnd":"2024-12-31","rent":1500,"hasInsurance":false}]]
 
 ═══════════════════════════════════════════════════════════════════════════════
-ADDING VENDORS
+ADDING VENDORS - STEP BY STEP
 ═══════════════════════════════════════════════════════════════════════════════
-When user wants to add a vendor/contractor, respond with:
+When a user wants to add a vendor or contractor, ask:
 
+"I'll add this vendor to your contacts. Please provide:
+
+🏢 **Company Name:**
+👤 **Contact Person:** (name of your main contact)
+🔧 **Service Category:** 
+   Plumber / Electrician / HVAC / General Contractor / Landscaper / Handyman / Roofer / Cleaning / Property Manager / Other
+📧 **Email:**
+📱 **Phone:**
+🏙️ **City/Area they serve:**
+📝 **Notes:** (specialties, rates, etc.)"
+
+Once you have the info:
 🔧 **Vendor Added!**
-• Company: [company name]
-• Contact: [contact name]
-• Category: [plumber/electrician/hvac/general_contractor/landscaper/handyman/roofer/cleaning/property_manager/other]
-• Email: [email]
-• Phone: [phone]
+• Company: [Company Name]
+• Contact: [Contact Name]
+• Category: [Category]
+• Phone: [phone] | Email: [email]
+• Area: [city]
 
-[[ADD_VENDOR:{"companyName":"company","contactName":"name","category":"plumber","email":"email","phone":"phone","notes":"optional notes"}]]
+[[ADD_VENDOR:{"companyName":"company","contactName":"name","category":"plumber","email":"email","phone":"phone","city":"Miami","notes":"optional notes"}]]
 
 ═══════════════════════════════════════════════════════════════════════════════
 DRAFTING COMMUNICATIONS
@@ -1035,17 +1110,33 @@ function MainApp() {
   
   // Delete property
   const deleteProperty = async (propertyId) => {
-    if (!confirm("Are you sure you want to delete this property?")) return;
+    const property = localProperties.find(p => p.id === propertyId);
+    const propertyName = property?.name || property?.address || 'this property';
     
-    setLocalProperties(prev => prev.filter(p => p.id !== propertyId));
+    // More explicit confirmation
+    const confirmed = confirm(`⚠️ DELETE PROPERTY\n\nAre you sure you want to permanently delete "${propertyName}"?\n\nThis action cannot be undone. All data for this property will be removed.`);
+    if (!confirmed) return;
+    
+    // Update local state
+    const updatedProperties = localProperties.filter(p => p.id !== propertyId);
+    setLocalProperties(updatedProperties);
     setShowPropertyDetailModal(null);
     setShowEditPropertyModal(null);
     
+    // Update localStorage backup
+    if (user) {
+      localStorage.setItem(`reptrack-properties-${user.id}`, JSON.stringify(updatedProperties));
+    }
+    
+    // Delete from Supabase
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${propertyId}`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${propertyId}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
+      if (!res.ok) {
+        console.error("Error deleting from Supabase");
+      }
     } catch (err) {
       console.error("Error deleting property:", err);
     }
@@ -1438,15 +1529,17 @@ function MainApp() {
     try {
       const headers = getAuthHeaders();
       
-      // Load properties - ALL FIELDS
-      const propsRes = await fetch(`${SUPABASE_URL}/rest/v1/properties?select=*&order=created_at.desc`, { headers });
+      // Load properties - ALL FIELDS with user_id filter
+      const propsRes = await fetch(`${SUPABASE_URL}/rest/v1/properties?user_id=eq.${user.id}&select=*&order=created_at.desc`, { headers });
       const propsData = await propsRes.json();
-      if (Array.isArray(propsData)) {
-        setLocalProperties(propsData.map(p => ({
+      console.log("Loaded properties from DB:", propsData); // Debug log
+      
+      if (Array.isArray(propsData) && propsData.length > 0) {
+        const mappedProps = propsData.map(p => ({
           id: p.id,
-          name: p.name,
-          address: p.address,
-          type: p.type,
+          name: p.name || '',
+          address: p.address || '',
+          type: p.type || 'single_family',
           units: p.units || 1,
           rent: p.rent || 0,
           purchaseDate: p.purchase_date,
@@ -1464,11 +1557,26 @@ function MainApp() {
           vacancyRate: p.vacancy_rate || 5,
           totalExpenses: p.total_expenses || 0,
           unitDetails: p.unit_details || []
-        })));
+        }));
+        setLocalProperties(mappedProps);
+        // Backup to localStorage
+        localStorage.setItem(`reptrack-properties-${user.id}`, JSON.stringify(mappedProps));
+      } else {
+        // Try to restore from localStorage backup
+        const backup = localStorage.getItem(`reptrack-properties-${user.id}`);
+        if (backup) {
+          try {
+            const backupProps = JSON.parse(backup);
+            if (Array.isArray(backupProps) && backupProps.length > 0) {
+              console.log("Restored properties from localStorage backup");
+              setLocalProperties(backupProps);
+            }
+          } catch (e) {}
+        }
       }
       
-      // Load entries
-      const entriesRes = await fetch(`${SUPABASE_URL}/rest/v1/entries?select=*&order=date.desc,created_at.desc`, { headers });
+      // Load entries with user_id filter
+      const entriesRes = await fetch(`${SUPABASE_URL}/rest/v1/entries?user_id=eq.${user.id}&select=*&order=date.desc,created_at.desc`, { headers });
       const entriesData = await entriesRes.json();
       if (Array.isArray(entriesData)) {
         setLocalEntries(entriesData.map(e => ({
@@ -1478,8 +1586,8 @@ function MainApp() {
         })));
       }
       
-      // Load tenants
-      const tenantsRes = await fetch(`${SUPABASE_URL}/rest/v1/tenants?select=*&order=created_at.desc`, { headers });
+      // Load tenants with user_id filter
+      const tenantsRes = await fetch(`${SUPABASE_URL}/rest/v1/tenants?user_id=eq.${user.id}&select=*&order=created_at.desc`, { headers });
       const tenantsData = await tenantsRes.json();
       if (Array.isArray(tenantsData)) {
         setLocalTenants(tenantsData.map(t => ({
@@ -1491,8 +1599,8 @@ function MainApp() {
         })));
       }
       
-      // Load vendors
-      const vendorsRes = await fetch(`${SUPABASE_URL}/rest/v1/vendors?select=*&order=created_at.desc`, { headers });
+      // Load vendors with user_id filter
+      const vendorsRes = await fetch(`${SUPABASE_URL}/rest/v1/vendors?user_id=eq.${user.id}&select=*&order=created_at.desc`, { headers });
       const vendorsData = await vendorsRes.json();
       if (Array.isArray(vendorsData)) {
         setLocalVendors(vendorsData.map(v => ({
@@ -1504,6 +1612,13 @@ function MainApp() {
       }
     } catch (err) {
       console.error("Error loading data:", err);
+      // Try to restore from localStorage on error
+      const backup = localStorage.getItem(`reptrack-properties-${user.id}`);
+      if (backup) {
+        try {
+          setLocalProperties(JSON.parse(backup));
+        } catch (e) {}
+      }
     }
     
     setDataLoading(false);
@@ -1545,6 +1660,7 @@ function MainApp() {
         return null;
       }
       const data = await res.json();
+      console.log("Property saved to Supabase successfully:", data[0]?.id);
       return data[0];
     } catch (err) {
       console.error("Error saving property:", err);
@@ -1666,6 +1782,18 @@ function MainApp() {
     }
   }, [user]);
 
+  // CRITICAL: Backup properties to localStorage whenever they change
+  useEffect(() => {
+    if (user && localProperties.length > 0) {
+      try {
+        localStorage.setItem(`reptrack-properties-${user.id}`, JSON.stringify(localProperties));
+        console.log(`✅ Properties backed up: ${localProperties.length} properties`);
+      } catch (e) {
+        console.error("Failed to backup properties:", e);
+      }
+    }
+  }, [localProperties, user]);
+
   // Copy to clipboard helper
   const copyToClipboard = (text, type) => {
     navigator.clipboard.writeText(text);
@@ -1776,7 +1904,15 @@ function MainApp() {
       property.id = uid();
     }
     
-    setLocalProperties(prev => [...prev, property]);
+    // Update local state and backup to localStorage
+    setLocalProperties(prev => {
+      const updated = [...prev, property];
+      // Backup to localStorage for persistence
+      if (user) {
+        localStorage.setItem(`reptrack-properties-${user.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
     setShowAddPropertyModal(false);
     setNewProperty({ 
       address: "", type: "single_family", units: 1, rent: "", purchaseDate: "", 
@@ -2058,21 +2194,65 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         setLocalEntries(prev => [newEntry, ...prev]);
       }
 
-      // Check for property data
+      // Check for property data - SAVE ALL FIELDS AND BACKUP
       const propertyData = parsePropertyFromResponse(responseText);
       if (propertyData) {
+        // Calculate total expenses
+        const taxes = parseInt(propertyData.taxes) || 0;
+        const insurance = parseInt(propertyData.insurance) || 0;
+        const hoa = parseInt(propertyData.hoa) || 0;
+        const utilities = parseInt(propertyData.utilities) || 0;
+        const maintenance = parseInt(propertyData.maintenance) || 0;
+        const propertyMgmt = parseInt(propertyData.propertyMgmt) || 0;
+        const totalExpenses = taxes + insurance + hoa + utilities + maintenance + propertyMgmt;
+        
         const newProperty = {
-          name: propertyData.address.split(",")[0].trim(),
+          name: propertyData.name || propertyData.address.split(",")[0].trim(),
           address: propertyData.address,
           type: propertyData.type || "single_family",
-          units: propertyData.units || 1,
-          rent: propertyData.rent || 0,
-          purchaseDate: propertyData.purchaseDate || null
+          units: parseInt(propertyData.units) || 1,
+          rent: parseInt(propertyData.rent) || 0,
+          purchaseDate: propertyData.purchaseDate || null,
+          purchasePrice: parseInt(propertyData.purchasePrice) || 0,
+          downPayment: parseInt(propertyData.downPayment) || 0,
+          mortgagePayment: parseInt(propertyData.mortgagePayment) || 0,
+          isSTR: propertyData.isSTR || false,
+          platforms: propertyData.platforms || [],
+          taxes,
+          insurance,
+          hoa,
+          utilities,
+          maintenance,
+          propertyMgmt,
+          vacancyRate: parseInt(propertyData.vacancyRate) || 5,
+          totalExpenses,
+          unitDetails: propertyData.unitDetails || []
         };
-        // Save to Supabase
+        
+        // Save to Supabase with ALL fields
         const savedProp = await savePropertyToDb(newProperty);
-        newProperty.id = savedProp?.id || uid();
-        setLocalProperties(prev => [...prev, newProperty]);
+        if (savedProp && savedProp.id) {
+          newProperty.id = savedProp.id;
+          console.log("✅ Property saved to Supabase:", savedProp.id);
+        } else {
+          newProperty.id = uid();
+          console.warn("⚠️ Supabase save failed, using local ID:", newProperty.id);
+        }
+        
+        // Update state AND backup to localStorage
+        setLocalProperties(prev => {
+          const updated = [...prev, newProperty];
+          // CRITICAL: Backup to localStorage for persistence
+          if (user) {
+            try {
+              localStorage.setItem(`reptrack-properties-${user.id}`, JSON.stringify(updated));
+              console.log("✅ Property backed up to localStorage");
+            } catch (e) {
+              console.error("localStorage backup failed:", e);
+            }
+          }
+          return updated;
+        });
       }
 
       // Check for tenant data
@@ -2581,13 +2761,13 @@ EXTRACT the following information if visible:
 - Purchase price or property value
 - Down payment amount
 - Monthly mortgage/loan payment
-- Interest rate
-- Loan term
+- Interest rate and loan term
 - Monthly rent (for leases)
 - Tenant name (for leases)
 - Lease start/end dates
-- Insurance premium
-- Tax amount
+- Annual property taxes
+- Annual insurance premium
+- HOA fees (monthly)
 
 RESPOND in this format:
 📋 **Document Analysis: ${file.name}**
@@ -2598,13 +2778,21 @@ RESPOND in this format:
 **Key Financial Data:**
 • [List all extracted values with labels]
 
-**Suggested Action:**
-[Tell user what to do next - e.g., "I can add this property to your portfolio. Just confirm the details above or provide any missing information."]
+**To Add This Property:**
+Tell me any details I couldn't extract:
+- Purchase price?
+- Down payment?
+- Monthly mortgage payment?
+- Monthly rent?
+- Property taxes (annual)?
+- Insurance (annual)?
 
-If you find an address, offer to add the property with:
-[[ADD_PROPERTY:{"address":"extracted address","purchasePrice":X,"mortgagePayment":X}]]
+Once you provide the details, I'll add it with full financial tracking!
 
-Be helpful and specific. If the image/document is unclear, ask for specific details.`;
+If you extracted enough info, use:
+[[ADD_PROPERTY:{"address":"full address","type":"single_family","units":1,"rent":0,"purchasePrice":0,"downPayment":0,"mortgagePayment":0,"taxes":0,"insurance":0,"hoa":0,"utilities":0,"maintenance":0,"propertyMgmt":0,"vacancyRate":5}]]
+
+IMPORTANT: Always include ALL fields in ADD_PROPERTY, use 0 for unknown values.`;
 
                               const messageContent = isImage ? [
                                 { type: "image", source: { type: "base64", media_type: fileType, data: base64 } },
