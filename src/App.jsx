@@ -767,12 +767,89 @@ function MainApp() {
   // Property modals
   const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
   const [showPropertyDetailModal, setShowPropertyDetailModal] = useState(null);
+  const [showEditPropertyModal, setShowEditPropertyModal] = useState(null);
   const [newProperty, setNewProperty] = useState({
     address: "", type: "single_family", units: 1, rent: "", purchaseDate: "",
     purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false,
     taxes: "", insurance: "", hoa: "", utilities: "", maintenance: "", propertyMgmt: "", vacancyRate: "5",
     unitDetails: [] // Array of { unitName, beds, baths, rent }
   });
+  
+  // Edit property handler
+  const startEditProperty = (property) => {
+    setShowPropertyDetailModal(null);
+    setShowEditPropertyModal({
+      ...property,
+      taxes: property.taxes || "",
+      insurance: property.insurance || "",
+      hoa: property.hoa || "",
+      utilities: property.utilities || "",
+      maintenance: property.maintenance || "",
+      propertyMgmt: property.propertyMgmt || "",
+      vacancyRate: property.vacancyRate || "5"
+    });
+  };
+  
+  // Save edited property
+  const saveEditedProperty = async () => {
+    if (!showEditPropertyModal) return;
+    
+    const taxes = parseInt(showEditPropertyModal.taxes) || 0;
+    const insurance = parseInt(showEditPropertyModal.insurance) || 0;
+    const hoa = parseInt(showEditPropertyModal.hoa) || 0;
+    const utilities = parseInt(showEditPropertyModal.utilities) || 0;
+    const maintenance = parseInt(showEditPropertyModal.maintenance) || 0;
+    const propertyMgmt = parseInt(showEditPropertyModal.propertyMgmt) || 0;
+    const totalExpenses = taxes + insurance + hoa + utilities + maintenance + propertyMgmt;
+    const vacancyRate = parseInt(showEditPropertyModal.vacancyRate) || 5;
+    
+    const updatedProperty = {
+      ...showEditPropertyModal,
+      rent: parseInt(showEditPropertyModal.rent) || 0,
+      units: parseInt(showEditPropertyModal.units) || 1,
+      purchasePrice: parseInt(showEditPropertyModal.purchasePrice) || 0,
+      downPayment: parseInt(showEditPropertyModal.downPayment) || 0,
+      mortgagePayment: parseInt(showEditPropertyModal.mortgagePayment) || 0,
+      taxes, insurance, hoa, utilities, maintenance, propertyMgmt, vacancyRate, totalExpenses
+    };
+    
+    // Update local state
+    setLocalProperties(prev => prev.map(p => p.id === updatedProperty.id ? updatedProperty : p));
+    
+    // Update in Supabase
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${updatedProperty.id}`, {
+        method: 'PATCH',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          name: updatedProperty.name, address: updatedProperty.address, type: updatedProperty.type,
+          units: updatedProperty.units, rent: updatedProperty.rent
+        })
+      });
+    } catch (err) {
+      console.error("Error updating property:", err);
+    }
+    
+    setShowEditPropertyModal(null);
+  };
+  
+  // Delete property
+  const deleteProperty = async (propertyId) => {
+    if (!confirm("Are you sure you want to delete this property?")) return;
+    
+    setLocalProperties(prev => prev.filter(p => p.id !== propertyId));
+    setShowPropertyDetailModal(null);
+    setShowEditPropertyModal(null);
+    
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/properties?id=eq.${propertyId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+    } catch (err) {
+      console.error("Error deleting property:", err);
+    }
+  };
   
   // Helper to update unit details for multifamily
   const updateUnitDetail = (index, field, value) => {
@@ -1795,40 +1872,53 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         * { box-sizing: border-box; margin: 0; padding: 0; }
         
         /* ═══════════════════════════════════════════════════════════════════════
-           VERY VISIBLE SCROLLBARS - Big, easy to see and grab
+           MOBILE-FRIENDLY SCROLLING - Touch optimized
            ═══════════════════════════════════════════════════════════════════════ */
         
-        /* Chrome, Safari, Edge scrollbars */
-        ::-webkit-scrollbar { 
-          width: 20px !important; 
-          height: 20px !important; 
+        /* Enable smooth touch scrolling everywhere */
+        html, body, div, main, section {
+          -webkit-overflow-scrolling: touch !important;
         }
-        ::-webkit-scrollbar-track { 
-          background: #e8e8e8 !important; 
-          border-radius: 10px !important; 
-          border: 2px solid #f5f5f5 !important;
-          box-shadow: inset 0 0 5px rgba(0,0,0,0.1) !important;
+        
+        /* Desktop scrollbars - visible but not too wide */
+        @media (min-width: 769px) {
+          ::-webkit-scrollbar { 
+            width: 14px !important; 
+            height: 14px !important; 
+          }
+          ::-webkit-scrollbar-track { 
+            background: #e8e8e8 !important; 
+            border-radius: 8px !important;
+          }
+          ::-webkit-scrollbar-thumb { 
+            background: linear-gradient(180deg, #B8860B 0%, #8B6914 100%) !important; 
+            border-radius: 8px !important; 
+            border: 2px solid #e8e8e8 !important;
+            min-height: 50px !important;
+          }
+          ::-webkit-scrollbar-thumb:hover { 
+            background: linear-gradient(180deg, #DAA520 0%, #B8860B 100%) !important;
+          }
         }
-        ::-webkit-scrollbar-thumb { 
-          background: linear-gradient(180deg, #B8860B 0%, #8B6914 100%) !important; 
-          border-radius: 10px !important; 
-          border: 3px solid #e8e8e8 !important;
-          min-height: 80px !important;
-        }
-        ::-webkit-scrollbar-thumb:hover { 
-          background: linear-gradient(180deg, #DAA520 0%, #B8860B 100%) !important;
-          cursor: grab !important;
-        }
-        ::-webkit-scrollbar-thumb:active {
-          cursor: grabbing !important;
-        }
-        ::-webkit-scrollbar-corner { 
-          background: #e8e8e8 !important; 
+        
+        /* Mobile - thin scrollbars, rely on touch */
+        @media (max-width: 768px) {
+          ::-webkit-scrollbar { 
+            width: 6px !important; 
+            height: 6px !important; 
+          }
+          ::-webkit-scrollbar-track { 
+            background: transparent !important;
+          }
+          ::-webkit-scrollbar-thumb { 
+            background: rgba(184, 134, 11, 0.5) !important; 
+            border-radius: 3px !important;
+          }
         }
         
         /* Firefox scrollbar */
         * { 
-          scrollbar-width: thick !important; 
+          scrollbar-width: thin !important; 
           scrollbar-color: #B8860B #e8e8e8 !important; 
         }
         
@@ -1836,38 +1926,60 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         html, body { 
           overflow-y: auto !important; 
           overflow-x: hidden !important;
+          height: 100% !important;
         }
         
         /* Main app scrollable area */
         .main-scroll {
           overflow-y: auto !important;
           overflow-x: hidden !important;
-          max-height: calc(100vh - 90px) !important;
-          padding-right: 10px !important;
+          max-height: calc(100vh - 70px) !important;
+          -webkit-overflow-scrolling: touch !important;
+          padding-bottom: 20px !important;
         }
         
         /* Modal scrollable content */
         .modal-scroll { 
           overflow-y: auto !important; 
           overflow-x: hidden !important;
-          max-height: 65vh !important;
-          padding-right: 15px !important;
+          max-height: 70vh !important;
+          -webkit-overflow-scrolling: touch !important;
+          padding-right: 10px !important;
         }
         
         /* Tab content scrollable */
         .tab-scroll {
           overflow-y: auto !important;
           overflow-x: hidden !important;
-          max-height: calc(100vh - 150px) !important;
-          padding-right: 10px !important;
-          padding-bottom: 60px !important;
+          max-height: calc(100vh - 130px) !important;
+          -webkit-overflow-scrolling: touch !important;
+          padding-bottom: 80px !important;
         }
         
         /* Card content scrollable */
         .card-scroll {
           overflow-y: auto !important;
           max-height: 400px !important;
-          padding-right: 10px !important;
+          -webkit-overflow-scrolling: touch !important;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════════
+           MOBILE RESPONSIVE STYLES
+           ═══════════════════════════════════════════════════════════════════════ */
+        
+        @media (max-width: 768px) {
+          .main-scroll {
+            padding: 12px !important;
+            max-height: calc(100vh - 60px) !important;
+          }
+          .tab-scroll {
+            max-height: calc(100vh - 100px) !important;
+            padding-bottom: 100px !important;
+          }
+          .modal-scroll {
+            max-height: 60vh !important;
+          }
+        }
         }
         
         .nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 18px; cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; transition:all .15s; color:#6a5830; }
@@ -1881,67 +1993,147 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         .msg-assistant { background: white; border: 1px solid ${C.border}; color: ${C.text}; margin-right: auto; border-bottom-left-radius: 4px; }
         .msg-logged { border-left: 3px solid ${C.greenB}; }
         .progress-ring { transform: rotate(-90deg); }
+        
+        /* ═══════════════════════════════════════════════════════════════════════
+           MOBILE RESPONSIVE STYLES
+           ═══════════════════════════════════════════════════════════════════════ */
+        
+        /* Mobile nav - icon only */
+        @media (max-width: 768px) {
+          .mobile-hide { display: none !important; }
+          .mobile-show { display: flex !important; }
+          .mobile-full { width: 100% !important; }
+          .mobile-col { flex-direction: column !important; }
+          .mobile-gap { gap: 8px !important; }
+          .mobile-pad { padding: 12px !important; }
+          .mobile-text-sm { font-size: 12px !important; }
+          .mobile-text-lg { font-size: 18px !important; }
+          
+          /* Stack grids on mobile */
+          .mobile-stack {
+            grid-template-columns: 1fr !important;
+          }
+          
+          /* Bigger touch targets */
+          button, select, input {
+            min-height: 44px !important;
+            font-size: 16px !important;
+          }
+          
+          /* Full width cards */
+          .card {
+            padding: 16px !important;
+          }
+          
+          /* Modal adjustments */
+          .modal-scroll {
+            max-height: 75vh !important;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .tiny-hide { display: none !important; }
+        }
+        
+        /* Responsive grids */
+        .grid-2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        .grid-3 {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 12px;
+        }
+        @media (max-width: 768px) {
+          .grid-2, .grid-3 {
+            grid-template-columns: 1fr !important;
+          }
+        }
       `}</style>
 
-      {/* Header - LIGHT & ACCESSIBLE */}
-      <header style={{ background: "#FFFFFF", borderBottom: "3px solid #B8860B", padding: "0 24px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-        <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-            <div style={{ padding: "14px 0" }}>
-              <span style={{ fontSize: 28, fontWeight: 800, color: "#1a1a2e", fontFamily: "'Inter', sans-serif" }}>
-                Rep<span style={{ color: "#B8860B" }}>Track</span>
-              </span>
-            </div>
-            <nav style={{ display: "flex", gap: 4 }}>
-              {VIEWS.map(v => (
-                <button 
-                  key={v.id} 
-                  onClick={() => setView(v.id)}
-                  style={{
-                    display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
-                    padding: "12px 20px", border: "none", cursor: "pointer",
-                    background: view === v.id ? "#FFF8DC" : "transparent",
-                    borderBottom: view === v.id ? "4px solid #B8860B" : "4px solid transparent",
-                    borderRadius: "8px 8px 0 0",
-                    transition: "all 0.2s"
-                  }}
-                >
-                  <span style={{ fontSize: 22 }}>{v.icon}</span>
-                  <span style={{ 
-                    fontFamily: "'Inter', sans-serif", 
-                    fontSize: 14, 
-                    fontWeight: view === v.id ? 700 : 500,
-                    color: view === v.id ? "#8B6914" : "#424242",
-                    letterSpacing: 0.5
-                  }}>{v.label}</span>
-                </button>
-              ))}
-            </nav>
+      {/* Header - MOBILE RESPONSIVE */}
+      <header style={{ 
+        background: "#FFFFFF", 
+        borderBottom: "3px solid #B8860B", 
+        padding: "0 12px", 
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        position: "sticky",
+        top: 0,
+        zIndex: 100
+      }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+          {/* Logo - always visible */}
+          <div style={{ padding: "10px 0" }}>
+            <span style={{ fontSize: 24, fontWeight: 800, color: "#1a1a2e", fontFamily: "'Inter', sans-serif" }}>
+              Rep<span style={{ color: "#B8860B" }}>Track</span>
+            </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: "#1a1a2e", fontWeight: 600 }}>{displayName}</div>
-              {profile?.companyName && (
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, color: "#616161" }}>{profile.companyName}</div>
-              )}
-            </div>
-            <button onClick={() => setShowSettingsModal(true)} style={{ background: "#f5f5f5", border: "2px solid #e0e0e0", fontSize: 24, cursor: "pointer", padding: "8px 12px", borderRadius: 8 }} title="Settings">⚙️</button>
-            <button onClick={signOut} style={{ padding: "10px 20px", fontSize: 14, color: "#616161", background: "#f5f5f5", border: "2px solid #e0e0e0", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}>Log Out</button>
+          
+          {/* Right side buttons - compact on mobile */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={() => setShowSettingsModal(true)} style={{ background: "#f5f5f5", border: "2px solid #e0e0e0", fontSize: 20, cursor: "pointer", padding: "8px 10px", borderRadius: 8, minHeight: 44 }} title="Settings">⚙️</button>
+            <button onClick={signOut} style={{ padding: "8px 12px", fontSize: 12, color: "#616161", background: "#f5f5f5", border: "2px solid #e0e0e0", borderRadius: 8, cursor: "pointer", fontWeight: 600, minHeight: 44 }}>Log Out</button>
           </div>
         </div>
+        
+        {/* Navigation - scrollable on mobile */}
+        <nav style={{ 
+          display: "flex", 
+          gap: 2, 
+          overflowX: "auto", 
+          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          paddingBottom: 2
+        }}>
+          {VIEWS.map(v => (
+            <button 
+              key={v.id} 
+              onClick={() => setView(v.id)}
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+                padding: "8px 14px", border: "none", cursor: "pointer",
+                background: view === v.id ? "#FFF8DC" : "transparent",
+                borderBottom: view === v.id ? "4px solid #B8860B" : "4px solid transparent",
+                borderRadius: "6px 6px 0 0",
+                transition: "all 0.2s",
+                flexShrink: 0,
+                minWidth: 60
+              }}
+            >
+              <span style={{ fontSize: 20 }}>{v.icon}</span>
+              <span style={{ 
+                fontFamily: "'Inter', sans-serif", 
+                fontSize: 11, 
+                fontWeight: view === v.id ? 700 : 500,
+                color: view === v.id ? "#8B6914" : "#424242",
+                whiteSpace: "nowrap"
+              }}>{v.label}</span>
+            </button>
+          ))}
+        </nav>
       </header>
 
-      {/* Main Content - SCROLLABLE */}
-      <main className="main-scroll" style={{ maxWidth: 1400, margin: "0 auto", padding: "24px", overflowY: "auto", maxHeight: "calc(100vh - 90px)" }}>
+      {/* Main Content - SCROLLABLE with touch support */}
+      <main className="main-scroll" style={{ 
+        maxWidth: 1400, 
+        margin: "0 auto", 
+        padding: "16px", 
+        overflowY: "auto", 
+        WebkitOverflowScrolling: "touch",
+        maxHeight: "calc(100vh - 110px)"
+      }}>
         
         {/* ASSISTANT VIEW */}
         {view === "assistant" && (
-          <div style={{ display: "flex", gap: 24, height: "calc(100vh - 140px)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "calc(100vh - 160px)" }}>
             {/* Chat Area */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-              <div style={{ marginBottom: 16 }}>
-                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>AI Documentation Assistant</h1>
-                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>Powered by Claude • IRS-compliant activity logging • Smart documentation</p>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+              <div style={{ marginBottom: 12 }}>
+                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: C.dark, marginBottom: 4 }}>AI Assistant</h1>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light }}>IRS-compliant activity logging</p>
               </div>
 
               {/* Messages */}
@@ -2475,8 +2667,8 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               </div>
             )}
 
-            <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 400px)", paddingRight: 10 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 400px)", paddingRight: 10, WebkitOverflowScrolling: "touch" }}>
+              <div className="grid-2">
                 {localProperties.map(p => {
                   // Calculate with actual expenses
                   const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
@@ -2508,75 +2700,82 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                   <div 
                     key={p.id} 
                     className="card" 
-                    onClick={() => setShowPropertyDetailModal(p)}
                     style={{ 
-                      borderLeft: `8px solid ${isPositive ? "#2E7D32" : "#C62828"}`, 
-                      cursor: "pointer",
+                      borderLeft: `6px solid ${isPositive ? "#2E7D32" : "#C62828"}`, 
                       transition: "transform 0.15s, box-shadow 0.15s",
-                      padding: 24
+                      padding: 20,
+                      background: "#FFFFFF"
                     }}
-                    onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.01)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.15)"; }}
-                    onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
                   >
                     {/* Property Header */}
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, alignItems: "center" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 22, fontWeight: 700, color: "#1a1a2e" }}>{p.name}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: "#1a1a2e" }}>{p.name}</span>
                         {p.isSTR ? (
-                          <span style={{ padding: "6px 12px", background: "#D32F2F", color: "white", fontFamily: "'Inter', sans-serif", fontSize: 14, borderRadius: 6, fontWeight: 700 }}>STR</span>
+                          <span style={{ padding: "4px 10px", background: "#D32F2F", color: "white", fontSize: 12, borderRadius: 4, fontWeight: 700 }}>STR</span>
                         ) : (
-                          <span style={{ padding: "6px 12px", background: "#1565C0", color: "white", fontFamily: "'Inter', sans-serif", fontSize: 14, borderRadius: 6, fontWeight: 700 }}>LTR</span>
+                          <span style={{ padding: "4px 10px", background: "#1565C0", color: "white", fontSize: 12, borderRadius: 4, fontWeight: 700 }}>LTR</span>
                         )}
                       </div>
-                      <span style={{ padding: "6px 12px", background: "#f5f5f5", border: "2px solid #e0e0e0", fontFamily: "'Inter', sans-serif", fontSize: 14, color: "#424242", borderRadius: 6, fontWeight: 600 }}>{p.type?.replace("_", " ") || "Property"}</span>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); startEditProperty(p); }}
+                        style={{ 
+                          padding: "8px 14px", background: "#B8860B", color: "white", 
+                          border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, 
+                          cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+                          minHeight: 40
+                        }}
+                      >
+                        ✏️ Edit
+                      </button>
                     </div>
-                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: "#616161", marginBottom: 20 }}>{p.address}</div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: "#616161", marginBottom: 16 }}>{p.address}</div>
                     
-                    {/* Financial Summary - LARGE & ACCESSIBLE */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-                      <div style={{ background: "#E8F5E9", padding: 16, borderRadius: 8 }}>
-                        <div style={{ fontSize: 14, color: "#2E7D32", letterSpacing: 1, fontWeight: 600, marginBottom: 4 }}>RENT</div>
-                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, color: "#1B5E20", fontWeight: 700 }}>${(p.rent || 0).toLocaleString()}</div>
+                    {/* Financial Summary - Clean White Background */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                      <div style={{ background: "#f8f8f8", padding: 14, borderRadius: 8, border: "2px solid #2E7D32" }}>
+                        <div style={{ fontSize: 12, color: "#2E7D32", fontWeight: 700, marginBottom: 4 }}>RENT</div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, color: "#1B5E20", fontWeight: 800 }}>${(p.rent || 0).toLocaleString()}</div>
                       </div>
-                      <div style={{ background: isPositive ? "#E8F5E9" : "#FFEBEE", padding: 16, borderRadius: 8 }}>
-                        <div style={{ fontSize: 14, color: isPositive ? "#2E7D32" : "#C62828", letterSpacing: 1, fontWeight: 600, marginBottom: 4 }}>CASH FLOW</div>
-                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, color: isPositive ? "#1B5E20" : "#B71C1C", fontWeight: 700 }}>
+                      <div style={{ background: "#f8f8f8", padding: 14, borderRadius: 8, border: `2px solid ${isPositive ? "#2E7D32" : "#C62828"}` }}>
+                        <div style={{ fontSize: 12, color: isPositive ? "#2E7D32" : "#C62828", fontWeight: 700, marginBottom: 4 }}>CASH FLOW</div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, color: isPositive ? "#1B5E20" : "#B71C1C", fontWeight: 800 }}>
                           {isPositive ? "+" : ""}${Math.round(cashFlow).toLocaleString()}
                         </div>
                       </div>
                     </div>
                     
-                    {/* Expenses Row */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-                      <div style={{ background: "#FFF3E0", padding: 12, borderRadius: 8 }}>
-                        <div style={{ fontSize: 12, color: "#E65100", fontWeight: 600 }}>EXPENSES</div>
-                        <div style={{ fontSize: 22, color: "#E65100", fontWeight: 700 }}>${(p.totalExpenses || 0).toLocaleString()}</div>
+                    {/* Expenses Row - Clean */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                      <div style={{ background: "#f8f8f8", padding: 12, borderRadius: 8, border: "1px solid #e0e0e0" }}>
+                        <div style={{ fontSize: 11, color: "#666", fontWeight: 600 }}>EXPENSES</div>
+                        <div style={{ fontSize: 18, color: "#333", fontWeight: 700 }}>${(p.totalExpenses || 0).toLocaleString()}</div>
                       </div>
-                      <div style={{ background: "#FFEBEE", padding: 12, borderRadius: 8 }}>
-                        <div style={{ fontSize: 12, color: "#C62828", fontWeight: 600 }}>MORTGAGE</div>
-                        <div style={{ fontSize: 22, color: "#B71C1C", fontWeight: 700 }}>${(p.mortgagePayment || 0).toLocaleString()}</div>
+                      <div style={{ background: "#f8f8f8", padding: 12, borderRadius: 8, border: "1px solid #e0e0e0" }}>
+                        <div style={{ fontSize: 11, color: "#666", fontWeight: 600 }}>MORTGAGE</div>
+                        <div style={{ fontSize: 18, color: "#333", fontWeight: 700 }}>${(p.mortgagePayment || 0).toLocaleString()}</div>
                       </div>
                     </div>
 
-                    {/* ROI Metrics - LARGE & ACCESSIBLE */}
+                    {/* ROI Metrics - Clean badges */}
                     {(capRate || cashOnCash || (p.downPayment && p.purchasePrice)) && (
-                      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
                         {capRate && (
-                          <div style={{ padding: "10px 16px", background: "#FFF8DC", borderRadius: 8, border: "2px solid #B8860B" }}>
-                            <span style={{ fontSize: 14, color: "#8B6914", fontWeight: 600 }}>CAP RATE </span>
-                            <span style={{ fontSize: 20, color: "#8B6914", fontWeight: 800 }}>{capRate.toFixed(1)}%</span>
+                          <div style={{ padding: "8px 12px", background: "#f8f8f8", borderRadius: 6, border: "2px solid #B8860B" }}>
+                            <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>CAP </span>
+                            <span style={{ fontSize: 16, color: "#8B6914", fontWeight: 800 }}>{capRate.toFixed(1)}%</span>
                           </div>
                         )}
                         {cashOnCash && (
-                          <div style={{ padding: "10px 16px", background: isPositive ? "#E8F5E9" : "#FFEBEE", borderRadius: 8, border: `2px solid ${isPositive ? "#2E7D32" : "#C62828"}` }}>
-                            <span style={{ fontSize: 14, color: isPositive ? "#1B5E20" : "#B71C1C", fontWeight: 600 }}>CoC </span>
-                            <span style={{ fontSize: 20, color: isPositive ? "#1B5E20" : "#B71C1C", fontWeight: 800 }}>{cashOnCash.toFixed(1)}%</span>
+                          <div style={{ padding: "8px 12px", background: "#f8f8f8", borderRadius: 6, border: `2px solid ${isPositive ? "#2E7D32" : "#C62828"}` }}>
+                            <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>CoC </span>
+                            <span style={{ fontSize: 16, color: isPositive ? "#1B5E20" : "#B71C1C", fontWeight: 800 }}>{cashOnCash.toFixed(1)}%</span>
                           </div>
                         )}
                         {p.downPayment && p.purchasePrice && (
-                          <div style={{ padding: "10px 16px", background: npvPositive ? "#E3F2FD" : "#FFEBEE", borderRadius: 8, border: `2px solid ${npvPositive ? "#1565C0" : "#C62828"}` }}>
-                            <span style={{ fontSize: 14, color: npvPositive ? "#0D47A1" : "#B71C1C", fontWeight: 600 }}>10yr NPV </span>
-                            <span style={{ fontSize: 20, color: npvPositive ? "#0D47A1" : "#B71C1C", fontWeight: 800 }}>
+                          <div style={{ padding: "8px 12px", background: "#f8f8f8", borderRadius: 6, border: `2px solid ${npvPositive ? "#1565C0" : "#C62828"}` }}>
+                            <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>NPV </span>
+                            <span style={{ fontSize: 16, color: npvPositive ? "#0D47A1" : "#B71C1C", fontWeight: 800 }}>
                               {npvPositive ? "+" : ""}${Math.round(npv / 1000)}K
                             </span>
                           </div>
@@ -2586,9 +2785,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
                     {/* Hours logged for this property */}
                     {repByProperty[p.name] && (
-                      <div style={{ paddingTop: 12, borderTop: "2px solid #e0e0e0" }}>
-                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: "#2E7D32", fontWeight: 600 }}>
-                          ✅ {(repByProperty[p.name].minutes / 60).toFixed(1)} hours logged • {repByProperty[p.name].count} activities
+                      <div style={{ paddingTop: 12, borderTop: "1px solid #e0e0e0" }}>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: "#2E7D32", fontWeight: 600 }}>
+                          ✅ {(repByProperty[p.name].minutes / 60).toFixed(1)}h logged • {repByProperty[p.name].count} activities
                         </div>
                       </div>
                     )}
@@ -2604,6 +2803,18 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                         })}
                       </div>
                     )}
+                    
+                    {/* View Details link */}
+                    <div 
+                      onClick={() => setShowPropertyDetailModal(p)}
+                      style={{ 
+                        marginTop: 12, paddingTop: 12, borderTop: "1px solid #e0e0e0", 
+                        textAlign: "center", cursor: "pointer", color: "#1565C0", 
+                        fontSize: 14, fontWeight: 600
+                      }}
+                    >
+                      View Full Details →
+                    </div>
                   </div>
                 );
               })}
@@ -2618,11 +2829,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                   justifyContent: "center", minHeight: 180, background: "#fafafa",
                   transition: "all 0.15s"
                 }}
-                onMouseOver={(e) => { e.currentTarget.style.borderLeftColor = C.gold; e.currentTarget.style.background = "#faf8f4"; }}
-                onMouseOut={(e) => { e.currentTarget.style.borderLeftColor = C.border; e.currentTarget.style.background = "#fafafa"; }}
               >
-                <div style={{ fontSize: 32, color: C.light, marginBottom: 8 }}>🏠</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>Add New Property</div>
+                <div style={{ fontSize: 40, color: "#B8860B", marginBottom: 8 }}>➕</div>
+                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: "#333", fontWeight: 600 }}>Add New Property</div>
               </div>
               </div>
             </div>
@@ -2656,7 +2865,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                       🏠 {property.name}
                       <span style={{ fontSize: 11, color: C.light, fontWeight: 400 }}>• {property.address}</span>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div className="grid-2">
                       {propertyTenants.map(tenant => (
                         <div 
                           key={tenant.id} 
@@ -2792,7 +3001,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                           <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, color: C.mid, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
                             {category.icon} {category.label}
                           </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          <div className="grid-2">
                             {categoryVendors.map(vendor => (
                               <div 
                                 key={vendor.id} 
@@ -3913,6 +4122,212 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                   )}
                 </div>
               </div>
+              
+              {/* Edit & Delete Buttons */}
+              <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+                <button 
+                  onClick={() => startEditProperty(showPropertyDetailModal)}
+                  style={{ 
+                    flex: 1, padding: "16px", background: "#B8860B", color: "white", 
+                    border: "none", borderRadius: 8, fontSize: 16, fontWeight: 700, 
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    minHeight: 54
+                  }}
+                >
+                  ✏️ Edit Property
+                </button>
+                <button 
+                  onClick={() => deleteProperty(showPropertyDetailModal.id)}
+                  style={{ 
+                    padding: "16px 24px", background: "#FFEBEE", color: "#C62828", 
+                    border: "2px solid #C62828", borderRadius: 8, fontSize: 16, fontWeight: 700, 
+                    cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    minHeight: 54
+                  }}
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ EDIT PROPERTY MODAL ═══ */}
+      {showEditPropertyModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.95)", display: "flex",
+          alignItems: "flex-start", justifyContent: "center", zIndex: 1000,
+          padding: "20px", overflowY: "auto", WebkitOverflowScrolling: "touch"
+        }}>
+          <div style={{
+            background: C.bg, borderRadius: 12, width: "100%",
+            maxWidth: 550, boxShadow: "0 25px 80px rgba(0,0,0,0.5)",
+            marginTop: 20, marginBottom: 40
+          }}>
+            {/* Header */}
+            <div style={{ 
+              background: "#B8860B", padding: "20px 24px", 
+              borderRadius: "12px 12px 0 0", display: "flex", 
+              justifyContent: "space-between", alignItems: "center",
+              position: "sticky", top: 0, zIndex: 10
+            }}>
+              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: "white", margin: 0 }}>
+                ✏️ Edit Property
+              </h2>
+              <button onClick={() => setShowEditPropertyModal(null)} style={{
+                background: "rgba(255,255,255,0.3)", border: "none", fontSize: 24, color: "white", 
+                cursor: "pointer", width: 44, height: 44, borderRadius: "50%", display: "flex",
+                alignItems: "center", justifyContent: "center"
+              }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {/* Property Name */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 14, color: "#1a1a2e", fontWeight: 600, marginBottom: 8 }}>
+                  Property Name *
+                </label>
+                <input
+                  type="text"
+                  value={showEditPropertyModal.name || ""}
+                  onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, name: e.target.value})}
+                  style={{ width: "100%", padding: "14px 16px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 50 }}
+                />
+              </div>
+              
+              {/* Address */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 14, color: "#1a1a2e", fontWeight: 600, marginBottom: 8 }}>
+                  Address
+                </label>
+                <input
+                  type="text"
+                  value={showEditPropertyModal.address || ""}
+                  onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, address: e.target.value})}
+                  style={{ width: "100%", padding: "14px 16px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 50 }}
+                />
+              </div>
+              
+              {/* Units & Rent */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 14, color: "#1a1a2e", fontWeight: 600, marginBottom: 8 }}>Units</label>
+                  <input
+                    type="number"
+                    value={showEditPropertyModal.units || 1}
+                    onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, units: e.target.value})}
+                    style={{ width: "100%", padding: "14px 16px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 50 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 14, color: "#1a1a2e", fontWeight: 600, marginBottom: 8 }}>Monthly Rent ($)</label>
+                  <input
+                    type="number"
+                    value={showEditPropertyModal.rent || ""}
+                    onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, rent: e.target.value})}
+                    style={{ width: "100%", padding: "14px 16px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 50 }}
+                  />
+                </div>
+              </div>
+              
+              {/* Purchase & Down Payment */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 14, color: "#1a1a2e", fontWeight: 600, marginBottom: 8 }}>Purchase Price ($)</label>
+                  <input
+                    type="number"
+                    value={showEditPropertyModal.purchasePrice || ""}
+                    onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, purchasePrice: e.target.value})}
+                    style={{ width: "100%", padding: "14px 16px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 50 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 14, color: "#1a1a2e", fontWeight: 600, marginBottom: 8 }}>Down Payment ($)</label>
+                  <input
+                    type="number"
+                    value={showEditPropertyModal.downPayment || ""}
+                    onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, downPayment: e.target.value})}
+                    style={{ width: "100%", padding: "14px 16px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 50 }}
+                  />
+                </div>
+              </div>
+              
+              {/* Mortgage */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", fontSize: 14, color: "#1a1a2e", fontWeight: 600, marginBottom: 8 }}>Monthly Mortgage ($)</label>
+                <input
+                  type="number"
+                  value={showEditPropertyModal.mortgagePayment || ""}
+                  onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, mortgagePayment: e.target.value})}
+                  style={{ width: "100%", padding: "14px 16px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 50 }}
+                />
+              </div>
+              
+              {/* Operating Expenses */}
+              <div style={{ background: "#FFF8DC", border: "2px solid #B8860B", borderRadius: 12, padding: 20, marginBottom: 20 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#8B6914", marginBottom: 16 }}>📊 Monthly Operating Expenses</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8B6914", fontWeight: 600, marginBottom: 6 }}>Taxes/mo</label>
+                    <input type="number" value={showEditPropertyModal.taxes || ""} onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, taxes: e.target.value})}
+                      style={{ width: "100%", padding: "12px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 48 }} placeholder="0" />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8B6914", fontWeight: 600, marginBottom: 6 }}>Insurance/mo</label>
+                    <input type="number" value={showEditPropertyModal.insurance || ""} onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, insurance: e.target.value})}
+                      style={{ width: "100%", padding: "12px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 48 }} placeholder="0" />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8B6914", fontWeight: 600, marginBottom: 6 }}>HOA/mo</label>
+                    <input type="number" value={showEditPropertyModal.hoa || ""} onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, hoa: e.target.value})}
+                      style={{ width: "100%", padding: "12px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 48 }} placeholder="0" />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8B6914", fontWeight: 600, marginBottom: 6 }}>Utilities/mo</label>
+                    <input type="number" value={showEditPropertyModal.utilities || ""} onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, utilities: e.target.value})}
+                      style={{ width: "100%", padding: "12px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 48 }} placeholder="0" />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8B6914", fontWeight: 600, marginBottom: 6 }}>Maintenance/mo</label>
+                    <input type="number" value={showEditPropertyModal.maintenance || ""} onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, maintenance: e.target.value})}
+                      style={{ width: "100%", padding: "12px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 48 }} placeholder="0" />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, color: "#8B6914", fontWeight: 600, marginBottom: 6 }}>Property Mgmt/mo</label>
+                    <input type="number" value={showEditPropertyModal.propertyMgmt || ""} onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, propertyMgmt: e.target.value})}
+                      style={{ width: "100%", padding: "12px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 48 }} placeholder="0" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Vacancy Rate */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 14, color: "#1a1a2e", fontWeight: 600, marginBottom: 8 }}>Vacancy Rate</label>
+                <select
+                  value={showEditPropertyModal.vacancyRate || "5"}
+                  onChange={(e) => setShowEditPropertyModal({...showEditPropertyModal, vacancyRate: e.target.value})}
+                  style={{ width: "100%", padding: "14px 16px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8, minHeight: 50, background: "white" }}
+                >
+                  <option value="0">0% - No vacancy</option>
+                  <option value="5">5% - Low vacancy</option>
+                  <option value="8">8% - Average vacancy</option>
+                  <option value="10">10% - High vacancy</option>
+                </select>
+              </div>
+              
+              {/* Save Button */}
+              <button 
+                onClick={saveEditedProperty}
+                style={{ 
+                  width: "100%", padding: "18px", background: "#228B22", color: "white", 
+                  border: "none", borderRadius: 8, fontSize: 18, fontWeight: 700, 
+                  cursor: "pointer", minHeight: 56
+                }}
+              >
+                💾 Save Changes
+              </button>
             </div>
           </div>
         </div>
