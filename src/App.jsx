@@ -1526,6 +1526,83 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        /* ═══════════════════════════════════════════════════════════════════════
+           VERY VISIBLE SCROLLBARS - Big, easy to see and grab
+           ═══════════════════════════════════════════════════════════════════════ */
+        
+        /* Chrome, Safari, Edge scrollbars */
+        ::-webkit-scrollbar { 
+          width: 20px !important; 
+          height: 20px !important; 
+        }
+        ::-webkit-scrollbar-track { 
+          background: #e8e8e8 !important; 
+          border-radius: 10px !important; 
+          border: 2px solid #f5f5f5 !important;
+          box-shadow: inset 0 0 5px rgba(0,0,0,0.1) !important;
+        }
+        ::-webkit-scrollbar-thumb { 
+          background: linear-gradient(180deg, #B8860B 0%, #8B6914 100%) !important; 
+          border-radius: 10px !important; 
+          border: 3px solid #e8e8e8 !important;
+          min-height: 80px !important;
+        }
+        ::-webkit-scrollbar-thumb:hover { 
+          background: linear-gradient(180deg, #DAA520 0%, #B8860B 100%) !important;
+          cursor: grab !important;
+        }
+        ::-webkit-scrollbar-thumb:active {
+          cursor: grabbing !important;
+        }
+        ::-webkit-scrollbar-corner { 
+          background: #e8e8e8 !important; 
+        }
+        
+        /* Firefox scrollbar */
+        * { 
+          scrollbar-width: thick !important; 
+          scrollbar-color: #B8860B #e8e8e8 !important; 
+        }
+        
+        /* Ensure scrolling is enabled everywhere */
+        html, body { 
+          overflow-y: auto !important; 
+          overflow-x: hidden !important;
+        }
+        
+        /* Main app scrollable area */
+        .main-scroll {
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          max-height: calc(100vh - 90px) !important;
+          padding-right: 10px !important;
+        }
+        
+        /* Modal scrollable content */
+        .modal-scroll { 
+          overflow-y: auto !important; 
+          overflow-x: hidden !important;
+          max-height: 65vh !important;
+          padding-right: 15px !important;
+        }
+        
+        /* Tab content scrollable */
+        .tab-scroll {
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          max-height: calc(100vh - 150px) !important;
+          padding-right: 10px !important;
+          padding-bottom: 60px !important;
+        }
+        
+        /* Card content scrollable */
+        .card-scroll {
+          overflow-y: auto !important;
+          max-height: 400px !important;
+          padding-right: 10px !important;
+        }
+        
         .nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 18px; cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; transition:all .15s; color:#6a5830; }
         .nav-item:hover { color:#e8c870; }
         .nav-item.active { color:#e8c870; border-bottom-color:#C6A24A; }
@@ -1587,8 +1664,8 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         </div>
       </header>
 
-      {/* Main Content */}
-      <main style={{ maxWidth: 1400, margin: "0 auto", padding: "24px" }}>
+      {/* Main Content - SCROLLABLE */}
+      <main className="main-scroll" style={{ maxWidth: 1400, margin: "0 auto", padding: "24px", overflowY: "auto", maxHeight: "calc(100vh - 90px)" }}>
         
         {/* ASSISTANT VIEW */}
         {view === "assistant" && (
@@ -1826,7 +1903,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
         {/* DASHBOARD VIEW */}
         {view === "dashboard" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="tab-scroll" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
@@ -1939,7 +2016,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
         {/* RECORDS VIEW */}
         {view === "records" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="tab-scroll" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Activity Records</h1>
@@ -1976,7 +2053,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
         {/* PROPERTIES VIEW */}
         {view === "properties" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="tab-scroll" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Properties</h1>
@@ -1987,7 +2064,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               <button 
                 onClick={() => setShowAddPropertyModal(true)}
                 className="btn-gold"
-                style={{ display: "flex", alignItems: "center", gap: 8 }}
+                style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, padding: "14px 24px" }}
               >
                 ➕ Add Property
               </button>
@@ -2269,7 +2346,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
         {/* TENANTS VIEW */}
         {view === "tenants" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="tab-scroll" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Tenants</h1>
@@ -2402,7 +2479,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
         {/* VENDORS VIEW */}
         {view === "vendors" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="tab-scroll" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Vendors</h1>
@@ -2661,11 +2738,11 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
           background: "rgba(15, 39, 66, 0.9)", display: "flex",
           alignItems: "center", justifyContent: "center", zIndex: 1000,
-          padding: 20, overflowY: "auto"
+          padding: 20, overflowY: "scroll"
         }}>
-          <div style={{
+          <div className="modal-scroll" style={{
             background: C.bg, borderRadius: 12, padding: 0, width: "100%",
-            maxWidth: 700, maxHeight: "90vh", overflowY: "auto",
+            maxWidth: 700, maxHeight: "85vh", overflowY: "scroll",
             boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
           }}>
             {/* Header */}
@@ -2828,11 +2905,11 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
           background: "rgba(15, 39, 66, 0.9)", display: "flex",
           alignItems: "center", justifyContent: "center", zIndex: 1000,
-          padding: 20, overflowY: "auto"
+          padding: 20, overflowY: "scroll"
         }}>
-          <div style={{
+          <div className="modal-scroll" style={{
             background: C.bg, borderRadius: 12, padding: 0, width: "100%",
-            maxWidth: 700, maxHeight: "90vh", overflowY: "auto",
+            maxWidth: 700, maxHeight: "85vh", overflowY: "scroll",
             boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
           }}>
             {/* Header */}
@@ -2988,34 +3065,38 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
           background: "rgba(15, 39, 66, 0.9)", display: "flex",
-          alignItems: "center", justifyContent: "center", zIndex: 1000
+          alignItems: "center", justifyContent: "center", zIndex: 1000,
+          padding: "20px"
         }}>
           <div style={{
             background: C.bg, borderRadius: 12, padding: 0, width: "100%",
-            maxWidth: 500, boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+            maxWidth: 600, maxHeight: "90vh", display: "flex", flexDirection: "column",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
           }}>
-            {/* Header */}
+            {/* Header - Fixed at top */}
             <div style={{ 
-              background: C.greenB, padding: "20px 24px", 
+              background: "#228B22", padding: "20px 24px", 
               borderRadius: "12px 12px 0 0", display: "flex", 
-              justifyContent: "space-between", alignItems: "center"
+              justifyContent: "space-between", alignItems: "center",
+              flexShrink: 0
             }}>
               <div>
-                <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: "white", margin: 0 }}>
+                <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: "white", margin: 0 }}>
                   🏠 Add New Property
                 </h2>
               </div>
               <button onClick={() => setShowAddPropertyModal(false)} style={{
-                background: "rgba(255,255,255,0.2)", border: "none", fontSize: 20, color: "white", 
-                cursor: "pointer", width: 36, height: 36, borderRadius: "50%", display: "flex",
-                alignItems: "center", justifyContent: "center"
+                background: "rgba(255,255,255,0.3)", border: "none", fontSize: 24, color: "white", 
+                cursor: "pointer", width: 44, height: 44, borderRadius: "50%", display: "flex",
+                alignItems: "center", justifyContent: "center", fontWeight: 700
               }}>×</button>
             </div>
 
-            <div style={{ padding: 24 }}>
+            {/* Scrollable Content - VISIBLE SCROLLBAR */}
+            <div className="modal-scroll" style={{ padding: 24, overflowY: "scroll", flex: 1, maxHeight: "70vh" }}>
               {/* Address */}
               <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 10, color: C.light, letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>
+                <label style={{ display: "block", fontSize: 14, color: "#1a1a2e", letterSpacing: 1, fontWeight: 600, marginBottom: 8 }}>
                   Property Address *
                 </label>
                 <input
@@ -3024,9 +3105,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                   onChange={(e) => setNewProperty({...newProperty, address: e.target.value})}
                   placeholder="123 Main St, Pittsburgh PA 15213"
                   style={{
-                    width: "100%", padding: "12px 14px", fontSize: 14, border: `1px solid ${C.border}`,
-                    borderRadius: 6, background: "white", color: C.text, outline: "none",
-                    fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box"
+                    width: "100%", padding: "14px 16px", fontSize: 16, border: "2px solid #e0e0e0",
+                    borderRadius: 8, background: "white", color: "#1a1a2e", outline: "none",
+                    fontFamily: "'Inter', sans-serif", boxSizing: "border-box"
                   }}
                 />
               </div>
@@ -3413,8 +3494,8 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                   onClick={() => setShowAddPropertyModal(false)}
                   style={{
                     flex: 1, padding: "14px 20px", background: "white", border: `1px solid ${C.border}`,
-                    borderRadius: 4, color: C.mid, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                    fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1, textTransform: "uppercase"
+                    borderRadius: 8, color: "#616161", fontSize: 16, fontWeight: 600, cursor: "pointer",
+                    fontFamily: "'Inter', sans-serif"
                   }}
                 >
                   Cancel
@@ -3423,13 +3504,13 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                   onClick={addProperty}
                   disabled={!newProperty.address.trim()}
                   style={{
-                    flex: 1, padding: "14px 20px", background: !newProperty.address.trim() ? C.border : C.greenB,
-                    border: "none", borderRadius: 4, color: "white", fontSize: 12, fontWeight: 600,
+                    flex: 1, padding: "16px 24px", background: !newProperty.address.trim() ? "#e0e0e0" : "#228B22",
+                    border: "none", borderRadius: 8, color: "white", fontSize: 18, fontWeight: 700,
                     cursor: !newProperty.address.trim() ? "not-allowed" : "pointer",
-                    fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1, textTransform: "uppercase"
+                    fontFamily: "'Inter', sans-serif"
                   }}
                 >
-                  Add Property
+                  ✓ Add Property
                 </button>
               </div>
             </div>
@@ -3443,11 +3524,11 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
           background: "rgba(15, 39, 66, 0.9)", display: "flex",
           alignItems: "center", justifyContent: "center", zIndex: 1000,
-          padding: 20
+          padding: 20, overflowY: "scroll"
         }}>
-          <div style={{
+          <div className="modal-scroll" style={{
             background: C.bg, borderRadius: 12, padding: 0, width: "100%",
-            maxWidth: 600, maxHeight: "90vh", overflowY: "auto",
+            maxWidth: 600, maxHeight: "85vh", overflowY: "scroll",
             boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
           }}>
             {/* Header */}
@@ -3561,11 +3642,11 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
           background: "rgba(15, 39, 66, 0.9)", display: "flex",
-          alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+          alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20, overflowY: "scroll"
         }}>
-          <div style={{
+          <div className="modal-scroll" style={{
             background: C.bg, borderRadius: 12, padding: 0, width: "100%",
-            maxWidth: 550, maxHeight: "90vh", overflowY: "auto",
+            maxWidth: 550, maxHeight: "85vh", overflowY: "scroll",
             boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
           }}>
             <div style={{ 
@@ -4031,23 +4112,25 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         }}>
           <div style={{
             background: C.bg, borderRadius: 12, padding: 0, width: "100%",
-            maxWidth: 450, boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+            maxWidth: 500, maxHeight: "90vh", display: "flex", flexDirection: "column",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
           }}>
             <div style={{ 
-              background: C.dark, padding: "20px 24px", 
+              background: "#1a1a2e", padding: "20px 24px", 
               borderRadius: "12px 12px 0 0", display: "flex", 
-              justifyContent: "space-between", alignItems: "center"
+              justifyContent: "space-between", alignItems: "center",
+              flexShrink: 0
             }}>
-              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: "white", margin: 0 }}>
+              <h2 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: "white", margin: 0 }}>
                 ⚙️ Settings
               </h2>
               <button onClick={() => setShowSettingsModal(false)} style={{
-                background: "rgba(255,255,255,0.2)", border: "none", fontSize: 20, color: "white", 
-                cursor: "pointer", width: 36, height: 36, borderRadius: "50%"
+                background: "rgba(255,255,255,0.2)", border: "none", fontSize: 24, color: "white", 
+                cursor: "pointer", width: 44, height: 44, borderRadius: "50%"
               }}>×</button>
             </div>
 
-            <div style={{ padding: 24 }}>
+            <div className="modal-scroll" style={{ padding: 24, overflowY: "auto", flex: 1 }}>
               {/* Font Size Selection */}
               <div style={{ marginBottom: 24 }}>
                 <div style={{ fontSize: 14, color: "#1a1a2e", letterSpacing: 2, marginBottom: 12, fontWeight: 700 }}>🔤 TEXT SIZE</div>
