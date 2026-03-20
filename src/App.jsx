@@ -423,15 +423,22 @@ const fmtH = (m) => { const h=Math.floor(m/60),mn=m%60; return !h&&!mn?"0h":`${h
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const todayStr = () => new Date().toISOString().split("T")[0];
 
+// HIGH CONTRAST COLORS - Accessible for 50+ vision
 const C = {
-  bg:"#F7F5EA", white:"#ffffff", dark:"#0F2742", darker:"#091e33", text:"#0F2742",
-  mid:"#2d4a6a", light:"#4D6785", lighter:"#7a96b0", border:"#d4cfbd", borderL:"#e8e4d4",
-  gold:"#9a7830", goldL:"#C6A24A", goldPale:"#faf3dc", goldBright:"#e8c870",
-  green:"#1a5c38", greenPale:"#e4f2ea", greenB:"#256b45",
-  red:"#7a1a1a", redPale:"#f5e4e4", redB:"#993030",
-  blue:"#2d4f6e", bluePale:"#e4edf5", blueB:"#3d6080",
-  purple:"#3a2060", purpleB:"#5a3a90",
-  orange:"#8a5a20", orangePale:"#fdf4e4", orangeB:"#b87820",
+  bg:"#FAFAF5", white:"#ffffff", dark:"#1a1a2e", darker:"#0d0d1a", text:"#1a1a2e",
+  mid:"#3d3d5c", light:"#5a5a7a", lighter:"#8080a0", border:"#c0c0c0", borderL:"#e0e0e0",
+  // High contrast gold - deeper, richer
+  gold:"#8B6914", goldL:"#B8860B", goldPale:"#FFF8DC", goldBright:"#DAA520",
+  // High contrast green - darker, bolder
+  green:"#006400", greenPale:"#E8F5E9", greenB:"#228B22",
+  // High contrast red - clear, unmistakable  
+  red:"#B22222", redPale:"#FFEBEE", redB:"#DC143C",
+  // High contrast blue - rich, readable
+  blue:"#1E3A5F", bluePale:"#E3F2FD", blueB:"#1565C0",
+  // Purple - bold
+  purple:"#4B0082", purpleB:"#6A0DAD",
+  // Orange - warm, visible
+  orange:"#CC5500", orangePale:"#FFF3E0", orangeB:"#E65100",
 };
 
 const VIEWS = [
@@ -1925,54 +1932,76 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
               </button>
             </div>
 
-            {/* Portfolio Summary */}
+            {/* Portfolio Summary - LARGE & ACCESSIBLE */}
             {localProperties.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10 }}>
-                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${C.greenB}` }}>
-                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>GROSS RENT</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: C.green, fontFamily: "'Inter', sans-serif" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
+                <div className="card" style={{ padding: 24, borderLeft: `8px solid ${C.greenB}`, background: "#E8F5E9" }}>
+                  <div style={{ fontSize: 16, color: "#1B5E20", letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>💰 RENT</div>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: "#1B5E20", fontFamily: "'Inter', sans-serif" }}>
                     ${localProperties.reduce((s, p) => s + (p.rent || 0), 0).toLocaleString()}
                   </div>
+                  <div style={{ fontSize: 16, color: "#2E7D32", marginTop: 6, fontWeight: 500 }}>per month</div>
                 </div>
-                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${C.orangeB}` }}>
-                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>EXPENSES</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: C.orange, fontFamily: "'Inter', sans-serif" }}>
+                <div className="card" style={{ padding: 24, borderLeft: `8px solid ${C.orangeB}`, background: "#FFF3E0" }}>
+                  <div style={{ fontSize: 16, color: "#E65100", letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>📊 EXPENSES</div>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: "#E65100", fontFamily: "'Inter', sans-serif" }}>
                     ${localProperties.reduce((s, p) => s + (p.totalExpenses || 0), 0).toLocaleString()}
                   </div>
+                  <div style={{ fontSize: 16, color: "#F57C00", marginTop: 6, fontWeight: 500 }}>per month</div>
                 </div>
-                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${C.redB}` }}>
-                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>MORTGAGE</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: C.red, fontFamily: "'Inter', sans-serif" }}>
+                <div className="card" style={{ padding: 24, borderLeft: `8px solid ${C.redB}`, background: "#FFEBEE" }}>
+                  <div style={{ fontSize: 16, color: "#B71C1C", letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>🏦 MORTGAGE</div>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: "#B71C1C", fontFamily: "'Inter', sans-serif" }}>
                     ${localProperties.reduce((s, p) => s + (p.mortgagePayment || 0), 0).toLocaleString()}
                   </div>
+                  <div style={{ fontSize: 16, color: "#C62828", marginTop: 6, fontWeight: 500 }}>per month</div>
                 </div>
-                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${(() => {
-                  const netCashFlow = localProperties.reduce((s, p) => {
-                    const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
-                    return s + effectiveRent - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
+              </div>
+            )}
+            
+            {/* Performance Metrics - LARGE & ACCESSIBLE */}
+            {localProperties.length > 0 && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+                <div className="card" style={{ padding: 24, borderLeft: `8px solid ${(() => {
+                  const cf = localProperties.reduce((s, p) => {
+                    const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                    return s + er - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
                   }, 0);
-                  return netCashFlow >= 0 ? C.greenB : C.redB;
-                })()}` }}>
-                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>CASH FLOW</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: (() => {
-                    const netCashFlow = localProperties.reduce((s, p) => {
-                      const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
-                      return s + effectiveRent - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
+                  return cf >= 0 ? "#2E7D32" : "#C62828";
+                })()}`, background: (() => {
+                  const cf = localProperties.reduce((s, p) => {
+                    const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                    return s + er - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
+                  }, 0);
+                  return cf >= 0 ? "#E8F5E9" : "#FFEBEE";
+                })() }}>
+                  <div style={{ fontSize: 16, color: (() => {
+                    const cf = localProperties.reduce((s, p) => {
+                      const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                      return s + er - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
                     }, 0);
-                    return netCashFlow >= 0 ? C.green : C.red;
+                    return cf >= 0 ? "#1B5E20" : "#B71C1C";
+                  })(), letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>💵 CASH FLOW</div>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: (() => {
+                    const cf = localProperties.reduce((s, p) => {
+                      const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                      return s + er - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
+                    }, 0);
+                    return cf >= 0 ? "#1B5E20" : "#B71C1C";
                   })(), fontFamily: "'Inter', sans-serif" }}>
                     {(() => {
-                      const netCashFlow = localProperties.reduce((s, p) => {
-                        const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
-                        return s + effectiveRent - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
+                      const cf = localProperties.reduce((s, p) => {
+                        const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                        return s + er - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
                       }, 0);
-                      return (netCashFlow >= 0 ? '+' : '') + '$' + Math.round(netCashFlow).toLocaleString();
+                      return (cf >= 0 ? '+$' : '-$') + Math.abs(Math.round(cf)).toLocaleString();
                     })()}
                   </div>
+                  <div style={{ fontSize: 16, color: "#424242", marginTop: 6, fontWeight: 500 }}>per month</div>
                 </div>
-                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${C.goldL}` }}>
-                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>AVG CAP</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: C.gold, fontFamily: "'Inter', sans-serif" }}>
+                <div className="card" style={{ padding: 24, borderLeft: `8px solid #B8860B`, background: "#FFF8DC" }}>
+                  <div style={{ fontSize: 16, color: "#8B6914", letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>📈 CAP RATE</div>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: "#8B6914", fontFamily: "'Inter', sans-serif" }}>
                     {(() => {
                       const propsWithValue = localProperties.filter(p => p.purchasePrice && p.rent);
                       if (propsWithValue.length === 0) return "—";
@@ -1984,68 +2013,43 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                       return avgCapRate.toFixed(1) + "%";
                     })()}
                   </div>
+                  <div style={{ fontSize: 16, color: "#A67C00", marginTop: 6, fontWeight: 500 }}>annual return</div>
                 </div>
-                <div className="card" style={{ padding: 14, borderLeft: `4px solid ${C.blueB}` }}>
-                  <div style={{ fontSize: 9, color: C.light, letterSpacing: 1, marginBottom: 4 }}>TOTAL NPV</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: (() => {
-                    // Calculate total portfolio NPV
-                    const discountRate = 0.08;
-                    const appreciationRate = 0.03;
-                    const holdingPeriod = 10;
-                    
-                    let totalNPV = 0;
+                <div className="card" style={{ padding: 24, borderLeft: `8px solid #1565C0`, background: "#E3F2FD" }}>
+                  <div style={{ fontSize: 16, color: "#0D47A1", letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>🎯 10-YR NPV</div>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: (() => {
+                    const dr = 0.08, ar = 0.03, hp = 10;
+                    let npv = 0;
                     localProperties.forEach(p => {
                       if (!p.downPayment || !p.purchasePrice) return;
-                      
-                      const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
-                      const noi = effectiveRent - (p.totalExpenses || 0);
-                      const cashFlow = noi - (p.mortgagePayment || 0);
-                      const annualCashFlow = cashFlow * 12;
-                      
-                      let npv = -(p.downPayment || 0);
-                      for (let year = 1; year <= holdingPeriod; year++) {
-                        const yearCashFlow = annualCashFlow * Math.pow(1.02, year - 1);
-                        npv += yearCashFlow / Math.pow(1 + discountRate, year);
-                      }
-                      const futureValue = (p.purchasePrice || 0) * Math.pow(1 + appreciationRate, holdingPeriod);
-                      const equityAtSale = futureValue * 0.94;
-                      npv += equityAtSale / Math.pow(1 + discountRate, holdingPeriod);
-                      
-                      totalNPV += npv;
+                      const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                      const noi = er - (p.totalExpenses || 0);
+                      const cf = noi - (p.mortgagePayment || 0);
+                      let pnpv = -(p.downPayment || 0);
+                      for (let y = 1; y <= hp; y++) pnpv += (cf * 12 * Math.pow(1.02, y - 1)) / Math.pow(1 + dr, y);
+                      pnpv += ((p.purchasePrice || 0) * Math.pow(1 + ar, hp) * 0.94) / Math.pow(1 + dr, hp);
+                      npv += pnpv;
                     });
-                    return totalNPV >= 0 ? C.blue : C.red;
+                    return npv >= 0 ? "#0D47A1" : "#B71C1C";
                   })(), fontFamily: "'Inter', sans-serif" }}>
                     {(() => {
-                      const discountRate = 0.08;
-                      const appreciationRate = 0.03;
-                      const holdingPeriod = 10;
-                      
-                      let totalNPV = 0;
+                      const dr = 0.08, ar = 0.03, hp = 10;
+                      let npv = 0;
                       localProperties.forEach(p => {
                         if (!p.downPayment || !p.purchasePrice) return;
-                        
-                        const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
-                        const noi = effectiveRent - (p.totalExpenses || 0);
-                        const cashFlow = noi - (p.mortgagePayment || 0);
-                        const annualCashFlow = cashFlow * 12;
-                        
-                        let npv = -(p.downPayment || 0);
-                        for (let year = 1; year <= holdingPeriod; year++) {
-                          const yearCashFlow = annualCashFlow * Math.pow(1.02, year - 1);
-                          npv += yearCashFlow / Math.pow(1 + discountRate, year);
-                        }
-                        const futureValue = (p.purchasePrice || 0) * Math.pow(1 + appreciationRate, holdingPeriod);
-                        const equityAtSale = futureValue * 0.94;
-                        npv += equityAtSale / Math.pow(1 + discountRate, holdingPeriod);
-                        
-                        totalNPV += npv;
+                        const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
+                        const noi = er - (p.totalExpenses || 0);
+                        const cf = noi - (p.mortgagePayment || 0);
+                        let pnpv = -(p.downPayment || 0);
+                        for (let y = 1; y <= hp; y++) pnpv += (cf * 12 * Math.pow(1.02, y - 1)) / Math.pow(1 + dr, y);
+                        pnpv += ((p.purchasePrice || 0) * Math.pow(1 + ar, hp) * 0.94) / Math.pow(1 + dr, hp);
+                        npv += pnpv;
                       });
-                      
                       if (localProperties.filter(p => p.downPayment && p.purchasePrice).length === 0) return "—";
-                      return (totalNPV >= 0 ? '+$' : '-$') + Math.abs(Math.round(totalNPV / 1000)).toLocaleString() + 'K';
+                      return (npv >= 0 ? '+$' : '-$') + Math.abs(Math.round(npv / 1000)).toLocaleString() + 'K';
                     })()}
                   </div>
-                  <div style={{ fontSize: 8, color: C.light, marginTop: 2 }}>10yr @8%</div>
+                  <div style={{ fontSize: 16, color: "#1976D2", marginTop: 6, fontWeight: 500 }}>future value</div>
                 </div>
               </div>
             )}
@@ -2069,13 +2073,11 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                 
                 if (p.downPayment && p.purchasePrice) {
                   for (let year = 1; year <= holdingPeriod; year++) {
-                    // Cash flows grow slightly with rent increases (~2%/yr assumed in cash flow)
                     const yearCashFlow = annualCashFlow * Math.pow(1.02, year - 1);
                     npv += yearCashFlow / Math.pow(1 + discountRate, year);
                   }
-                  // Terminal value: sale price minus remaining mortgage (simplified)
                   const futureValue = (p.purchasePrice || 0) * Math.pow(1 + appreciationRate, holdingPeriod);
-                  const equityAtSale = futureValue * 0.94; // 6% selling costs
+                  const equityAtSale = futureValue * 0.94;
                   npv += equityAtSale / Math.pow(1 + discountRate, holdingPeriod);
                 }
                 const npvPositive = npv >= 0;
@@ -2086,75 +2088,75 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                     className="card" 
                     onClick={() => setShowPropertyDetailModal(p)}
                     style={{ 
-                      borderLeft: `4px solid ${isPositive ? C.greenB : C.redB}`, cursor: "pointer",
-                      transition: "transform 0.15s, box-shadow 0.15s"
+                      borderLeft: `8px solid ${isPositive ? "#2E7D32" : "#C62828"}`, 
+                      cursor: "pointer",
+                      transition: "transform 0.15s, box-shadow 0.15s",
+                      padding: 24
                     }}
-                    onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)"; }}
-                    onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
+                    onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.01)"; e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.15)"; }}
                     onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 17, fontWeight: 600, color: C.dark }}>{p.name}</span>
+                    {/* Property Header */}
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 22, fontWeight: 700, color: "#1a1a2e" }}>{p.name}</span>
                         {p.isSTR ? (
-                          <span style={{ padding: "2px 6px", background: "#FF5A5F", color: "white", fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, borderRadius: 3, fontWeight: 600 }}>STR</span>
+                          <span style={{ padding: "6px 12px", background: "#D32F2F", color: "white", fontFamily: "'Inter', sans-serif", fontSize: 14, borderRadius: 6, fontWeight: 700 }}>STR</span>
                         ) : (
-                          <span style={{ padding: "2px 6px", background: C.blueB, color: "white", fontFamily: "'IBM Plex Mono', monospace", fontSize: 9, borderRadius: 3, fontWeight: 600 }}>LTR</span>
+                          <span style={{ padding: "6px 12px", background: "#1565C0", color: "white", fontFamily: "'Inter', sans-serif", fontSize: 14, borderRadius: 6, fontWeight: 700 }}>LTR</span>
                         )}
                       </div>
-                      <span style={{ padding: "2px 8px", background: "#f0ece4", border: `1px solid ${C.border}`, fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid, borderRadius: 2 }}>{p.type?.replace("_", " ") || "Property"}</span>
+                      <span style={{ padding: "6px 12px", background: "#f5f5f5", border: "2px solid #e0e0e0", fontFamily: "'Inter', sans-serif", fontSize: 14, color: "#424242", borderRadius: 6, fontWeight: 600 }}>{p.type?.replace("_", " ") || "Property"}</span>
                     </div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid, marginBottom: 12 }}>{p.address}</div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: "#616161", marginBottom: 20 }}>{p.address}</div>
                     
-                    {/* Financial Summary */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 6, marginBottom: 12 }}>
-                      <div>
-                        <div style={{ fontSize: 8, color: C.light, letterSpacing: 1 }}>RENT</div>
-                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.green, fontWeight: 600 }}>${(p.rent || 0).toLocaleString()}</div>
+                    {/* Financial Summary - LARGE & ACCESSIBLE */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                      <div style={{ background: "#E8F5E9", padding: 16, borderRadius: 8 }}>
+                        <div style={{ fontSize: 14, color: "#2E7D32", letterSpacing: 1, fontWeight: 600, marginBottom: 4 }}>RENT</div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, color: "#1B5E20", fontWeight: 700 }}>${(p.rent || 0).toLocaleString()}</div>
                       </div>
-                      <div>
-                        <div style={{ fontSize: 8, color: C.light, letterSpacing: 1 }}>EXPENSES</div>
-                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.orange, fontWeight: 600 }}>${(p.totalExpenses || 0).toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 8, color: C.light, letterSpacing: 1 }}>MORTGAGE</div>
-                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.red, fontWeight: 600 }}>${(p.mortgagePayment || 0).toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 8, color: C.light, letterSpacing: 1 }}>CASH FLOW</div>
-                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: isPositive ? C.green : C.red, fontWeight: 700 }}>
+                      <div style={{ background: isPositive ? "#E8F5E9" : "#FFEBEE", padding: 16, borderRadius: 8 }}>
+                        <div style={{ fontSize: 14, color: isPositive ? "#2E7D32" : "#C62828", letterSpacing: 1, fontWeight: 600, marginBottom: 4 }}>CASH FLOW</div>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, color: isPositive ? "#1B5E20" : "#B71C1C", fontWeight: 700 }}>
                           {isPositive ? "+" : ""}${Math.round(cashFlow).toLocaleString()}
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Expenses Row */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                      <div style={{ background: "#FFF3E0", padding: 12, borderRadius: 8 }}>
+                        <div style={{ fontSize: 12, color: "#E65100", fontWeight: 600 }}>EXPENSES</div>
+                        <div style={{ fontSize: 22, color: "#E65100", fontWeight: 700 }}>${(p.totalExpenses || 0).toLocaleString()}</div>
+                      </div>
+                      <div style={{ background: "#FFEBEE", padding: 12, borderRadius: 8 }}>
+                        <div style={{ fontSize: 12, color: "#C62828", fontWeight: 600 }}>MORTGAGE</div>
+                        <div style={{ fontSize: 22, color: "#B71C1C", fontWeight: 700 }}>${(p.mortgagePayment || 0).toLocaleString()}</div>
+                      </div>
+                    </div>
 
-                    {/* ROI Metrics */}
+                    {/* ROI Metrics - LARGE & ACCESSIBLE */}
                     {(capRate || cashOnCash || (p.downPayment && p.purchasePrice)) && (
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
                         {capRate && (
-                          <div style={{ padding: "4px 8px", background: C.goldPale, borderRadius: 4 }}>
-                            <span style={{ fontSize: 9, color: C.gold }}>CAP </span>
-                            <span style={{ fontSize: 12, color: C.gold, fontWeight: 600 }}>{capRate.toFixed(1)}%</span>
+                          <div style={{ padding: "10px 16px", background: "#FFF8DC", borderRadius: 8, border: "2px solid #B8860B" }}>
+                            <span style={{ fontSize: 14, color: "#8B6914", fontWeight: 600 }}>CAP RATE </span>
+                            <span style={{ fontSize: 20, color: "#8B6914", fontWeight: 800 }}>{capRate.toFixed(1)}%</span>
                           </div>
                         )}
                         {cashOnCash && (
-                          <div style={{ padding: "4px 8px", background: isPositive ? C.greenPale : C.redPale, borderRadius: 4 }}>
-                            <span style={{ fontSize: 9, color: isPositive ? C.green : C.red }}>CoC </span>
-                            <span style={{ fontSize: 12, color: isPositive ? C.green : C.red, fontWeight: 600 }}>{cashOnCash.toFixed(1)}%</span>
+                          <div style={{ padding: "10px 16px", background: isPositive ? "#E8F5E9" : "#FFEBEE", borderRadius: 8, border: `2px solid ${isPositive ? "#2E7D32" : "#C62828"}` }}>
+                            <span style={{ fontSize: 14, color: isPositive ? "#1B5E20" : "#B71C1C", fontWeight: 600 }}>CoC </span>
+                            <span style={{ fontSize: 20, color: isPositive ? "#1B5E20" : "#B71C1C", fontWeight: 800 }}>{cashOnCash.toFixed(1)}%</span>
                           </div>
                         )}
                         {p.downPayment && p.purchasePrice && (
-                          <div style={{ padding: "4px 8px", background: npvPositive ? C.bluePale : C.redPale, borderRadius: 4 }}>
-                            <span style={{ fontSize: 9, color: npvPositive ? C.blue : C.red }}>NPV </span>
-                            <span style={{ fontSize: 12, color: npvPositive ? C.blue : C.red, fontWeight: 600 }}>
+                          <div style={{ padding: "10px 16px", background: npvPositive ? "#E3F2FD" : "#FFEBEE", borderRadius: 8, border: `2px solid ${npvPositive ? "#1565C0" : "#C62828"}` }}>
+                            <span style={{ fontSize: 14, color: npvPositive ? "#0D47A1" : "#B71C1C", fontWeight: 600 }}>10yr NPV </span>
+                            <span style={{ fontSize: 20, color: npvPositive ? "#0D47A1" : "#B71C1C", fontWeight: 800 }}>
                               {npvPositive ? "+" : ""}${Math.round(npv / 1000)}K
                             </span>
-                          </div>
-                        )}
-                        {p.vacancyRate > 0 && (
-                          <div style={{ padding: "4px 8px", background: "#f5f5f5", borderRadius: 4 }}>
-                            <span style={{ fontSize: 9, color: C.mid }}>VAC </span>
-                            <span style={{ fontSize: 12, color: C.mid, fontWeight: 600 }}>{p.vacancyRate}%</span>
                           </div>
                         )}
                       </div>
@@ -2162,9 +2164,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
                     {/* Hours logged for this property */}
                     {repByProperty[p.name] && (
-                      <div style={{ paddingTop: 8, borderTop: `1px solid ${C.borderL}` }}>
-                        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.green }}>
-                          ✅ {(repByProperty[p.name].minutes / 60).toFixed(1)}h logged • {repByProperty[p.name].count} activities
+                      <div style={{ paddingTop: 12, borderTop: "2px solid #e0e0e0" }}>
+                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: "#2E7D32", fontWeight: 600 }}>
+                          ✅ {(repByProperty[p.name].minutes / 60).toFixed(1)} hours logged • {repByProperty[p.name].count} activities
                         </div>
                       </div>
                     )}
