@@ -2790,80 +2790,48 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
         {/* PROPERTIES VIEW */}
         {view === "properties" && (
-          <div className="tab-scroll" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div className="tab-scroll" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>Properties</h1>
-                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>
-                  {localProperties.length} properties • {strProperties.length} STR • {ltrProperties.length} Long-Term
+                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: "#1a1a2e", marginBottom: 4 }}>Properties</h1>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#888" }}>
+                  {localProperties.length} properties • ${localProperties.reduce((s, p) => s + (p.rent || 0), 0).toLocaleString()}/mo portfolio rent
                 </p>
               </div>
               <button 
                 onClick={() => setShowAddPropertyModal(true)}
-                className="btn-gold"
-                style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 16, padding: "14px 24px" }}
+                style={{ 
+                  background: "#1a1a2e", color: "white", border: "none", borderRadius: 8,
+                  padding: "12px 20px", fontSize: 14, fontWeight: 600, cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 8
+                }}
               >
-                ➕ Add Property
+                <span style={{ fontSize: 16 }}>+</span> Add Property
               </button>
             </div>
 
-            {/* Portfolio Summary - LARGE & ACCESSIBLE */}
+            {/* Portfolio Summary - Elegant minimal cards */}
             {localProperties.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
-                <div className="card" style={{ padding: 24, borderLeft: `8px solid ${C.greenB}`, background: "#E8F5E9" }}>
-                  <div style={{ fontSize: 16, color: "#1B5E20", letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>💰 RENT</div>
-                  <div style={{ fontSize: 36, fontWeight: 800, color: "#1B5E20", fontFamily: "'Inter', sans-serif" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+                {/* Total Rent */}
+                <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid #e8e8e8" }}>
+                  <div style={{ fontSize: 11, color: "#888", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>MONTHLY RENT</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: "#1a1a2e" }}>
                     ${localProperties.reduce((s, p) => s + (p.rent || 0), 0).toLocaleString()}
                   </div>
-                  <div style={{ fontSize: 16, color: "#2E7D32", marginTop: 6, fontWeight: 500 }}>per month</div>
                 </div>
-                <div className="card" style={{ padding: 24, borderLeft: `8px solid ${C.orangeB}`, background: "#FFF3E0" }}>
-                  <div style={{ fontSize: 16, color: "#E65100", letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>📊 EXPENSES</div>
-                  <div style={{ fontSize: 36, fontWeight: 800, color: "#E65100", fontFamily: "'Inter', sans-serif" }}>
-                    ${localProperties.reduce((s, p) => s + (p.totalExpenses || 0), 0).toLocaleString()}
-                  </div>
-                  <div style={{ fontSize: 16, color: "#F57C00", marginTop: 6, fontWeight: 500 }}>per month</div>
-                </div>
-                <div className="card" style={{ padding: 24, borderLeft: `8px solid ${C.redB}`, background: "#FFEBEE" }}>
-                  <div style={{ fontSize: 16, color: "#B71C1C", letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>🏦 MORTGAGE</div>
-                  <div style={{ fontSize: 36, fontWeight: 800, color: "#B71C1C", fontFamily: "'Inter', sans-serif" }}>
-                    ${localProperties.reduce((s, p) => s + (p.mortgagePayment || 0), 0).toLocaleString()}
-                  </div>
-                  <div style={{ fontSize: 16, color: "#C62828", marginTop: 6, fontWeight: 500 }}>per month</div>
-                </div>
-              </div>
-            )}
-            
-            {/* Performance Metrics - LARGE & ACCESSIBLE */}
-            {localProperties.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-                <div className="card" style={{ padding: 24, borderLeft: `8px solid ${(() => {
-                  const cf = localProperties.reduce((s, p) => {
-                    const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
-                    return s + er - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
-                  }, 0);
-                  return cf >= 0 ? "#2E7D32" : "#C62828";
-                })()}`, background: (() => {
-                  const cf = localProperties.reduce((s, p) => {
-                    const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
-                    return s + er - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
-                  }, 0);
-                  return cf >= 0 ? "#E8F5E9" : "#FFEBEE";
-                })() }}>
-                  <div style={{ fontSize: 16, color: (() => {
+                
+                {/* Cash Flow */}
+                <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid #e8e8e8" }}>
+                  <div style={{ fontSize: 11, color: "#888", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>CASH FLOW</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: (() => {
                     const cf = localProperties.reduce((s, p) => {
                       const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
                       return s + er - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
                     }, 0);
-                    return cf >= 0 ? "#1B5E20" : "#B71C1C";
-                  })(), letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>💵 CASH FLOW</div>
-                  <div style={{ fontSize: 36, fontWeight: 800, color: (() => {
-                    const cf = localProperties.reduce((s, p) => {
-                      const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
-                      return s + er - (p.totalExpenses || 0) - (p.mortgagePayment || 0);
-                    }, 0);
-                    return cf >= 0 ? "#1B5E20" : "#B71C1C";
-                  })(), fontFamily: "'Inter', sans-serif" }}>
+                    return cf >= 0 ? "#22c55e" : "#ef4444";
+                  })() }}>
                     {(() => {
                       const cf = localProperties.reduce((s, p) => {
                         const er = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
@@ -2872,11 +2840,12 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                       return (cf >= 0 ? '+$' : '-$') + Math.abs(Math.round(cf)).toLocaleString();
                     })()}
                   </div>
-                  <div style={{ fontSize: 16, color: "#424242", marginTop: 6, fontWeight: 500 }}>per month</div>
                 </div>
-                <div className="card" style={{ padding: 24, borderLeft: `8px solid #B8860B`, background: "#FFF8DC" }}>
-                  <div style={{ fontSize: 16, color: "#8B6914", letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>📈 CAP RATE</div>
-                  <div style={{ fontSize: 36, fontWeight: 800, color: "#8B6914", fontFamily: "'Inter', sans-serif" }}>
+
+                {/* Avg Cap Rate */}
+                <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid #e8e8e8" }}>
+                  <div style={{ fontSize: 11, color: "#888", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>AVG CAP RATE</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: "#1a1a2e" }}>
                     {(() => {
                       const propsWithValue = localProperties.filter(p => p.purchasePrice && p.rent);
                       if (propsWithValue.length === 0) return "—";
@@ -2888,11 +2857,12 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                       return avgCapRate.toFixed(1) + "%";
                     })()}
                   </div>
-                  <div style={{ fontSize: 16, color: "#A67C00", marginTop: 6, fontWeight: 500 }}>annual return</div>
                 </div>
-                <div className="card" style={{ padding: 24, borderLeft: `8px solid #1565C0`, background: "#E3F2FD" }}>
-                  <div style={{ fontSize: 16, color: "#0D47A1", letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>🎯 10-YR NPV</div>
-                  <div style={{ fontSize: 36, fontWeight: 800, color: (() => {
+
+                {/* Total NPV */}
+                <div style={{ background: "white", borderRadius: 12, padding: 20, border: "1px solid #e8e8e8" }}>
+                  <div style={{ fontSize: 11, color: "#888", fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>10-YR NPV</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: (() => {
                     const dr = 0.08, ar = 0.03, hp = 10;
                     let npv = 0;
                     localProperties.forEach(p => {
@@ -2905,8 +2875,8 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                       pnpv += ((p.purchasePrice || 0) * Math.pow(1 + ar, hp) * 0.94) / Math.pow(1 + dr, hp);
                       npv += pnpv;
                     });
-                    return npv >= 0 ? "#0D47A1" : "#B71C1C";
-                  })(), fontFamily: "'Inter', sans-serif" }}>
+                    return npv >= 0 ? "#22c55e" : "#ef4444";
+                  })() }}>
                     {(() => {
                       const dr = 0.08, ar = 0.03, hp = 10;
                       let npv = 0;
@@ -2924,15 +2894,14 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                       return (npv >= 0 ? '+$' : '-$') + Math.abs(Math.round(npv / 1000)).toLocaleString() + 'K';
                     })()}
                   </div>
-                  <div style={{ fontSize: 16, color: "#1976D2", marginTop: 6, fontWeight: 500 }}>future value</div>
                 </div>
               </div>
             )}
 
-            <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 400px)", paddingRight: 10, WebkitOverflowScrolling: "touch" }}>
-              <div className="grid-2">
+            {/* Property Cards - Clean minimal design */}
+            <div style={{ overflowY: "auto", maxHeight: "calc(100vh - 340px)", paddingRight: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 16 }}>
                 {localProperties.map(p => {
-                  // Calculate with actual expenses
                   const effectiveRent = (p.rent || 0) * (1 - (p.vacancyRate || 0) / 100);
                   const noi = effectiveRent - (p.totalExpenses || 0);
                   const cashFlow = noi - (p.mortgagePayment || 0);
@@ -2940,161 +2909,151 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                   const capRate = p.purchasePrice && p.rent ? ((noi * 12) / p.purchasePrice * 100) : null;
                   const cashOnCash = p.downPayment && cashFlow ? ((cashFlow * 12) / p.downPayment * 100) : null;
                   
-                  // NPV Calculation (10-year horizon, 8% discount rate, 3% annual appreciation)
-                  const discountRate = 0.08;
-                  const appreciationRate = 0.03;
-                  const holdingPeriod = 10; // years
-                  const annualCashFlow = cashFlow * 12;
-                  let npv = -(p.downPayment || 0); // Initial investment (negative)
-                  
+                  // NPV
+                  const dr = 0.08, ar = 0.03, hp = 10;
+                  let npv = -(p.downPayment || 0);
                   if (p.downPayment && p.purchasePrice) {
-                    for (let year = 1; year <= holdingPeriod; year++) {
-                      const yearCashFlow = annualCashFlow * Math.pow(1.02, year - 1);
-                      npv += yearCashFlow / Math.pow(1 + discountRate, year);
-                    }
-                    const futureValue = (p.purchasePrice || 0) * Math.pow(1 + appreciationRate, holdingPeriod);
-                    const equityAtSale = futureValue * 0.94;
-                  npv += equityAtSale / Math.pow(1 + discountRate, holdingPeriod);
-                }
-                const npvPositive = npv >= 0;
-                
-                return (
-                  <div 
-                    key={p.id} 
-                    className="card" 
-                    style={{ 
-                      borderLeft: `6px solid ${isPositive ? "#2E7D32" : "#C62828"}`, 
-                      transition: "transform 0.15s, box-shadow 0.15s",
-                      padding: 20,
-                      background: "#FFFFFF"
+                    for (let y = 1; y <= hp; y++) npv += (cashFlow * 12 * Math.pow(1.02, y - 1)) / Math.pow(1 + dr, y);
+                    npv += ((p.purchasePrice || 0) * Math.pow(1 + ar, hp) * 0.94) / Math.pow(1 + dr, hp);
+                  }
+                  
+                  return (
+                    <div key={p.id} style={{ 
+                      background: "white", borderRadius: 12, border: "1px solid #e8e8e8",
+                      overflow: "hidden", transition: "box-shadow 0.2s"
                     }}
-                  >
-                    {/* Property Header */}
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: "#1a1a2e" }}>{p.name}</span>
-                        {p.isSTR ? (
-                          <span style={{ padding: "4px 10px", background: "#D32F2F", color: "white", fontSize: 12, borderRadius: 4, fontWeight: 700 }}>STR</span>
-                        ) : (
-                          <span style={{ padding: "4px 10px", background: "#1565C0", color: "white", fontSize: 12, borderRadius: 4, fontWeight: 700 }}>LTR</span>
+                    onMouseOver={(e) => e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.08)"}
+                    onMouseOut={(e) => e.currentTarget.style.boxShadow = "none"}
+                    >
+                      {/* Header bar */}
+                      <div style={{ 
+                        background: p.isSTR ? "#fef2f2" : "#f0f9ff", 
+                        padding: "12px 16px", 
+                        borderBottom: "1px solid #e8e8e8",
+                        display: "flex", justifyContent: "space-between", alignItems: "center"
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 18 }}>{p.isSTR ? "🏖️" : "🏠"}</span>
+                          <div>
+                            <div style={{ fontWeight: 600, color: "#1a1a2e", fontSize: 15 }}>{p.name}</div>
+                            <div style={{ fontSize: 12, color: "#888" }}>{p.isSTR ? "Short-Term Rental" : "Long-Term Rental"}</div>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); startEditProperty(p); }}
+                          style={{ 
+                            padding: "6px 12px", background: "#f5f5f5", color: "#666", 
+                            border: "1px solid #ddd", borderRadius: 6, fontSize: 12, 
+                            cursor: "pointer", fontWeight: 500
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      
+                      {/* Content */}
+                      <div style={{ padding: 16 }}>
+                        <div style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>{p.address}</div>
+                        
+                        {/* Main metrics */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                          <div>
+                            <div style={{ fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 4 }}>RENT</div>
+                            <div style={{ fontSize: 22, fontWeight: 700, color: "#1a1a2e" }}>${(p.rent || 0).toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 4 }}>CASH FLOW</div>
+                            <div style={{ fontSize: 22, fontWeight: 700, color: isPositive ? "#22c55e" : "#ef4444" }}>
+                              {isPositive ? "+" : ""}${Math.round(cashFlow).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Secondary metrics */}
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+                          <div style={{ background: "#f5f5f5", padding: "6px 10px", borderRadius: 6 }}>
+                            <span style={{ fontSize: 11, color: "#888" }}>Expenses </span>
+                            <span style={{ fontSize: 13, color: "#1a1a2e", fontWeight: 600 }}>${(p.totalExpenses || 0).toLocaleString()}</span>
+                          </div>
+                          <div style={{ background: "#f5f5f5", padding: "6px 10px", borderRadius: 6 }}>
+                            <span style={{ fontSize: 11, color: "#888" }}>Mortgage </span>
+                            <span style={{ fontSize: 13, color: "#1a1a2e", fontWeight: 600 }}>${(p.mortgagePayment || 0).toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        {/* ROI metrics */}
+                        {(capRate || cashOnCash || (p.downPayment && p.purchasePrice)) && (
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
+                            {capRate && (
+                              <div style={{ background: "#fafafa", padding: "6px 10px", borderRadius: 6, border: "1px solid #e8e8e8" }}>
+                                <span style={{ fontSize: 11, color: "#888" }}>Cap </span>
+                                <span style={{ fontSize: 13, color: "#1a1a2e", fontWeight: 700 }}>{capRate.toFixed(1)}%</span>
+                              </div>
+                            )}
+                            {cashOnCash && (
+                              <div style={{ background: "#fafafa", padding: "6px 10px", borderRadius: 6, border: "1px solid #e8e8e8" }}>
+                                <span style={{ fontSize: 11, color: "#888" }}>CoC </span>
+                                <span style={{ fontSize: 13, color: isPositive ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{cashOnCash.toFixed(1)}%</span>
+                              </div>
+                            )}
+                            {p.downPayment && p.purchasePrice && (
+                              <div style={{ background: "#fafafa", padding: "6px 10px", borderRadius: 6, border: "1px solid #e8e8e8" }}>
+                                <span style={{ fontSize: 11, color: "#888" }}>NPV </span>
+                                <span style={{ fontSize: 13, color: npv >= 0 ? "#22c55e" : "#ef4444", fontWeight: 700 }}>
+                                  {npv >= 0 ? "+" : ""}${Math.round(npv / 1000)}K
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Hours logged */}
+                        {repByProperty[p.name] && (
+                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f0f0f0", fontSize: 13, color: "#22c55e", fontWeight: 500 }}>
+                            ✓ {(repByProperty[p.name].minutes / 60).toFixed(1)}h logged
+                          </div>
+                        )}
+
+                        {/* STR Platforms */}
+                        {p.isSTR && p.platforms && p.platforms.length > 0 && (
+                          <div style={{ marginTop: 10, display: "flex", gap: 6 }}>
+                            {p.platforms.map(pl => {
+                              const platform = STR_PLATFORMS.find(s => s.id === pl);
+                              return platform ? <span key={pl} style={{ fontSize: 14 }} title={platform.name}>{platform.icon}</span> : null;
+                            })}
+                          </div>
                         )}
                       </div>
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); startEditProperty(p); }}
+                      
+                      {/* Footer */}
+                      <div 
+                        onClick={() => setShowPropertyDetailModal(p)}
                         style={{ 
-                          padding: "8px 14px", background: "#B8860B", color: "white", 
-                          border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600, 
-                          cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-                          minHeight: 40
+                          padding: "12px 16px", background: "#fafafa", borderTop: "1px solid #e8e8e8",
+                          textAlign: "center", cursor: "pointer", fontSize: 13, color: "#666", fontWeight: 500
                         }}
                       >
-                        ✏️ Edit
-                      </button>
-                    </div>
-                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: "#616161", marginBottom: 16 }}>{p.address}</div>
-                    
-                    {/* Financial Summary - Clean White Background */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-                      <div style={{ background: "#f8f8f8", padding: 14, borderRadius: 8, border: "2px solid #2E7D32" }}>
-                        <div style={{ fontSize: 12, color: "#2E7D32", fontWeight: 700, marginBottom: 4 }}>RENT</div>
-                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, color: "#1B5E20", fontWeight: 800 }}>${(p.rent || 0).toLocaleString()}</div>
-                      </div>
-                      <div style={{ background: "#f8f8f8", padding: 14, borderRadius: 8, border: `2px solid ${isPositive ? "#2E7D32" : "#C62828"}` }}>
-                        <div style={{ fontSize: 12, color: isPositive ? "#2E7D32" : "#C62828", fontWeight: 700, marginBottom: 4 }}>CASH FLOW</div>
-                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, color: isPositive ? "#1B5E20" : "#B71C1C", fontWeight: 800 }}>
-                          {isPositive ? "+" : ""}${Math.round(cashFlow).toLocaleString()}
-                        </div>
+                        View Details →
                       </div>
                     </div>
-                    
-                    {/* Expenses Row - Clean */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-                      <div style={{ background: "#f8f8f8", padding: 12, borderRadius: 8, border: "1px solid #e0e0e0" }}>
-                        <div style={{ fontSize: 11, color: "#666", fontWeight: 600 }}>EXPENSES</div>
-                        <div style={{ fontSize: 18, color: "#333", fontWeight: 700 }}>${(p.totalExpenses || 0).toLocaleString()}</div>
-                      </div>
-                      <div style={{ background: "#f8f8f8", padding: 12, borderRadius: 8, border: "1px solid #e0e0e0" }}>
-                        <div style={{ fontSize: 11, color: "#666", fontWeight: 600 }}>MORTGAGE</div>
-                        <div style={{ fontSize: 18, color: "#333", fontWeight: 700 }}>${(p.mortgagePayment || 0).toLocaleString()}</div>
-                      </div>
-                    </div>
-
-                    {/* ROI Metrics - Clean badges */}
-                    {(capRate || cashOnCash || (p.downPayment && p.purchasePrice)) && (
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-                        {capRate && (
-                          <div style={{ padding: "8px 12px", background: "#f8f8f8", borderRadius: 6, border: "2px solid #B8860B" }}>
-                            <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>CAP </span>
-                            <span style={{ fontSize: 16, color: "#8B6914", fontWeight: 800 }}>{capRate.toFixed(1)}%</span>
-                          </div>
-                        )}
-                        {cashOnCash && (
-                          <div style={{ padding: "8px 12px", background: "#f8f8f8", borderRadius: 6, border: `2px solid ${isPositive ? "#2E7D32" : "#C62828"}` }}>
-                            <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>CoC </span>
-                            <span style={{ fontSize: 16, color: isPositive ? "#1B5E20" : "#B71C1C", fontWeight: 800 }}>{cashOnCash.toFixed(1)}%</span>
-                          </div>
-                        )}
-                        {p.downPayment && p.purchasePrice && (
-                          <div style={{ padding: "8px 12px", background: "#f8f8f8", borderRadius: 6, border: `2px solid ${npvPositive ? "#1565C0" : "#C62828"}` }}>
-                            <span style={{ fontSize: 12, color: "#666", fontWeight: 600 }}>NPV </span>
-                            <span style={{ fontSize: 16, color: npvPositive ? "#0D47A1" : "#B71C1C", fontWeight: 800 }}>
-                              {npvPositive ? "+" : ""}${Math.round(npv / 1000)}K
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Hours logged for this property */}
-                    {repByProperty[p.name] && (
-                      <div style={{ paddingTop: 12, borderTop: "1px solid #e0e0e0" }}>
-                        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, color: "#2E7D32", fontWeight: 600 }}>
-                          ✅ {(repByProperty[p.name].minutes / 60).toFixed(1)}h logged • {repByProperty[p.name].count} activities
-                        </div>
-                      </div>
-                    )}
-
-                    {/* STR Platforms if STR */}
-                    {p.isSTR && p.platforms && p.platforms.length > 0 && (
-                      <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
-                        {p.platforms.map(pl => {
-                          const platform = STR_PLATFORMS.find(s => s.id === pl);
-                          return platform ? (
-                            <span key={pl} style={{ fontSize: 12 }} title={platform.name}>{platform.icon}</span>
-                          ) : null;
-                        })}
-                      </div>
-                    )}
-                    
-                    {/* View Details link */}
-                    <div 
-                      onClick={() => setShowPropertyDetailModal(p)}
-                      style={{ 
-                        marginTop: 12, paddingTop: 12, borderTop: "1px solid #e0e0e0", 
-                        textAlign: "center", cursor: "pointer", color: "#1565C0", 
-                        fontSize: 14, fontWeight: 600
-                      }}
-                    >
-                      View Full Details →
-                    </div>
-                  </div>
-                );
-              })}
-              
-              {/* Add Property Card */}
-              <div 
-                onClick={() => setShowAddPropertyModal(true)}
-                className="card" 
-                style={{ 
-                  borderLeft: `4px solid ${C.border}`, cursor: "pointer",
-                  display: "flex", flexDirection: "column", alignItems: "center", 
-                  justifyContent: "center", minHeight: 180, background: "#fafafa",
-                  transition: "all 0.15s"
-                }}
-              >
-                <div style={{ fontSize: 40, color: "#B8860B", marginBottom: 8 }}>➕</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, color: "#333", fontWeight: 600 }}>Add New Property</div>
-              </div>
+                  );
+                })}
+                
+                {/* Add Property Card */}
+                <div 
+                  onClick={() => setShowAddPropertyModal(true)}
+                  style={{ 
+                    background: "#fafafa", borderRadius: 12, border: "2px dashed #ddd",
+                    display: "flex", flexDirection: "column", alignItems: "center", 
+                    justifyContent: "center", minHeight: 200, cursor: "pointer",
+                    transition: "border-color 0.2s"
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.borderColor = "#1a1a2e"}
+                  onMouseOut={(e) => e.currentTarget.style.borderColor = "#ddd"}
+                >
+                  <div style={{ fontSize: 32, color: "#888", marginBottom: 8 }}>+</div>
+                  <div style={{ fontSize: 14, color: "#666", fontWeight: 500 }}>Add Property</div>
+                </div>
               </div>
             </div>
           </div>
