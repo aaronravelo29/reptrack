@@ -1998,7 +1998,37 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
            MOBILE RESPONSIVE STYLES
            ═══════════════════════════════════════════════════════════════════════ */
         
-        /* Mobile nav - icon only */
+        /* ═══ ASSISTANT VIEW - MOBILE LAYOUT ═══ */
+        /* Desktop: hide mobile stats bar */
+        @media (min-width: 769px) {
+          .mobile-stats-bar {
+            display: none !important;
+          }
+        }
+        
+        /* Mobile: show mobile stats, hide sidebar */
+        @media (max-width: 768px) {
+          .mobile-stats-bar {
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .desktop-sidebar {
+            display: none !important;
+          }
+          .assistant-layout {
+            flex-direction: column !important;
+          }
+          .chat-area {
+            min-height: 300px !important;
+          }
+          .quick-actions-row {
+            overflow-x: auto !important;
+            flex-wrap: nowrap !important;
+            padding-bottom: 8px !important;
+          }
+        }
+        
+        /* Mobile nav and general */
         @media (max-width: 768px) {
           .mobile-hide { display: none !important; }
           .mobile-show { display: flex !important; }
@@ -2015,19 +2045,25 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           }
           
           /* Bigger touch targets */
-          button, select, input {
+          button, select, input, textarea {
             min-height: 44px !important;
             font-size: 16px !important;
           }
           
           /* Full width cards */
           .card {
-            padding: 16px !important;
+            padding: 14px !important;
           }
           
           /* Modal adjustments */
           .modal-scroll {
             max-height: 75vh !important;
+          }
+          
+          /* Message bubbles */
+          .msg-bubble {
+            max-width: 92% !important;
+            padding: 12px 14px !important;
           }
         }
         
@@ -2127,240 +2163,219 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
       }}>
         
         {/* ASSISTANT VIEW */}
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            ASSISTANT VIEW - Mobile Friendly Redesign
+            ═══════════════════════════════════════════════════════════════════ */}
         {view === "assistant" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "calc(100vh - 160px)" }}>
-            {/* Chat Area */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-              <div style={{ marginBottom: 12 }}>
-                <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 700, color: C.dark, marginBottom: 4 }}>AI Assistant</h1>
-                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light }}>IRS-compliant activity logging</p>
-              </div>
-
-              {/* Messages */}
-              <div className="card" style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column" }}>
-                {messages.map(msg => (
-                  <div key={msg.id} className={`msg-bubble ${msg.role === "user" ? "msg-user" : "msg-assistant"} ${msg.activityLogged ? "msg-logged" : ""}`}>
-                    {msg.activityLogged && (
-                      <div style={{ fontSize: 10, color: C.green, fontFamily: "'IBM Plex Mono', monospace", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                        <span>✓</span> ACTIVITY SAVED TO RECORDS
-                      </div>
-                    )}
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>
-                      {msg.content}
-                    </div>
+          <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 130px)" }}>
+            
+            {/* MOBILE STATS BAR - Compact header for mobile */}
+            <div className="mobile-stats-bar" style={{ 
+              background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 100%)",
+              borderRadius: 12, padding: 12, marginBottom: 12,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                {/* REP Hours */}
+                <div 
+                  onClick={() => setShowREPDetailModal(true)}
+                  style={{ flex: 1, background: "rgba(34,139,34,0.2)", borderRadius: 8, padding: "10px 12px", textAlign: "center", border: "1px solid rgba(34,139,34,0.4)", cursor: "pointer" }}>
+                  <div style={{ fontSize: 10, color: "#90EE90", fontWeight: 600 }}>REP</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "#90EE90" }}>{reHrs}h</div>
+                </div>
+                
+                {/* Progress Ring */}
+                <div style={{ position: "relative", width: 70, height: 70, flexShrink: 0 }}>
+                  <svg viewBox="0 0 36 36" style={{ transform: "rotate(-90deg)", width: 70, height: 70 }}>
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none" stroke={reHrs >= 750 ? "#90EE90" : "#FFD700"} strokeWidth="3"
+                      strokeDasharray={`${Math.min((reHrs/750)*100, 100)}, 100`} strokeLinecap="round" />
+                  </svg>
+                  <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", textAlign: "center" }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "white" }}>{Math.min(100, Math.round(reHrs/750*100))}%</div>
+                    <div style={{ fontSize: 8, color: "#C6A24A" }}>of 750h</div>
                   </div>
-                ))}
-                {loading && (
-                  <div className="msg-bubble msg-assistant">
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: C.light }}>
-                      🔍 Analyzing activity and generating IRS documentation...
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
+                </div>
+                
+                {/* Non-REP Hours */}
+                <div 
+                  onClick={() => setShowNonREPDetailModal(true)}
+                  style={{ flex: 1, background: "rgba(178,34,34,0.2)", borderRadius: 8, padding: "10px 12px", textAlign: "center", border: "1px solid rgba(178,34,34,0.4)", cursor: "pointer" }}>
+                  <div style={{ fontSize: 10, color: "#FFA07A", fontWeight: 600 }}>JOB</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "#FFA07A" }}>{nonREHrs}h</div>
+                </div>
               </div>
-
-              {/* Input */}
-              <div style={{ marginTop: 16, display: "flex", gap: 12, alignItems: "flex-end" }}>
-                {/* File Upload Button */}
-                <label style={{ 
-                  padding: "14px 16px", background: "#f5f5f5", border: `1px solid ${C.border}`,
-                  borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-                  transition: "all 0.15s"
-                }}
-                onMouseOver={(e) => e.currentTarget.style.background = "#eee"}
-                onMouseOut={(e) => e.currentTarget.style.background = "#f5f5f5"}
-                title="Upload document (mortgage statement, lease, etc.)"
-                >
-                  <span style={{ fontSize: 18 }}>📎</span>
-                  <input type="file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx" style={{ display: "none" }} 
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          setInput(prev => prev + `\n\n[Uploaded: ${file.name}]\nPlease analyze this document and extract relevant property/financial information.`);
-                        };
-                        reader.readAsDataURL(file);
-                        // Note: Full file processing would require backend integration
-                        setMessages(prev => [...prev, {
-                          role: "assistant", id: uid(),
-                          content: `📎 **Document Received: ${file.name}**\n\nI noticed you uploaded a document. While I can't directly read file contents in this interface, you can:\n\n1. **Copy/paste** the key information from your mortgage statement\n2. **Tell me** the details like:\n   - Monthly mortgage payment\n   - Purchase price\n   - Down payment amount\n   - Interest rate\n\nI'll help you add it to your property records!`
-                        }]);
-                      }
-                      e.target.value = '';
-                    }}
-                  />
-                </label>
-                <textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Describe your activity or paste mortgage/property info... (Press Enter to send)"
-                  style={{
-                    flex: 1, padding: "14px 16px", fontSize: 14, border: `1px solid ${C.border}`,
-                    borderRadius: 8, background: "white", color: C.text, outline: "none", resize: "none",
-                    fontFamily: "'IBM Plex Mono', monospace", minHeight: 56
-                  }}
-                />
-                <button onClick={sendMessage} disabled={loading || !input.trim()} className="btn-gold" style={{ padding: "14px 24px", opacity: loading || !input.trim() ? 0.5 : 1 }}>
-                  Send
-                </button>
-              </div>
-
-              {/* Quick Actions */}
-              <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                {[
-                  "I spent 2 hours on property management",
-                  "Log a 45-min contractor meeting", 
-                  "I showed a rental unit for 1 hour",
-                  "What qualifies as REP work?",
-                ].map(q => (
-                  <button key={q} onClick={() => setInput(q)} style={{
-                    background: "white", border: `1px solid ${C.border}`, borderRadius: 20,
-                    padding: "6px 14px", fontSize: 11, color: C.mid, cursor: "pointer",
-                    fontFamily: "'IBM Plex Mono', monospace"
-                  }}>
-                    {q}
-                  </button>
-                ))}
-                <button 
-                  onClick={() => setShowNonREModal(true)} 
-                  style={{
-                    background: C.redPale, border: `1px solid ${C.redB}`, borderRadius: 20,
-                    padding: "6px 14px", fontSize: 11, color: C.red, cursor: "pointer",
-                    fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600
-                  }}>
-                  ➕ Log Non-REPP Hours
-                </button>
+              
+              {/* REP Percentage Bar - Mobile */}
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.7)" }}>REP: {rePct.toFixed(0)}%</span>
+                  <span style={{ fontSize: 10, color: rePct > 50 ? "#90EE90" : "#FFA07A" }}>{rePct > 50 ? "✓ Above 50%" : "⚠️ Need >50%"}</span>
+                </div>
+                <div style={{ height: 6, background: "rgba(255,255,255,0.1)", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ width: `${Math.min(rePct, 100)}%`, height: "100%", background: rePct > 50 ? "#228B22" : "#B8860B", borderRadius: 3 }} />
+                </div>
               </div>
             </div>
 
-            {/* Sidebar Stats */}
-            <div style={{ width: 320, display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* MAIN LAYOUT - Chat + Sidebar */}
+            <div className="assistant-layout" style={{ display: "flex", gap: 20, flex: 1, minHeight: 0 }}>
               
-              {/* Main Hours Comparison Card */}
-              <div className="card" style={{ padding: 20, border: `2px solid ${C.goldL}` }}>
-                <div style={{ textAlign: "center", marginBottom: 16 }}>
-                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 700, color: C.dark, letterSpacing: 1 }}>
-                    🏠 REAL ESTATE PROFESSIONAL
+              {/* CHAT AREA */}
+              <div className="chat-area" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, minWidth: 0 }}>
+                
+                {/* Chat Header */}
+                <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                  <div>
+                    <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: fs.title, fontWeight: 700, color: C.dark, margin: 0 }}>AI Assistant</h1>
+                    <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light, margin: 0, marginTop: 2 }}>Log REP activities • IRS-ready documentation</p>
                   </div>
-                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, marginTop: 4 }}>
-                    IRS Status Tracker
-                  </div>
+                  <button onClick={() => setShowNonREModal(true)} style={{
+                    background: "#FFEBEE", border: "2px solid #C62828", borderRadius: 8,
+                    padding: "8px 14px", fontSize: 12, color: "#C62828", cursor: "pointer",
+                    fontFamily: "'Inter', sans-serif", fontWeight: 600, display: "flex", alignItems: "center", gap: 6
+                  }}>
+                    💼 Log Job Hours
+                  </button>
                 </div>
 
-                {/* REP vs Non-REPP Side by Side */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-                  {/* REP Hours - Clickable */}
-                  <div 
-                    onClick={() => setShowREPDetailModal(true)}
-                    style={{ background: C.greenPale, borderRadius: 8, padding: 14, textAlign: "center", border: `1px solid ${C.greenB}`, cursor: "pointer", transition: "transform 0.15s, box-shadow 0.15s" }}
-                    onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(37,107,69,0.2)"; }}
-                    onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
-                  >
-                    <div style={{ fontSize: 11, color: C.green, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, marginBottom: 6 }}>
-                      ✅ REP HOURS
+                {/* Messages Container */}
+                <div className="card" style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", WebkitOverflowScrolling: "touch", minHeight: 200 }}>
+                  {messages.map(msg => (
+                    <div key={msg.id} className={`msg-bubble ${msg.role === "user" ? "msg-user" : "msg-assistant"} ${msg.activityLogged ? "msg-logged" : ""}`}
+                      style={{ maxWidth: msg.role === "user" ? "85%" : "92%", alignSelf: msg.role === "user" ? "flex-end" : "flex-start" }}>
+                      {msg.activityLogged && (
+                        <div style={{ fontSize: 11, color: "#1B5E20", fontFamily: "'Inter', sans-serif", marginBottom: 8, display: "flex", alignItems: "center", gap: 6, background: "#E8F5E9", padding: "4px 8px", borderRadius: 4, fontWeight: 600 }}>
+                          ✓ SAVED TO RECORDS
+                        </div>
+                      )}
+                      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: fs.base, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{msg.content}</div>
                     </div>
-                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.green }}>
-                      {reHrs}h
-                    </div>
-                    <div style={{ fontSize: 10, color: C.mid, fontFamily: "'IBM Plex Mono', monospace", marginTop: 4 }}>
-                      REP Work
-                    </div>
-                    <div style={{ fontSize: 9, color: C.green, fontFamily: "'IBM Plex Mono', monospace", marginTop: 6 }}>
-                      
-                    </div>
-                  </div>
-
-                  {/* Non-REPP Hours - Clickable */}
-                  <div 
-                    onClick={() => setShowNonREPDetailModal(true)}
-                    style={{ background: C.redPale, borderRadius: 8, padding: 14, textAlign: "center", border: `1px solid ${C.redB}`, cursor: "pointer", transition: "transform 0.15s, box-shadow 0.15s" }}
-                    onMouseOver={(e) => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(153,48,48,0.2)"; }}
-                    onMouseOut={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}
-                  >
-                    <div style={{ fontSize: 11, color: C.red, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, marginBottom: 6 }}>
-                      💼 NON-REP JOBP
-                    </div>
-                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.red }}>
-                      {nonREHrs}h
-                    </div>
-                    <div style={{ fontSize: 10, color: C.mid, fontFamily: "'IBM Plex Mono', monospace", marginTop: 4 }}>
-                      W-2 or 1099 Job
-                    </div>
-                    <div style={{ fontSize: 9, color: C.red, fontFamily: "'IBM Plex Mono', monospace", marginTop: 6 }}>
-                      
-                    </div>
-                  </div>
-                </div>
-
-                {/* Visual Progress Bar */}
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: C.mid }}>REP Percentage</span>
-                    <span style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, color: rePct > 50 ? C.green : C.red }}>
-                      {rePct.toFixed(0)}% {rePct > 50 ? "✓" : "⚠️"}
-                    </span>
-                  </div>
-                  <div style={{ height: 12, background: C.redPale, borderRadius: 6, overflow: "hidden", display: "flex" }}>
-                    <div style={{ width: `${Math.min(rePct, 100)}%`, background: C.greenB, borderRadius: 6, transition: "width 0.3s" }} />
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-                    <span style={{ fontSize: 9, color: C.green, fontFamily: "'IBM Plex Mono', monospace" }}>RE: {rePct.toFixed(0)}%</span>
-                    <span style={{ fontSize: 9, color: C.red, fontFamily: "'IBM Plex Mono', monospace" }}>Non-REP: {(100-rePct).toFixed(0)}%</span>
-                  </div>
-                </div>
-
-                {/* 750 Hour Progress */}
-                <div style={{ background: "#f8f6f0", borderRadius: 6, padding: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: C.mid }}>750h Threshold</span>
-                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, color: reHrs >= 750 ? C.green : C.gold }}>
-                      {reHrs}/750h
-                    </span>
-                  </div>
-                  <div style={{ height: 8, background: C.borderL, borderRadius: 4, overflow: "hidden" }}>
-                    <div style={{ width: `${Math.min((reHrs/750)*100, 100)}%`, height: "100%", background: reHrs >= 750 ? C.greenB : C.goldL, borderRadius: 4 }} />
-                  </div>
-                  {reHrs < 750 && (
-                    <div style={{ fontSize: 10, color: C.orange, fontFamily: "'IBM Plex Mono', monospace", marginTop: 6, textAlign: "center" }}>
-                      Need {hoursNeeded}h more • {hoursPerWeek}h/week
+                  ))}
+                  {loading && (
+                    <div className="msg-bubble msg-assistant" style={{ alignSelf: "flex-start" }}>
+                      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: fs.base, color: C.light }}>🔍 Analyzing activity...</div>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input Area */}
+                <div style={{ marginTop: 12, background: "white", borderRadius: 12, border: `2px solid ${C.border}`, padding: 12 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                    <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKeyDown}
+                      placeholder="Tell me what you worked on today..." rows={2}
+                      style={{ flex: 1, padding: "12px", fontSize: fs.base, border: "none", background: "transparent", color: C.text, outline: "none", resize: "none", fontFamily: "'Inter', sans-serif", minHeight: 50 }} />
+                    <button onClick={sendMessage} disabled={loading || !input.trim()} 
+                      style={{ padding: "12px 20px", background: loading || !input.trim() ? "#e0e0e0" : "#B8860B", border: "none", borderRadius: 8, color: loading || !input.trim() ? "#999" : "white", fontSize: 14, fontWeight: 700, cursor: loading || !input.trim() ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", minHeight: 50 }}>
+                      Send
+                    </button>
+                  </div>
+                  
+                  {/* Quick Actions */}
+                  <div className="quick-actions-row" style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #f0f0f0", display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {[
+                      { text: "2h property mgmt", icon: "🏠" },
+                      { text: "45min contractor call", icon: "📞" },
+                      { text: "1h showing unit", icon: "🔑" },
+                    ].map(q => (
+                      <button key={q.text} onClick={() => setInput(`I spent ${q.text}`)} style={{
+                        background: "#f8f8f8", border: "1px solid #e8e8e8", borderRadius: 20,
+                        padding: "6px 12px", fontSize: 12, color: "#555", cursor: "pointer",
+                        fontFamily: "'Inter', sans-serif", display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap"
+                      }}>
+                        <span>{q.icon}</span> {q.text}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Quick Stats */}
-              <div className="card" style={{ padding: 14 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontSize: 10, color: C.light, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1 }}>ENTRIES</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: C.blue, fontFamily: "'Inter', sans-serif" }}>{localEntries.length}</div>
+              {/* DESKTOP SIDEBAR */}
+              <div className="desktop-sidebar" style={{ width: 300, display: "flex", flexDirection: "column", gap: 12, flexShrink: 0 }}>
+                
+                {/* Main Status Card - Dark Theme */}
+                <div className="card" style={{ padding: 20, background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 100%)", border: "none", borderRadius: 16 }}>
+                  <div style={{ textAlign: "center", marginBottom: 16 }}>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 700, color: "#C6A24A", letterSpacing: 1 }}>🏠 REP STATUS TRACKER</div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: 10, color: C.light, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1 }}>QUALIFYING</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: C.green, fontFamily: "'Inter', sans-serif" }}>{localEntries.filter(e => e.qualifies).length}</div>
-                  </div>
-                </div>
-              </div>
 
-              {/* IRS Requirements Checklist */}
-              <div className="card" style={{ background: rePct > 50 && reHrs >= 750 ? C.greenPale : C.goldPale, border: `1px solid ${rePct > 50 && reHrs >= 750 ? C.greenB : C.gold}`, padding: 14 }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: rePct > 50 && reHrs >= 750 ? C.green : C.gold, letterSpacing: 2, marginBottom: 10 }}>
-                  {rePct > 50 && reHrs >= 750 ? "✅ REP QUALIFIED" : "📋 REP REQUIREMENTS"}
+                  {/* Hours Grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                    <div onClick={() => setShowREPDetailModal(true)} style={{ background: "rgba(34,139,34,0.15)", borderRadius: 12, padding: 14, textAlign: "center", border: "1px solid rgba(34,139,34,0.3)", cursor: "pointer", transition: "transform 0.15s" }}>
+                      <div style={{ fontSize: 11, color: "#90EE90", fontWeight: 600, marginBottom: 4 }}>✅ REP HOURS</div>
+                      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, fontWeight: 800, color: "#90EE90" }}>{reHrs}h</div>
+                      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>Tap for details</div>
+                    </div>
+                    <div onClick={() => setShowNonREPDetailModal(true)} style={{ background: "rgba(178,34,34,0.15)", borderRadius: 12, padding: 14, textAlign: "center", border: "1px solid rgba(178,34,34,0.3)", cursor: "pointer", transition: "transform 0.15s" }}>
+                      <div style={{ fontSize: 11, color: "#FFA07A", fontWeight: 600, marginBottom: 4 }}>💼 JOB HOURS</div>
+                      <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, fontWeight: 800, color: "#FFA07A" }}>{nonREHrs}h</div>
+                      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.5)", marginTop: 4 }}>Tap for details</div>
+                    </div>
+                  </div>
+
+                  {/* REP Percentage */}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>REP Percentage</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: rePct > 50 ? "#90EE90" : "#FFA07A" }}>{rePct.toFixed(0)}% {rePct > 50 ? "✓" : "⚠️"}</span>
+                    </div>
+                    <div style={{ height: 10, background: "rgba(178,34,34,0.3)", borderRadius: 5, overflow: "hidden" }}>
+                      <div style={{ width: `${Math.min(rePct, 100)}%`, height: "100%", background: "linear-gradient(90deg, #228B22, #32CD32)", borderRadius: 5, transition: "width 0.3s" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 9, color: "rgba(255,255,255,0.5)" }}>
+                      <span>Need &gt;50%</span>
+                      <span>RE: {rePct.toFixed(0)}% | Job: {(100-rePct).toFixed(0)}%</span>
+                    </div>
+                  </div>
+
+                  {/* 750h Progress */}
+                  <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: 10, padding: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)" }}>750h Threshold</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: reHrs >= 750 ? "#90EE90" : "#FFD700" }}>{reHrs}/750h</span>
+                    </div>
+                    <div style={{ height: 8, background: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "hidden" }}>
+                      <div style={{ width: `${Math.min((reHrs/750)*100, 100)}%`, height: "100%", background: reHrs >= 750 ? "#228B22" : "linear-gradient(90deg, #B8860B, #DAA520)", borderRadius: 4 }} />
+                    </div>
+                    {reHrs < 750 && <div style={{ fontSize: 11, color: "#FFD700", marginTop: 8, textAlign: "center" }}>📊 Need {hoursNeeded.toFixed(0)}h more • ~{hoursPerWeek}h/week</div>}
+                    {reHrs >= 750 && <div style={{ fontSize: 11, color: "#90EE90", marginTop: 8, textAlign: "center" }}>🎉 750h Threshold reached!</div>}
+                  </div>
                 </div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, lineHeight: 1.8 }}>
-                  <div>{reHrs >= 750 ? "✅" : "⬜"} 750+ hours in REP activities</div>
-                  <div>{rePct > 50 ? "✅" : "⬜"} REP work {">"} 50% of total</div>
-                  <div>⬜ Material participation</div>
+
+                {/* Quick Stats Card */}
+                <div className="card" style={{ padding: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: C.light, letterSpacing: 1 }}>ENTRIES</div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: C.blue }}>{localEntries.length}</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 10, color: C.light, letterSpacing: 1 }}>QUALIFYING</div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: "#228B22" }}>{localEntries.filter(e => e.qualifies).length}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* IRS Requirements Card */}
+                <div className="card" style={{ background: rePct > 50 && reHrs >= 750 ? "#E8F5E9" : "#FFF8DC", border: `2px solid ${rePct > 50 && reHrs >= 750 ? "#228B22" : "#B8860B"}`, padding: 14 }}>
+                  <div style={{ fontSize: 11, color: rePct > 50 && reHrs >= 750 ? "#1B5E20" : "#8B6914", fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>
+                    {rePct > 50 && reHrs >= 750 ? "✅ REP QUALIFIED" : "📋 REP REQUIREMENTS"}
+                  </div>
+                  <div style={{ fontSize: 13, color: "#424242", lineHeight: 1.8 }}>
+                    <div>{reHrs >= 750 ? "✅" : "⬜"} 750+ hours in RE activities</div>
+                    <div>{rePct > 50 ? "✅" : "⬜"} RE work &gt; 50% of total</div>
+                    <div>⬜ Material participation</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* DASHBOARD VIEW */}
         {view === "dashboard" && (
           <div className="tab-scroll" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
