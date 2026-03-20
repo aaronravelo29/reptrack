@@ -4,8 +4,8 @@ import { useState, useRef, useEffect, useMemo, createContext, useContext } from 
 const SUPABASE_URL = "https://lzxutumsrzjovjmebqns.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6eHV0dW1zcnpqb3ZqbWVicW5zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODAzNzAsImV4cCI6MjA4ODI1NjM3MH0.WuZsLON6sZ2Oe7uEKOZysZzcQXOGwFDaK5doxhulEAA";
 
-// ─── ANTHROPIC CONFIG ─────────────────────────────────────────────────────────
-const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
+// ─── API CONFIG ───────────────────────────────────────────────────────────────
+// API calls go through our backend to keep the key secure
 
 // Simple Supabase client
 const supabase = {
@@ -22,12 +22,12 @@ const supabase = {
       try {
         const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
           method: 'POST',
-          headers: {
+          headers: { 
             'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY
+            'apikey': SUPABASE_ANON_KEY 
           },
-          body: JSON.stringify({
-            email,
+          body: JSON.stringify({ 
+            email, 
             password,
             data: options?.data || {}
           })
@@ -51,9 +51,9 @@ const supabase = {
       try {
         const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
           method: 'POST',
-          headers: {
+          headers: { 
             'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY
+            'apikey': SUPABASE_ANON_KEY 
           },
           body: JSON.stringify({ email, password })
         });
@@ -80,7 +80,7 @@ const supabase = {
       if (token && user) {
         callback('SIGNED_IN', { access_token: token, user: JSON.parse(user) });
       }
-      return { data: { subscription: { unsubscribe: () => { } } } };
+      return { data: { subscription: { unsubscribe: () => {} } } };
     }
   }
 };
@@ -115,8 +115,8 @@ function AuthProvider({ children }) {
   }, []);
 
   const signUp = async (email, password, profileData) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
+    const { data, error } = await supabase.auth.signUp({ 
+      email, 
       password,
       options: { data: profileData }
     });
@@ -165,26 +165,26 @@ function AuthScreen() {
   const [message, setMessage] = useState("");
   const { signIn, signUp } = useAuth();
 
-  const inputStyle = {
-    width: "100%",
-    padding: "12px 14px",
-    fontSize: 14,
-    border: "1px solid #d4cfbd",
-    borderRadius: 4,
-    background: "#faf8f4",
-    color: "#0F2742",
-    outline: "none",
-    fontFamily: "'IBM Plex Mono', monospace",
-    boxSizing: "border-box"
+  const inputStyle = { 
+    width: "100%", 
+    padding: "12px 14px", 
+    fontSize: 14, 
+    border: "1px solid #d4cfbd", 
+    borderRadius: 4, 
+    background: "#faf8f4", 
+    color: "#0F2742", 
+    outline: "none", 
+    fontFamily: "'IBM Plex Mono', monospace", 
+    boxSizing: "border-box" 
   };
 
-  const labelStyle = {
-    display: "block",
-    fontSize: 10,
-    color: "#4D6785",
-    letterSpacing: 2,
-    textTransform: "uppercase",
-    marginBottom: 6
+  const labelStyle = { 
+    display: "block", 
+    fontSize: 10, 
+    color: "#4D6785", 
+    letterSpacing: 2, 
+    textTransform: "uppercase", 
+    marginBottom: 6 
   };
 
   const handleSubmit = async (e) => {
@@ -237,7 +237,7 @@ function AuthScreen() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
       `}</style>
-
+      
       <div style={{
         background: "#F7F5EA",
         borderRadius: 8,
@@ -282,9 +282,9 @@ function AuthScreen() {
                 <div>
                   <label style={labelStyle}>First Name *</label>
                   <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    type="text" 
+                    value={firstName} 
+                    onChange={(e) => setFirstName(e.target.value)} 
                     required={mode === "signup"}
                     style={inputStyle}
                     placeholder="John"
@@ -293,9 +293,9 @@ function AuthScreen() {
                 <div>
                   <label style={labelStyle}>Last Name *</label>
                   <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
+                    type="text" 
+                    value={lastName} 
+                    onChange={(e) => setLastName(e.target.value)} 
                     required={mode === "signup"}
                     style={inputStyle}
                     placeholder="Smith"
@@ -306,8 +306,8 @@ function AuthScreen() {
               <div style={{ marginBottom: 14 }}>
                 <label style={labelStyle}>Company Name</label>
                 <input
-                  type="text"
-                  value={companyName}
+                  type="text" 
+                  value={companyName} 
                   onChange={(e) => setCompanyName(e.target.value)}
                   style={inputStyle}
                   placeholder="Smith Properties LLC"
@@ -317,8 +317,8 @@ function AuthScreen() {
               <div style={{ marginBottom: 14 }}>
                 <label style={labelStyle}>Phone Number</label>
                 <input
-                  type="tel"
-                  value={phone}
+                  type="tel" 
+                  value={phone} 
                   onChange={(e) => setPhone(e.target.value)}
                   style={inputStyle}
                   placeholder="(555) 123-4567"
@@ -377,39 +377,39 @@ function AuthScreen() {
 
 // ─── Sample Data ──────────────────────────────────────────────────────────────
 const SAMPLE_PROPERTIES = [
-  { id: "p1", name: "Oak Street Duplex", address: "123 Oak St, Pittsburgh PA 15213", type: "multi_family", units: 2, rent: 3400 },
-  { id: "p2", name: "Downtown Studio", address: "88 Fifth Ave #4C, Pittsburgh PA 15219", type: "single_family", units: 1, rent: 1650 },
-  { id: "p3", name: "Squirrel Hill 4-Plex", address: "501 Murray Ave, Pittsburgh PA 15217", type: "multi_family", units: 4, rent: 6800 },
-  { id: "p4", name: "Lawrenceville Commercial", address: "4200 Butler St, Pittsburgh PA 15201", type: "commercial", units: 1, rent: 4200 },
+  { id:"p1", name:"Oak Street Duplex", address:"123 Oak St, Pittsburgh PA 15213", type:"multi_family", units:2, rent:3400 },
+  { id:"p2", name:"Downtown Studio", address:"88 Fifth Ave #4C, Pittsburgh PA 15219", type:"single_family", units:1, rent:1650 },
+  { id:"p3", name:"Squirrel Hill 4-Plex", address:"501 Murray Ave, Pittsburgh PA 15217", type:"multi_family", units:4, rent:6800 },
+  { id:"p4", name:"Lawrenceville Commercial", address:"4200 Butler St, Pittsburgh PA 15201", type:"commercial", units:1, rent:4200 },
 ];
 
 const SAMPLE_ENTRIES = [
-  { id: "e1", date: "2024-11-01", qualifies: true, category: "management", categoryLabel: "Property Management", activity: "Called tenant re maintenance request — Oak St Unit A", minutes: 30 },
-  { id: "e2", date: "2024-11-01", qualifies: false, category: "non_re", categoryLabel: "Non-RE Work", activity: "W-2 work shift", minutes: 480 },
-  { id: "e3", date: "2024-11-02", qualifies: true, category: "maintenance", categoryLabel: "Maintenance & Repairs", activity: "Supervised plumber — Oak St hot water heater repair", minutes: 90 },
-  { id: "e4", date: "2024-11-04", qualifies: true, category: "leasing", categoryLabel: "Leasing", activity: "Showed vacant unit — Downtown Studio #4C", minutes: 120 },
-  { id: "e5", date: "2024-11-05", qualifies: true, category: "financial_mgmt", categoryLabel: "Financial Management", activity: "Reviewed monthly rent rolls and P&L", minutes: 75 },
+  { id:"e1", date:"2024-11-01", qualifies:true, category:"management", categoryLabel:"Property Management", activity:"Called tenant re maintenance request — Oak St Unit A", minutes:30 },
+  { id:"e2", date:"2024-11-01", qualifies:false, category:"non_re", categoryLabel:"Non-RE Work", activity:"W-2 work shift", minutes:480 },
+  { id:"e3", date:"2024-11-02", qualifies:true, category:"maintenance", categoryLabel:"Maintenance & Repairs", activity:"Supervised plumber — Oak St hot water heater repair", minutes:90 },
+  { id:"e4", date:"2024-11-04", qualifies:true, category:"leasing", categoryLabel:"Leasing", activity:"Showed vacant unit — Downtown Studio #4C", minutes:120 },
+  { id:"e5", date:"2024-11-05", qualifies:true, category:"financial_mgmt", categoryLabel:"Financial Management", activity:"Reviewed monthly rent rolls and P&L", minutes:75 },
 ];
 
-const fmtH = (m) => { const h = Math.floor(m / 60), mn = m % 60; return !h && !mn ? "0h" : `${h > 0 ? h + "h" : ""}${mn > 0 ? " " + mn + "m" : ""}`.trim(); };
-const uid = () => Date.now() + Math.random().toString(36).slice(2);
+const fmtH = (m) => { const h=Math.floor(m/60),mn=m%60; return !h&&!mn?"0h":`${h>0?h+"h":""}${mn>0?" "+mn+"m":""}`.trim(); };
+const uid = () => Date.now()+Math.random().toString(36).slice(2);
 const todayStr = () => new Date().toISOString().split("T")[0];
 
 const C = {
-  bg: "#F7F5EA", white: "#ffffff", dark: "#0F2742", darker: "#091e33", text: "#0F2742",
-  mid: "#2d4a6a", light: "#4D6785", lighter: "#7a96b0", border: "#d4cfbd", borderL: "#e8e4d4",
-  gold: "#9a7830", goldL: "#C6A24A", goldPale: "#faf3dc", goldBright: "#e8c870",
-  green: "#1a5c38", greenPale: "#e4f2ea", greenB: "#256b45",
-  red: "#7a1a1a", redPale: "#f5e4e4", redB: "#993030",
-  blue: "#2d4f6e", bluePale: "#e4edf5", blueB: "#3d6080",
-  purple: "#3a2060", purpleB: "#5a3a90",
+  bg:"#F7F5EA", white:"#ffffff", dark:"#0F2742", darker:"#091e33", text:"#0F2742",
+  mid:"#2d4a6a", light:"#4D6785", lighter:"#7a96b0", border:"#d4cfbd", borderL:"#e8e4d4",
+  gold:"#9a7830", goldL:"#C6A24A", goldPale:"#faf3dc", goldBright:"#e8c870",
+  green:"#1a5c38", greenPale:"#e4f2ea", greenB:"#256b45",
+  red:"#7a1a1a", redPale:"#f5e4e4", redB:"#993030",
+  blue:"#2d4f6e", bluePale:"#e4edf5", blueB:"#3d6080",
+  purple:"#3a2060", purpleB:"#5a3a90",
 };
 
 const VIEWS = [
-  { id: "assistant", icon: "◈", label: "Assistant" },
-  { id: "dashboard", icon: "◉", label: "Dashboard" },
-  { id: "records", icon: "⊟", label: "Records" },
-  { id: "properties", icon: "⌂", label: "Properties" },
+  { id:"assistant", icon:"◈", label:"Assistant" },
+  { id:"dashboard", icon:"◉", label:"Dashboard" },
+  { id:"records", icon:"⊟", label:"Records" },
+  { id:"properties", icon:"⌂", label:"Properties" },
 ];
 
 // ─── CLAUDE AI SYSTEM PROMPT ──────────────────────────────────────────────────
@@ -458,7 +458,7 @@ function MainApp() {
   const { user, profile, signOut } = useAuth();
   const [view, setView] = useState("assistant");
   const [localEntries, setLocalEntries] = useState(SAMPLE_ENTRIES);
-
+  
   // Chat state
   const [messages, setMessages] = useState([
     { role: "assistant", id: "welcome", content: `Hi${profile?.firstName ? ` ${profile.firstName}` : ''}! I'm your RepTrack assistant. I can help you:\n\n• Log real estate activities\n• Track your hours toward REP status\n• Draft emails to tenants and vendors\n• Answer questions about documentation\n\nWhat did you work on today?` }
@@ -475,8 +475,8 @@ function MainApp() {
   const rePct = totalMins > 0 ? (totalREMins / totalMins) * 100 : 0;
 
   // Display name
-  const displayName = profile?.firstName && profile?.lastName
-    ? `${profile.firstName} ${profile.lastName}`
+  const displayName = profile?.firstName && profile?.lastName 
+    ? `${profile.firstName} ${profile.lastName}` 
     : user?.email;
 
   useEffect(() => {
@@ -492,26 +492,21 @@ function MainApp() {
     setLoading(true);
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true"
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1024,
           system: getSystemPrompt(reHrs, rePct, localEntries, profile),
           messages: [...messages.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })), { role: "user", content: input.trim() }]
         })
       });
 
       const data = await response.json();
-
+      
       if (data.error) {
-        throw new Error(data.error.message);
+        throw new Error(data.error);
       }
 
       const assistantMessage = {
@@ -586,7 +581,7 @@ function MainApp() {
 
       {/* Main Content */}
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "24px" }}>
-
+        
         {/* ASSISTANT VIEW */}
         {view === "assistant" && (
           <div style={{ display: "flex", gap: 24, height: "calc(100vh - 140px)" }}>
@@ -653,7 +648,7 @@ function MainApp() {
                 <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.green }}>{reHrs}h</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>of 750h threshold</div>
                 <div style={{ marginTop: 8, height: 6, background: C.borderL, borderRadius: 3 }}>
-                  <div style={{ height: "100%", width: `${Math.min((reHrs / 750) * 100, 100)}%`, background: C.greenB, borderRadius: 3 }} />
+                  <div style={{ height: "100%", width: `${Math.min((reHrs/750)*100, 100)}%`, background: C.greenB, borderRadius: 3 }} />
                 </div>
               </div>
 
