@@ -368,13 +368,13 @@ Company: ${profile?.companyName || 'Not specified'}
 ═══════════════════════════════════════════════════════════════════════════════
 CURRENT REP STATUS
 ═══════════════════════════════════════════════════════════════════════════════
-• RE Hours Logged: ${reHrs} hours (NEED 750+ for REP status)
+• REP Hours Logged: ${reHrs} hours (NEED 750+ for REP status)
 • RE % of Total Work: ${rePct.toFixed(1)}% (NEED >50% for REP status)
 • Total Entries: ${entries.length}
 • Progress: ${Math.min(100, (reHrs/750*100)).toFixed(0)}% toward 750-hour threshold
 
 ${reHrs >= 750 && rePct > 50 ? "✅ ON TRACK: User appears to meet REP requirements!" : 
-  reHrs < 750 ? `⚠️ NEEDS ${750 - reHrs} MORE HOURS to reach 750-hour threshold` :
+  reHrs < 750 ? `⚠️ NEEDS ${750 - reHrs} MOREP HOURS to reach 750-hour threshold` :
   "⚠️ RE percentage below 50% - may not qualify"}
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -415,7 +415,7 @@ Qualifies: [✅ Yes - RE Work] or [❌ No - Non-RE]
 
 💡 Progress Update:
 • New RE Total: [X] hours ([Y]% toward 750h)
-• RE Percentage: [Z]% of total work
+• REP Percentage: [Z]% of total work
 ───────────────────────────────────────
 
 [[SAVE_ACTIVITY:{"activity":"brief description","minutes":X,"category":"category_key","qualifies":true/false,"property":"property name or null","irsDescription":"full IRS description"}]]
@@ -530,7 +530,7 @@ function MainApp() {
     setMessages(prev => [...prev, {
       role: "assistant",
       id: uid(),
-      content: `✅ **Non-RE Hours Logged**\n\n• Type: ${category?.label}\n• Duration: ${nonREHours} hours\n• Activity: ${nonREDescription || "Work shift"}\n\nThis helps track your RE percentage accurately. Your RE work must exceed 50% of total work time for REP status.`,
+      content: `✅ **Non-REP Hours Logged**\n\n• Type: ${category?.label}\n• Duration: ${nonREHours} hours\n• Activity: ${nonREDescription || "Work shift"}\n\nThis helps track your RE percentage accurately. Your RE work must exceed 50% of total work time for REP status.`,
       activityLogged: true
     }]);
   };
@@ -548,7 +548,7 @@ function MainApp() {
         content: `Hi ${profile?.firstName || 'there'}! I'm your RepTrack AI assistant. 🏠
 
 **Your Current Status:**
-• RE Hours: ${reHrs}h of 750h needed
+• REP Hours: ${reHrs}h of 750h needed
 • Progress: ${Math.min(100, (reHrs/750*100)).toFixed(0)}% toward REP qualification
 
 **I can help you:**
@@ -800,72 +800,113 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
                     padding: "6px 14px", fontSize: 11, color: C.red, cursor: "pointer",
                     fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600
                   }}>
-                  ➕ Log Non-RE Hours
+                  ➕ Log Non-REP Hours
                 </button>
               </div>
             </div>
 
             {/* Sidebar Stats */}
-            <div style={{ width: 300, display: "flex", flexDirection: "column", gap: 12 }}>
-              {/* REP Status Card */}
-              <div className="card" style={{ borderLeft: `4px solid ${reHrs >= 750 && rePct > 50 ? C.greenB : C.orangeB}`, padding: 16 }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 12 }}>REP STATUS</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  {/* Progress Circle */}
-                  <svg width="70" height="70" viewBox="0 0 70 70">
-                    <circle cx="35" cy="35" r="30" fill="none" stroke={C.borderL} strokeWidth="6" />
-                    <circle cx="35" cy="35" r="30" fill="none" stroke={reHrs >= 750 ? C.greenB : C.goldL} strokeWidth="6" 
-                      strokeDasharray={`${Math.min(100, (reHrs/750*100)) * 1.885} 188.5`}
-                      className="progress-ring" />
-                    <text x="35" y="38" textAnchor="middle" style={{ fontSize: 14, fontWeight: 700, fill: C.dark, fontFamily: "'Inter', sans-serif" }}>
-                      {Math.min(100, (reHrs/750*100)).toFixed(0)}%
-                    </text>
-                  </svg>
-                  <div>
-                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: reHrs >= 750 ? C.green : C.gold }}>{reHrs}h</div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>of 750h threshold</div>
+            <div style={{ width: 320, display: "flex", flexDirection: "column", gap: 12 }}>
+              
+              {/* Main Hours Comparison Card */}
+              <div className="card" style={{ padding: 20, border: `2px solid ${C.goldL}` }}>
+                <div style={{ textAlign: "center", marginBottom: 16 }}>
+                  <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 14, fontWeight: 700, color: C.dark, letterSpacing: 1 }}>
+                    🏠 REAL ESTATE PROFESSIONAL
+                  </div>
+                  <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, marginTop: 4 }}>
+                    IRS Status Tracker
                   </div>
                 </div>
-                {reHrs < 750 && (
-                  <div style={{ marginTop: 12, padding: "8px 10px", background: C.orangePale, borderRadius: 4 }}>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.orange }}>
-                      Need <strong>{hoursNeeded}h more</strong> ({hoursPerWeek}h/week for {weeksRemaining} weeks)
+
+                {/* REP vs Non-REP Side by Side */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                  {/* REP Hours */}
+                  <div style={{ background: C.greenPale, borderRadius: 8, padding: 14, textAlign: "center", border: `1px solid ${C.greenB}` }}>
+                    <div style={{ fontSize: 11, color: C.green, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, marginBottom: 6 }}>
+                      ✅ REP HOURS
+                    </div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.green }}>
+                      {reHrs}h
+                    </div>
+                    <div style={{ fontSize: 10, color: C.mid, fontFamily: "'IBM Plex Mono', monospace", marginTop: 4 }}>
+                      Real Estate Work
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* RE Percentage */}
-              <div className="card" style={{ borderLeft: `4px solid ${rePct > 50 ? C.greenB : C.redB}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>RE PERCENTAGE</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, fontWeight: 700, color: rePct > 50 ? C.green : C.red }}>{rePct.toFixed(0)}%</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>of total work time {rePct > 50 ? "✓" : "(need >50%)"}</div>
-                <div style={{ marginTop: 8, height: 6, background: C.borderL, borderRadius: 3 }}>
-                  <div style={{ height: "100%", width: `${Math.min(rePct, 100)}%`, background: rePct > 50 ? C.greenB : C.redB, borderRadius: 3 }} />
+                  {/* Non-REP Hours */}
+                  <div style={{ background: C.redPale, borderRadius: 8, padding: 14, textAlign: "center", border: `1px solid ${C.redB}` }}>
+                    <div style={{ fontSize: 11, color: C.red, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, marginBottom: 6 }}>
+                      💼 NON-REP
+                    </div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 32, fontWeight: 700, color: C.red }}>
+                      {nonREHrs}h
+                    </div>
+                    <div style={{ fontSize: 10, color: C.mid, fontFamily: "'IBM Plex Mono', monospace", marginTop: 4 }}>
+                      W-2 & Other Work
+                    </div>
+                  </div>
+                </div>
+
+                {/* Visual Progress Bar */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: C.mid }}>REP Percentage</span>
+                    <span style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, color: rePct > 50 ? C.green : C.red }}>
+                      {rePct.toFixed(0)}% {rePct > 50 ? "✓" : "⚠️"}
+                    </span>
+                  </div>
+                  <div style={{ height: 12, background: C.redPale, borderRadius: 6, overflow: "hidden", display: "flex" }}>
+                    <div style={{ width: `${Math.min(rePct, 100)}%`, background: C.greenB, borderRadius: 6, transition: "width 0.3s" }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                    <span style={{ fontSize: 9, color: C.green, fontFamily: "'IBM Plex Mono', monospace" }}>RE: {rePct.toFixed(0)}%</span>
+                    <span style={{ fontSize: 9, color: C.red, fontFamily: "'IBM Plex Mono', monospace" }}>Non-RE: {(100-rePct).toFixed(0)}%</span>
+                  </div>
+                </div>
+
+                {/* 750 Hour Progress */}
+                <div style={{ background: "#f8f6f0", borderRadius: 6, padding: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: C.mid }}>750h Threshold</span>
+                    <span style={{ fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, color: reHrs >= 750 ? C.green : C.gold }}>
+                      {reHrs}/750h
+                    </span>
+                  </div>
+                  <div style={{ height: 8, background: C.borderL, borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ width: `${Math.min((reHrs/750)*100, 100)}%`, height: "100%", background: reHrs >= 750 ? C.greenB : C.goldL, borderRadius: 4 }} />
+                  </div>
+                  {reHrs < 750 && (
+                    <div style={{ fontSize: 10, color: C.orange, fontFamily: "'IBM Plex Mono', monospace", marginTop: 6, textAlign: "center" }}>
+                      Need {hoursNeeded}h more • {hoursPerWeek}h/week
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Non-RE Hours */}
-              <div className="card" style={{ borderLeft: `4px solid ${C.redB}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>NON-RE HOURS</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, fontWeight: 700, color: C.red }}>{nonREHrs}h</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>W-2, consulting, other work</div>
+              {/* Quick Stats */}
+              <div className="card" style={{ padding: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: C.light, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1 }}>ENTRIES</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: C.blue, fontFamily: "'Inter', sans-serif" }}>{localEntries.length}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 10, color: C.light, fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1 }}>QUALIFYING</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: C.green, fontFamily: "'Inter', sans-serif" }}>{localEntries.filter(e => e.qualifies).length}</div>
+                  </div>
+                </div>
               </div>
 
-              {/* Entries */}
-              <div className="card" style={{ borderLeft: `4px solid ${C.blueB}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 6 }}>DOCUMENTED ENTRIES</div>
-                <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 28, fontWeight: 700, color: C.blue }}>{localEntries.length}</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{localEntries.filter(e => e.qualifies).length} qualifying RE activities</div>
-              </div>
-
-              {/* IRS Requirements */}
-              <div className="card" style={{ background: C.goldPale, border: `1px solid ${C.gold}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.gold, letterSpacing: 2, marginBottom: 8 }}>IRS REP REQUIREMENTS</div>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, lineHeight: 1.6 }}>
-                  <div style={{ marginBottom: 6 }}>✓ 750+ hours in RE activities</div>
-                  <div style={{ marginBottom: 6 }}>✓ RE work > 50% of total work</div>
-                  <div>✓ Material participation in RE</div>
+              {/* IRS Requirements Checklist */}
+              <div className="card" style={{ background: rePct > 50 && reHrs >= 750 ? C.greenPale : C.goldPale, border: `1px solid ${rePct > 50 && reHrs >= 750 ? C.greenB : C.gold}`, padding: 14 }}>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: rePct > 50 && reHrs >= 750 ? C.green : C.gold, letterSpacing: 2, marginBottom: 10 }}>
+                  {rePct > 50 && reHrs >= 750 ? "✅ REP QUALIFIED" : "📋 REP REQUIREMENTS"}
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, lineHeight: 1.8 }}>
+                  <div>{reHrs >= 750 ? "✅" : "⬜"} 750+ hours in RE activities</div>
+                  <div>{rePct > 50 ? "✅" : "⬜"} RE work {">"} 50% of total</div>
+                  <div>⬜ Material participation</div>
                 </div>
               </div>
             </div>
@@ -884,17 +925,17 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 16 }}>
               <div className="card" style={{ borderLeft: `4px solid ${C.greenB}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>RE HOURS</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>REP HOURS</div>
                 <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.green }}>{reHrs}h</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>of 750h threshold</div>
               </div>
               <div className="card" style={{ borderLeft: `4px solid ${C.redB}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>NON-RE HOURS</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>NON-REP HOURS</div>
                 <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.red }}>{nonREHrs}h</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>W-2 & other work</div>
               </div>
               <div className="card" style={{ borderLeft: `4px solid ${C.goldL}` }}>
-                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>RE PERCENTAGE</div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 2, marginBottom: 8 }}>REP PERCENTAGE</div>
                 <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 36, fontWeight: 700, color: C.gold }}>{rePct.toFixed(0)}%</div>
                 <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, marginTop: 4 }}>of total work time</div>
               </div>
@@ -996,7 +1037,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         )}
       </main>
 
-      {/* Non-RE Hours Quick Add Modal */}
+      {/* Non-REP Hours Quick Add Modal */}
       {showNonREModal && (
         <div style={{
           position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
