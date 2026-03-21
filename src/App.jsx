@@ -692,6 +692,20 @@ Qualifies: [✅ Yes - REP Work] or [❌ No - Non-REP]
 
 [[SAVE_ACTIVITY:{"activity":"brief description","minutes":X,"category":"category_key","qualifies":true/false,"property":"property name or null","irsDescription":"full IRS description"}]]
 
+⚠️ CRITICAL - AVOID DUPLICATE LOGGING:
+═══════════════════════════════════════════════════════════════════════════════
+• ONLY include [[SAVE_ACTIVITY:...]] tag ONCE when the user FIRST reports an activity
+• If user asks follow-up questions about the SAME activity (clarification, more details, etc.), DO NOT include the [[SAVE_ACTIVITY:...]] tag again
+• If user wants to EDIT or CORRECT an already-logged activity, tell them to go to the Records tab
+• If user reports a NEW, DIFFERENT activity, then include [[SAVE_ACTIVITY:...]] for the new one
+• When in doubt, ASK: "Would you like me to log this as a new activity, or are we still discussing the previous one?"
+
+Examples:
+- User: "I spent 4 hours on property management" → LOG IT (first mention)
+- User: "What category is that?" → DO NOT LOG AGAIN (follow-up question)
+- User: "Actually it was more like 4.5 hours" → DO NOT LOG (tell them to edit in Records)
+- User: "I also spent 2 hours on tenant screening" → LOG IT (new activity)
+
 ═══════════════════════════════════════════════════════════════════════════════
 IRS-QUALIFYING RE CATEGORIES (Per IRC §469(c)(7)(C) & Treas. Reg. §1.469-9)
 ═══════════════════════════════════════════════════════════════════════════════
@@ -1028,6 +1042,16 @@ function MainApp() {
 
   // Settings modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showREPCalculator, setShowREPCalculator] = useState(false);
+  const [repCalcData, setRepCalcData] = useState({
+    annualIncome: '',
+    filingStatus: 'married',
+    numProperties: '',
+    rentalLosses: '',
+    jobHoursPerWeek: '40',
+    spouseWorks: 'no',
+    spouseJobHours: '0'
+  });
   const [emailProvider, setEmailProvider] = useState(() => localStorage.getItem('reptrack-email-provider') || 'gmail');
   const [fontSize, setFontSize] = useState(() => localStorage.getItem('reptrack-font-size') || 'medium');
   
@@ -1054,6 +1078,8 @@ function MainApp() {
   const [showAddPropertyModal, setShowAddPropertyModal] = useState(false);
   const [showPropertyDetailModal, setShowPropertyDetailModal] = useState(null);
   const [showEditPropertyModal, setShowEditPropertyModal] = useState(null);
+  const [showEditEntryModal, setShowEditEntryModal] = useState(null);
+  const [showDeleteEntryConfirm, setShowDeleteEntryConfirm] = useState(null);
   const [newProperty, setNewProperty] = useState({
     address: "", type: "single_family", units: 1, rent: "", purchaseDate: "",
     purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false,
@@ -1494,6 +1520,158 @@ function MainApp() {
     doc.save(fileName);
   };
 
+  // Export Weekly Summary PDF
+  const exportWeeklyPDF = async () => {
+    // Dynamically load jsPDF
+    if (!window.jspdf) {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      document.head.appendChild(script);
+      await new Promise(resolve => script.onload = resolve);
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Colors
+    const navy = [15, 39, 66];
+    const gold = [198, 162, 74];
+    const green = [34, 139, 34];
+    
+    // Get this week's entries (last 7 days)
+    const today = new Date();
+    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const weekEntries = localEntries.filter(e => {
+      const entryDate = new Date(e.date);
+      return entryDate >= weekAgo && entryDate <= today;
+    });
+    
+    const weekRepEntries = weekEntries.filter(e => e.qualifies);
+    const weekNonRepEntries = weekEntries.filter(e => !e.qualifies);
+    const weekRepMinutes = weekRepEntries.reduce((s, e) => s + e.minutes, 0);
+    const weekNonRepMinutes = weekNonRepEntries.reduce((s, e) => s + e.minutes, 0);
+    const weekRepHours = (weekRepMinutes / 60).toFixed(1);
+    
+    let y = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const contentWidth = pageWidth - (margin * 2);
+    
+    // ═══ HEADER ═══
+    doc.setFillColor(...navy);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RepTrack Weekly Summary', margin, 25);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const weekStart = weekAgo.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const weekEnd = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    doc.text(`${weekStart} - ${weekEnd}`, pageWidth - margin, 25, { align: 'right' });
+    
+    y = 50;
+    
+    // ═══ WEEKLY STATS ═══
+    doc.setTextColor(...navy);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('THIS WEEK', margin, y);
+    y += 10;
+    
+    // Stats box
+    doc.setFillColor(248, 248, 248);
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(margin, y, contentWidth, 25, 'FD');
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...green);
+    doc.text(`${weekRepHours} REP Hours`, margin + 10, y + 10);
+    
+    doc.setTextColor(80, 80, 80);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${weekRepEntries.length} activities logged`, margin + 10, y + 18);
+    
+    doc.setTextColor(...navy);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`YTD: ${(reHrs).toFixed(1)}h / 750h`, pageWidth - margin - 10, y + 14, { align: 'right' });
+    
+    y += 35;
+    
+    // ═══ ACTIVITIES ═══
+    doc.setTextColor(...navy);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ACTIVITIES THIS WEEK', margin, y);
+    y += 8;
+    
+    // Group by date
+    const entriesByDate = {};
+    weekEntries.forEach(e => {
+      if (!entriesByDate[e.date]) entriesByDate[e.date] = [];
+      entriesByDate[e.date].push(e);
+    });
+    
+    const sortedDates = Object.keys(entriesByDate).sort((a, b) => new Date(b) - new Date(a));
+    
+    doc.setFontSize(9);
+    sortedDates.forEach(date => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+      
+      const dateStr = new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...navy);
+      doc.text(dateStr, margin, y);
+      y += 5;
+      
+      entriesByDate[date].forEach(entry => {
+        if (y > 270) {
+          doc.addPage();
+          y = 20;
+        }
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80, 80, 80);
+        const hours = (entry.minutes / 60).toFixed(1);
+        const qualifier = entry.qualifies ? '✓' : '○';
+        const text = `${qualifier} ${hours}h - ${entry.activity}`;
+        
+        // Word wrap if too long
+        const lines = doc.splitTextToSize(text, contentWidth - 10);
+        lines.forEach(line => {
+          doc.text(line, margin + 5, y);
+          y += 4;
+        });
+        y += 2;
+      });
+      
+      y += 4;
+    });
+    
+    if (weekEntries.length === 0) {
+      doc.setTextColor(150, 150, 150);
+      doc.text('No activities logged this week', margin, y);
+      y += 10;
+    }
+    
+    // ═══ FOOTER ═══
+    y = Math.max(y + 10, 270);
+    doc.setTextColor(...gold);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Generated by RepTrack • reptrack.ai', pageWidth / 2, y, { align: 'center' });
+    
+    // Save
+    const fileName = `RepTrack_Weekly_${today.toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+  };
+
   // Filter entries by selected year
   const entriesForYear = localEntries.filter(e => new Date(e.date).getFullYear() === selectedYear);
   const repEntriesForYear = entriesForYear.filter(e => e.qualifies);
@@ -1729,6 +1907,71 @@ function MainApp() {
       console.error("Error saving entry:", err);
       return null;
     }
+  };
+
+  // Update entry in Supabase
+  const updateEntryInDb = async (entry) => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/entries?id=eq.${entry.id}`, {
+        method: 'PATCH',
+        headers: { ...getAuthHeaders(), 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          date: entry.date, qualifies: entry.qualifies,
+          category: entry.category, category_label: entry.categoryLabel,
+          activity: entry.activity, minutes: entry.minutes,
+          property: entry.property, irs_description: entry.irsDescription
+        })
+      });
+      const data = await res.json();
+      console.log("✅ Entry updated in Supabase:", entry.id);
+      return data[0];
+    } catch (err) {
+      console.error("Error updating entry:", err);
+      return null;
+    }
+  };
+
+  // Delete entry from Supabase
+  const deleteEntryFromDb = async (entryId) => {
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/entries?id=eq.${entryId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+      console.log("✅ Entry deleted from Supabase:", entryId);
+      return true;
+    } catch (err) {
+      console.error("Error deleting entry:", err);
+      return false;
+    }
+  };
+
+  // Save edited entry
+  const saveEditedEntry = async () => {
+    if (!showEditEntryModal) return;
+    
+    const updatedEntry = {
+      ...showEditEntryModal,
+      minutes: parseInt(showEditEntryModal.minutes) || 0,
+      categoryLabel: IRS_CATEGORIES[showEditEntryModal.category]?.label || showEditEntryModal.category
+    };
+    
+    // Update in Supabase
+    await updateEntryInDb(updatedEntry);
+    
+    // Update local state
+    setLocalEntries(prev => prev.map(e => e.id === updatedEntry.id ? updatedEntry : e));
+    setShowEditEntryModal(null);
+  };
+
+  // Delete entry
+  const deleteEntry = async (entryId) => {
+    // Delete from Supabase
+    await deleteEntryFromDb(entryId);
+    
+    // Remove from local state
+    setLocalEntries(prev => prev.filter(e => e.id !== entryId));
+    setShowDeleteEntryConfirm(null);
   };
 
   // Save tenant to Supabase
@@ -2175,23 +2418,45 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
       const responseText = data.content[0].text;
       
-      // Check for activity to save
+      // Check for activity to save - WITH DUPLICATE DETECTION
       const activityData = parseActivityFromResponse(responseText);
       if (activityData) {
-        const newEntry = {
-          date: todayStr(),
-          qualifies: activityData.qualifies,
-          category: activityData.category,
-          categoryLabel: IRS_CATEGORIES[activityData.category]?.label || activityData.category,
-          activity: activityData.activity,
-          minutes: activityData.minutes,
-          property: activityData.property,
-          irsDescription: activityData.irsDescription
-        };
-        // Save to Supabase
-        const savedEntry = await saveEntryToDb(newEntry);
-        newEntry.id = savedEntry?.id || uid();
-        setLocalEntries(prev => [newEntry, ...prev]);
+        // Check for duplicate: same activity description AND minutes logged in last 5 minutes
+        const now = new Date();
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+        
+        const isDuplicate = localEntries.some(entry => {
+          // Check if same activity and minutes
+          if (entry.activity?.toLowerCase() === activityData.activity?.toLowerCase() && 
+              entry.minutes === activityData.minutes) {
+            // Check if logged recently (within same session)
+            const entryDate = new Date(entry.date);
+            // If it's today and similar content, likely duplicate
+            if (entry.date === todayStr()) {
+              console.log("⚠️ Duplicate activity detected, skipping save:", activityData.activity);
+              return true;
+            }
+          }
+          return false;
+        });
+        
+        if (!isDuplicate) {
+          const newEntry = {
+            date: todayStr(),
+            qualifies: activityData.qualifies,
+            category: activityData.category,
+            categoryLabel: IRS_CATEGORIES[activityData.category]?.label || activityData.category,
+            activity: activityData.activity,
+            minutes: activityData.minutes,
+            property: activityData.property,
+            irsDescription: activityData.irsDescription
+          };
+          // Save to Supabase
+          const savedEntry = await saveEntryToDb(newEntry);
+          newEntry.id = savedEntry?.id || uid();
+          setLocalEntries(prev => [newEntry, ...prev]);
+          console.log("✅ Activity logged:", newEntry.activity, newEntry.minutes, "minutes");
+        }
       }
 
       // Check for property data - SAVE ALL FIELDS AND BACKUP
@@ -3006,15 +3271,25 @@ Since I can't directly read the document content, please ask me for the specific
 
         {view === "dashboard" && (
           <div className="tab-scroll" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
               <div>
                 <h1 style={{ fontFamily: "'Inter', sans-serif", fontSize: 24, fontWeight: 700, color: C.dark, marginBottom: 6 }}>
                   Dashboard {profile?.firstName && <span style={{ fontWeight: 400, color: C.light }}>— {profile.firstName}</span>}
                 </h1>
                 <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.light }}>{profile?.companyName || 'Track your real estate professional status'}</p>
               </div>
-              {/* Year Selector */}
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {/* Year Selector + Calculator Button */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <button 
+                  onClick={() => setShowREPCalculator(true)}
+                  style={{ 
+                    padding: "8px 14px", background: "#0F2742", color: "white", 
+                    border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, 
+                    cursor: "pointer", display: "flex", alignItems: "center", gap: 6
+                  }}
+                >
+                  🧮 Do I Need REP?
+                </button>
                 <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.light }}>Tax Year:</span>
                 <select 
                   value={selectedYear} 
@@ -3135,6 +3410,13 @@ Since I can't directly read the document content, please ask me for the specific
                     <option key={year} value={year}>{year}</option>
                   ))}
                 </select>
+                <button onClick={exportWeeklyPDF} style={{ 
+                  display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
+                  background: "white", border: `2px solid ${C.dark}`, borderRadius: 8,
+                  color: C.dark, fontSize: 13, fontWeight: 600, cursor: "pointer"
+                }}>
+                  📅 Weekly Summary
+                </button>
                 <button onClick={exportPDFForCPA} className="btn-gold" style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 20px" }}>
                   📄 Export PDF for CPA
                 </button>
@@ -3142,16 +3424,16 @@ Since I can't directly read the document content, please ask me for the specific
             </div>
             
             <div className="card" style={{ padding: 0, maxHeight: "calc(100vh - 220px)", display: "flex", flexDirection: "column" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "100px 80px 1fr 140px 70px", padding: "12px 16px", background: "#f5f0e8", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
-                {["Date", "Type", "Activity & IRS Documentation", "Category", "Time"].map(h => (
+              <div style={{ display: "grid", gridTemplateColumns: "90px 70px 1fr 130px 60px 80px", padding: "12px 16px", background: "#f5f0e8", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+                {["Date", "Type", "Activity & IRS Documentation", "Category", "Time", "Actions"].map(h => (
                   <div key={h} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 1.5, textTransform: "uppercase" }}>{h}</div>
                 ))}
               </div>
               <div style={{ overflowY: "auto", flex: 1 }}>
                 {localEntries.map(e => (
-                  <div key={e.id} style={{ display: "grid", gridTemplateColumns: "100px 80px 1fr 140px 70px", padding: "14px 16px", borderBottom: `1px solid ${C.borderL}`, alignItems: "start" }}>
+                  <div key={e.id} style={{ display: "grid", gridTemplateColumns: "90px 70px 1fr 130px 60px 80px", padding: "14px 16px", borderBottom: `1px solid ${C.borderL}`, alignItems: "start" }}>
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.mid }}>{e.date}</div>
-                    <div><span style={{ padding: "2px 8px", borderRadius: 2, fontSize: 10, fontFamily: "'IBM Plex Mono', monospace", background: e.qualifies ? C.greenPale : C.redPale, color: e.qualifies ? C.green : C.red }}>{e.qualifies ? "RE" : "Non-REP"}</span></div>
+                    <div><span style={{ padding: "2px 6px", borderRadius: 2, fontSize: 9, fontFamily: "'IBM Plex Mono', monospace", background: e.qualifies ? C.greenPale : C.redPale, color: e.qualifies ? C.green : C.red }}>{e.qualifies ? "REP" : "Non"}</span></div>
                     <div>
                       <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.text, marginBottom: 4 }}>{e.activity}</div>
                       {e.irsDescription && (
@@ -3160,8 +3442,30 @@ Since I can't directly read the document content, please ask me for the specific
                         </div>
                       )}
                     </div>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid }}>{e.categoryLabel}</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.mid }}>{e.categoryLabel}</div>
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: C.gold, fontWeight: 600 }}>{fmtH(e.minutes)}</div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button 
+                        onClick={() => setShowEditEntryModal({...e})}
+                        style={{ 
+                          padding: "4px 8px", fontSize: 10, background: "#f0f0f0", 
+                          border: "1px solid #ddd", borderRadius: 4, cursor: "pointer",
+                          fontFamily: "'IBM Plex Mono', monospace"
+                        }}
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button 
+                        onClick={() => setShowDeleteEntryConfirm(e)}
+                        style={{ 
+                          padding: "4px 8px", fontSize: 10, background: "#fee2e2", 
+                          border: "1px solid #fca5a5", borderRadius: 4, cursor: "pointer",
+                          color: "#dc2626", fontFamily: "'IBM Plex Mono', monospace"
+                        }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -5392,6 +5696,612 @@ Since I can't directly read the document content, please ask me for the specific
                   Ask the AI to draft formal service requests, quote requests, or follow-up communications to this vendor.
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ EDIT ENTRY MODAL ═══ */}
+      {showEditEntryModal && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.9)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+        }}>
+          <div style={{
+            background: "white", borderRadius: 12, padding: 0, width: "100%",
+            maxWidth: 500, maxHeight: "90vh", display: "flex", flexDirection: "column",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.5)", overflow: "hidden"
+          }}>
+            {/* Header */}
+            <div style={{ 
+              padding: "16px 20px", borderBottom: "1px solid #e8e8e8",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              background: "#0F2742"
+            }}>
+              <h2 style={{ margin: 0, color: "white", fontSize: 18, fontWeight: 700 }}>
+                ✏️ Edit Activity
+              </h2>
+              <button onClick={() => setShowEditEntryModal(null)} style={{
+                background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8,
+                width: 32, height: 32, cursor: "pointer", color: "white", fontSize: 16
+              }}>✕</button>
+            </div>
+            
+            {/* Content */}
+            <div style={{ padding: 20, overflowY: "auto", flex: 1 }}>
+              <div style={{ display: "grid", gap: 16 }}>
+                {/* Date */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    📅 Date
+                  </label>
+                  <input
+                    type="date"
+                    value={showEditEntryModal.date}
+                    onChange={(e) => setShowEditEntryModal({...showEditEntryModal, date: e.target.value})}
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "2px solid #e0e0e0", borderRadius: 8 }}
+                  />
+                </div>
+
+                {/* Activity Description */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    📝 Activity Description
+                  </label>
+                  <input
+                    type="text"
+                    value={showEditEntryModal.activity}
+                    onChange={(e) => setShowEditEntryModal({...showEditEntryModal, activity: e.target.value})}
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "2px solid #e0e0e0", borderRadius: 8 }}
+                  />
+                </div>
+
+                {/* Minutes */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    ⏱️ Duration (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    value={showEditEntryModal.minutes}
+                    onChange={(e) => setShowEditEntryModal({...showEditEntryModal, minutes: parseInt(e.target.value) || 0})}
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "2px solid #e0e0e0", borderRadius: 8 }}
+                  />
+                  <p style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
+                    = {((showEditEntryModal.minutes || 0) / 60).toFixed(1)} hours
+                  </p>
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    📂 Category
+                  </label>
+                  <select
+                    value={showEditEntryModal.category}
+                    onChange={(e) => setShowEditEntryModal({...showEditEntryModal, category: e.target.value, categoryLabel: IRS_CATEGORIES[e.target.value]?.label || e.target.value})}
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "2px solid #e0e0e0", borderRadius: 8 }}
+                  >
+                    <optgroup label="✅ REP Qualifying">
+                      {Object.entries(IRS_CATEGORIES).filter(([k, v]) => v.qualifies).map(([key, val]) => (
+                        <option key={key} value={key}>{val.label}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="❌ Non-REP">
+                      {Object.entries(IRS_CATEGORIES).filter(([k, v]) => !v.qualifies).map(([key, val]) => (
+                        <option key={key} value={key}>{val.label}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+
+                {/* Qualifies Toggle */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    ✅ Counts Toward REP?
+                  </label>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <button
+                      onClick={() => setShowEditEntryModal({...showEditEntryModal, qualifies: true})}
+                      style={{
+                        flex: 1, padding: "10px", borderRadius: 8, cursor: "pointer",
+                        background: showEditEntryModal.qualifies ? "#22c55e" : "#f0f0f0",
+                        color: showEditEntryModal.qualifies ? "white" : "#666",
+                        border: showEditEntryModal.qualifies ? "2px solid #16a34a" : "2px solid #ddd",
+                        fontWeight: 600
+                      }}
+                    >
+                      ✅ Yes - REP Hours
+                    </button>
+                    <button
+                      onClick={() => setShowEditEntryModal({...showEditEntryModal, qualifies: false})}
+                      style={{
+                        flex: 1, padding: "10px", borderRadius: 8, cursor: "pointer",
+                        background: !showEditEntryModal.qualifies ? "#ef4444" : "#f0f0f0",
+                        color: !showEditEntryModal.qualifies ? "white" : "#666",
+                        border: !showEditEntryModal.qualifies ? "2px solid #dc2626" : "2px solid #ddd",
+                        fontWeight: 600
+                      }}
+                    >
+                      ❌ No - Non-REP
+                    </button>
+                  </div>
+                </div>
+
+                {/* Property */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    🏠 Property (optional)
+                  </label>
+                  <select
+                    value={showEditEntryModal.property || ""}
+                    onChange={(e) => setShowEditEntryModal({...showEditEntryModal, property: e.target.value || null})}
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "2px solid #e0e0e0", borderRadius: 8 }}
+                  >
+                    <option value="">General / No specific property</option>
+                    {localProperties.map(p => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* IRS Description */}
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    📋 IRS Documentation
+                  </label>
+                  <textarea
+                    value={showEditEntryModal.irsDescription || ""}
+                    onChange={(e) => setShowEditEntryModal({...showEditEntryModal, irsDescription: e.target.value})}
+                    rows={3}
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "2px solid #e0e0e0", borderRadius: 8, resize: "vertical" }}
+                    placeholder="Professional description for IRS audit documentation..."
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div style={{ 
+              padding: "16px 20px", borderTop: "1px solid #e8e8e8",
+              display: "flex", gap: 12, justifyContent: "flex-end"
+            }}>
+              <button
+                onClick={() => setShowEditEntryModal(null)}
+                style={{
+                  padding: "10px 20px", background: "#f0f0f0", color: "#333",
+                  border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEditedEntry}
+                style={{
+                  padding: "10px 24px", background: "#0F2742", color: "white",
+                  border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer"
+                }}
+              >
+                💾 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ DELETE ENTRY CONFIRM MODAL ═══ */}
+      {showDeleteEntryConfirm && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.9)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+        }}>
+          <div style={{
+            background: "white", borderRadius: 12, padding: 24, width: "100%",
+            maxWidth: 400, boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+          }}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🗑️</div>
+              <h2 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, color: "#dc2626" }}>
+                Delete Activity?
+              </h2>
+              <p style={{ margin: 0, fontSize: 14, color: "#666" }}>
+                This will permanently remove this entry from your records.
+              </p>
+            </div>
+            
+            <div style={{ 
+              background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, 
+              padding: 12, marginBottom: 20 
+            }}>
+              <div style={{ fontSize: 12, color: "#991b1b", fontWeight: 600 }}>
+                {showDeleteEntryConfirm.date} • {fmtH(showDeleteEntryConfirm.minutes)}
+              </div>
+              <div style={{ fontSize: 14, color: "#333", marginTop: 4 }}>
+                {showDeleteEntryConfirm.activity}
+              </div>
+            </div>
+            
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setShowDeleteEntryConfirm(null)}
+                style={{
+                  flex: 1, padding: "12px", background: "#f0f0f0", color: "#333",
+                  border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteEntry(showDeleteEntryConfirm.id)}
+                style={{
+                  flex: 1, padding: "12px", background: "#dc2626", color: "white",
+                  border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer"
+                }}
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ REP CALCULATOR MODAL ═══ */}
+      {showREPCalculator && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.95)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+        }}>
+          <div style={{
+            background: "white", borderRadius: 16, padding: 0, width: "100%",
+            maxWidth: 600, maxHeight: "90vh", display: "flex", flexDirection: "column",
+            boxShadow: "0 25px 80px rgba(0,0,0,0.5)", overflow: "hidden"
+          }}>
+            {/* Header */}
+            <div style={{ 
+              padding: "20px 24px", borderBottom: "1px solid #e8e8e8",
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 100%)"
+            }}>
+              <div>
+                <h2 style={{ margin: 0, color: "white", fontSize: 20, fontWeight: 700 }}>
+                  🧮 Do I Need REP Status?
+                </h2>
+                <p style={{ margin: "4px 0 0", color: "#C6A24A", fontSize: 12 }}>
+                  Calculate your potential tax savings
+                </p>
+              </div>
+              <button onClick={() => setShowREPCalculator(false)} style={{
+                background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 8,
+                width: 36, height: 36, cursor: "pointer", color: "white", fontSize: 18
+              }}>✕</button>
+            </div>
+            
+            {/* Content */}
+            <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>
+              {/* Input Fields */}
+              <div style={{ display: "grid", gap: 16 }}>
+                {/* Annual Income */}
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    💰 Your Annual Income (W-2 + Self-Employment)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="e.g., 120000"
+                    value={repCalcData.annualIncome}
+                    onChange={(e) => setRepCalcData({...repCalcData, annualIncome: e.target.value})}
+                    style={{ width: "100%", padding: "12px 14px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8 }}
+                  />
+                </div>
+
+                {/* Filing Status */}
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    📋 Filing Status
+                  </label>
+                  <select
+                    value={repCalcData.filingStatus}
+                    onChange={(e) => setRepCalcData({...repCalcData, filingStatus: e.target.value})}
+                    style={{ width: "100%", padding: "12px 14px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8 }}
+                  >
+                    <option value="single">Single</option>
+                    <option value="married">Married Filing Jointly</option>
+                    <option value="head">Head of Household</option>
+                  </select>
+                </div>
+
+                {/* Number of Properties */}
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    🏠 Number of Rental Properties
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="e.g., 3"
+                    value={repCalcData.numProperties}
+                    onChange={(e) => setRepCalcData({...repCalcData, numProperties: e.target.value})}
+                    style={{ width: "100%", padding: "12px 14px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8 }}
+                  />
+                </div>
+
+                {/* Rental Losses */}
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    📉 Total Annual Rental Losses (including depreciation)
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="e.g., 40000"
+                    value={repCalcData.rentalLosses}
+                    onChange={(e) => setRepCalcData({...repCalcData, rentalLosses: e.target.value})}
+                    style={{ width: "100%", padding: "12px 14px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8 }}
+                  />
+                  <p style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
+                    Tip: Depreciation alone is often $10K-15K per property
+                  </p>
+                </div>
+
+                {/* Job Hours */}
+                <div>
+                  <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                    ⏰ Your Work Hours Per Week (W-2 or Self-Employed)
+                  </label>
+                  <select
+                    value={repCalcData.jobHoursPerWeek}
+                    onChange={(e) => setRepCalcData({...repCalcData, jobHoursPerWeek: e.target.value})}
+                    style={{ width: "100%", padding: "12px 14px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8 }}
+                  >
+                    <option value="0">0 - Not working / Retired</option>
+                    <option value="10">10 hours (very part-time)</option>
+                    <option value="20">20 hours (part-time)</option>
+                    <option value="30">30 hours (reduced)</option>
+                    <option value="40">40 hours (full-time)</option>
+                    <option value="50">50+ hours (heavy workload)</option>
+                  </select>
+                </div>
+
+                {/* Spouse */}
+                {repCalcData.filingStatus === 'married' && (
+                  <>
+                    <div>
+                      <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#333", marginBottom: 6 }}>
+                        👫 Does Your Spouse Work?
+                      </label>
+                      <select
+                        value={repCalcData.spouseWorks}
+                        onChange={(e) => setRepCalcData({...repCalcData, spouseWorks: e.target.value})}
+                        style={{ width: "100%", padding: "12px 14px", fontSize: 16, border: "2px solid #e0e0e0", borderRadius: 8 }}
+                      >
+                        <option value="no">No - Stay-at-home / Retired</option>
+                        <option value="part">Part-time (under 20 hrs/week)</option>
+                        <option value="full">Full-time (40+ hrs/week)</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Results */}
+              {repCalcData.annualIncome && repCalcData.rentalLosses && (() => {
+                const income = parseInt(repCalcData.annualIncome) || 0;
+                const losses = parseInt(repCalcData.rentalLosses) || 0;
+                const jobHours = parseInt(repCalcData.jobHoursPerWeek) || 0;
+                const annualJobHours = jobHours * 50; // 50 work weeks
+                
+                // Calculate $25K allowance based on income
+                let allowance = 0;
+                if (income < 100000) {
+                  allowance = Math.min(25000, losses);
+                } else if (income < 150000) {
+                  allowance = Math.max(0, 25000 - ((income - 100000) / 2));
+                  allowance = Math.min(allowance, losses);
+                }
+                
+                // Without REP - only get allowance
+                const deductionWithoutREP = allowance;
+                const suspendedLosses = Math.max(0, losses - allowance);
+                
+                // With REP - full deduction
+                const deductionWithREP = losses;
+                
+                // Tax rate estimate (simplified)
+                let taxRate = 0.22;
+                if (income > 500000) taxRate = 0.37;
+                else if (income > 200000) taxRate = 0.35;
+                else if (income > 150000) taxRate = 0.32;
+                else if (income > 80000) taxRate = 0.24;
+                else if (income > 40000) taxRate = 0.22;
+                else taxRate = 0.12;
+                
+                const savingsWithoutREP = deductionWithoutREP * taxRate;
+                const savingsWithREP = deductionWithREP * taxRate;
+                const additionalSavings = savingsWithREP - savingsWithoutREP;
+                
+                // Can they qualify?
+                const reHoursNeeded = annualJobHours + 1; // Need more than job hours
+                const canQualifySelf = annualJobHours < 750 || (losses > 25000 && annualJobHours < 1500);
+                const spouseCanQualify = repCalcData.filingStatus === 'married' && 
+                  (repCalcData.spouseWorks === 'no' || repCalcData.spouseWorks === 'part');
+                
+                const needsREP = losses > allowance || income >= 100000;
+                
+                return (
+                  <div style={{ marginTop: 24 }}>
+                    <div style={{ 
+                      background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 100%)", 
+                      borderRadius: 12, padding: 20, color: "white" 
+                    }}>
+                      <h3 style={{ margin: "0 0 16px", fontSize: 16, color: "#C6A24A" }}>
+                        📊 Your REP Analysis
+                      </h3>
+                      
+                      {/* Current Situation */}
+                      <div style={{ marginBottom: 16, padding: 16, background: "rgba(255,255,255,0.1)", borderRadius: 8 }}>
+                        <div style={{ fontSize: 13, color: "#aaa", marginBottom: 8 }}>WITHOUT REP STATUS</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          <div>
+                            <div style={{ fontSize: 11, color: "#888" }}>$25K Allowance</div>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: income >= 150000 ? "#ef4444" : "#22c55e" }}>
+                              ${Math.round(allowance).toLocaleString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, color: "#888" }}>Suspended (Wasted)</div>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: "#ef4444" }}>
+                              ${Math.round(suspendedLosses).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* With REP */}
+                      <div style={{ marginBottom: 16, padding: 16, background: "rgba(34,197,94,0.2)", borderRadius: 8, border: "1px solid rgba(34,197,94,0.3)" }}>
+                        <div style={{ fontSize: 13, color: "#22c55e", marginBottom: 8 }}>WITH REP STATUS</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          <div>
+                            <div style={{ fontSize: 11, color: "#888" }}>Full Deduction</div>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: "#22c55e" }}>
+                              ${Math.round(losses).toLocaleString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, color: "#888" }}>Suspended</div>
+                            <div style={{ fontSize: 18, fontWeight: 700, color: "#22c55e" }}>
+                              $0
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Savings */}
+                      <div style={{ 
+                        padding: 16, 
+                        background: additionalSavings > 1000 ? "rgba(198,162,74,0.3)" : "rgba(255,255,255,0.1)", 
+                        borderRadius: 8,
+                        border: additionalSavings > 1000 ? "2px solid #C6A24A" : "none"
+                      }}>
+                        <div style={{ fontSize: 13, color: "#C6A24A", marginBottom: 8 }}>💰 POTENTIAL TAX SAVINGS</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                          <div>
+                            <div style={{ fontSize: 10, color: "#888" }}>Per Year</div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: "#C6A24A" }}>
+                              ${Math.round(additionalSavings).toLocaleString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: "#888" }}>Over 5 Years</div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: "#C6A24A" }}>
+                              ${Math.round(additionalSavings * 5).toLocaleString()}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 10, color: "#888" }}>Over 10 Years</div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: "#C6A24A" }}>
+                              ${Math.round(additionalSavings * 10).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Recommendation */}
+                    <div style={{ 
+                      marginTop: 16, padding: 16, borderRadius: 8,
+                      background: needsREP ? "#fef3c7" : "#d1fae5",
+                      border: needsREP ? "2px solid #f59e0b" : "2px solid #10b981"
+                    }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: needsREP ? "#92400e" : "#065f46", marginBottom: 8 }}>
+                        {needsREP ? "⚠️ You Should Consider REP Status" : "✅ REP Status May Be Optional"}
+                      </div>
+                      <div style={{ fontSize: 13, color: "#333", lineHeight: 1.6 }}>
+                        {needsREP ? (
+                          <>
+                            {income >= 150000 && <p style={{margin:"0 0 8px"}}>• Your income exceeds $150K, so you get <strong>$0</strong> passive loss allowance</p>}
+                            {income >= 100000 && income < 150000 && <p style={{margin:"0 0 8px"}}>• Your income is phasing out the $25K allowance</p>}
+                            {losses > 25000 && <p style={{margin:"0 0 8px"}}>• Your rental losses exceed $25K, leaving ${suspendedLosses.toLocaleString()} unused</p>}
+                            <p style={{margin:"0 0 8px"}}>• <strong>Annual savings with REP: ${Math.round(additionalSavings).toLocaleString()}</strong></p>
+                          </>
+                        ) : (
+                          <>
+                            <p style={{margin:"0 0 8px"}}>• Your $25K passive loss allowance covers your rental losses</p>
+                            <p style={{margin:0}}>• However, as you scale up or income grows, REP will become valuable</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Can You Qualify? */}
+                    <div style={{ marginTop: 16, padding: 16, borderRadius: 8, background: "#f8f8f8", border: "1px solid #e0e0e0" }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#333", marginBottom: 12 }}>
+                        🎯 Can You Qualify for REP Status?
+                      </div>
+                      
+                      <div style={{ fontSize: 13, color: "#555", lineHeight: 1.8 }}>
+                        <div style={{ marginBottom: 8 }}>
+                          <strong>Your job:</strong> {jobHours} hrs/week = {annualJobHours.toLocaleString()} hrs/year
+                        </div>
+                        <div style={{ marginBottom: 8 }}>
+                          <strong>RE hours needed for 50%:</strong> {(annualJobHours + 1).toLocaleString()}+ hours
+                        </div>
+                        
+                        {annualJobHours === 0 ? (
+                          <div style={{ color: "#22c55e", fontWeight: 600 }}>
+                            ✅ You can easily qualify! Just log 750+ hours of RE activities.
+                          </div>
+                        ) : annualJobHours <= 750 ? (
+                          <div style={{ color: "#22c55e", fontWeight: 600 }}>
+                            ✅ Very achievable! You need {annualJobHours + 1}+ RE hours to hit 50%.
+                          </div>
+                        ) : annualJobHours <= 1500 ? (
+                          <div style={{ color: "#f59e0b", fontWeight: 600 }}>
+                            ⚠️ Challenging but possible with {annualJobHours + 1}+ RE hours.
+                          </div>
+                        ) : (
+                          <div style={{ color: "#ef4444", fontWeight: 600 }}>
+                            ❌ Difficult - you'd need {annualJobHours + 1}+ RE hours.
+                          </div>
+                        )}
+                        
+                        {spouseCanQualify && (
+                          <div style={{ marginTop: 12, padding: 12, background: "#d1fae5", borderRadius: 6 }}>
+                            <strong style={{ color: "#065f46" }}>💡 SPOUSE STRATEGY:</strong>
+                            <div style={{ color: "#047857", marginTop: 4 }}>
+                              Your spouse {repCalcData.spouseWorks === 'no' ? "doesn't work" : "works part-time"}, 
+                              so THEY can qualify as REP with just 750+ hours!
+                              This is the most common strategy for high-income households.
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* CTA */}
+                    <button
+                      onClick={() => setShowREPCalculator(false)}
+                      style={{
+                        width: "100%", marginTop: 20, padding: "14px 20px",
+                        background: "#0F2742", color: "white", border: "none",
+                        borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: "pointer"
+                      }}
+                    >
+                      Start Tracking My REP Hours →
+                    </button>
+                  </div>
+                );
+              })()}
+              
+              {/* Disclaimer */}
+              <p style={{ 
+                fontSize: 10, color: "#888", marginTop: 20, padding: 12, 
+                background: "#f8f8f8", borderRadius: 6, lineHeight: 1.5 
+              }}>
+                ⚠️ <strong>Disclaimer:</strong> This calculator provides estimates only and is not tax advice. 
+                Actual tax savings depend on many factors including state taxes, AMT, and other deductions. 
+                Consult a qualified CPA or tax attorney for personalized advice.
+              </p>
             </div>
           </div>
         </div>
