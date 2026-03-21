@@ -204,6 +204,7 @@ function AuthScreen() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const { signIn, signUp } = useAuth();
 
   const inputStyle = { 
@@ -252,12 +253,89 @@ function AuthScreen() {
       } else if (data?.user?.identities?.length === 0) {
         setError("This email is already registered. Please log in.");
       } else {
-        setMessage("Check your email to confirm your account!");
+        // Show confirmation screen
+        setShowConfirmation(true);
       }
     }
     setLoading(false);
   };
 
+  const goToLogin = () => {
+    setShowConfirmation(false);
+    setMode("login");
+    setError("");
+    setMessage("");
+    // Keep email so user doesn't have to retype it
+  };
+
+  // ═══ EMAIL CONFIRMATION SCREEN ═══
+  if (showConfirmation) {
+    return (
+      <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 50%, #0F2742 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'IBM Plex Mono', monospace" }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');`}</style>
+        
+        <div style={{ background: "#F7F5EA", borderRadius: 8, padding: "40px 36px", width: "100%", maxWidth: 420, boxShadow: "0 25px 80px rgba(0,0,0,0.4)", textAlign: "center" }}>
+          {/* Success Icon */}
+          <div style={{ 
+            width: 80, height: 80, borderRadius: "50%", 
+            background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 24px", fontSize: 40
+          }}>
+            ✉️
+          </div>
+          
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: "#0F2742", fontFamily: "'Inter', sans-serif", margin: "0 0 12px" }}>
+            Check Your Email
+          </h1>
+          
+          <p style={{ fontSize: 14, color: "#4D6785", lineHeight: 1.6, margin: "0 0 24px" }}>
+            We sent a confirmation link to:<br/>
+            <strong style={{ color: "#0F2742" }}>{email}</strong>
+          </p>
+          
+          <div style={{ 
+            background: "#e8f4ec", border: "1px solid #86efac", borderRadius: 8, 
+            padding: 16, marginBottom: 24, textAlign: "left" 
+          }}>
+            <div style={{ fontSize: 13, color: "#166534", fontWeight: 600, marginBottom: 8 }}>
+              📋 Next Steps:
+            </div>
+            <ol style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: "#166534", lineHeight: 1.8 }}>
+              <li>Open your email inbox</li>
+              <li>Click the confirmation link from RepTrack</li>
+              <li>Come back here and log in!</li>
+            </ol>
+          </div>
+          
+          <button 
+            onClick={goToLogin}
+            style={{ 
+              width: "100%", padding: "14px 20px", 
+              background: "#C6A24A", border: "none", borderRadius: 4, 
+              color: "#0F2742", fontSize: 14, fontWeight: 600, 
+              cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace",
+              marginBottom: 16
+            }}
+          >
+            ← Go to Login
+          </button>
+          
+          <p style={{ fontSize: 11, color: "#7a96b0", margin: 0 }}>
+            Didn't receive the email? Check your spam folder or{" "}
+            <span 
+              onClick={() => { setShowConfirmation(false); setMode("signup"); }}
+              style={{ color: "#C6A24A", cursor: "pointer", textDecoration: "underline" }}
+            >
+              try again
+            </span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══ MAIN LOGIN/SIGNUP SCREEN ═══
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 50%, #0F2742 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'IBM Plex Mono', monospace" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');`}</style>
@@ -370,9 +448,9 @@ function AuthScreen() {
 
         <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid #d4cfbd", textAlign: "center", fontSize: 11, color: "#7a96b0" }}>
           {mode === "login" ? (
-            <>Don't have an account? <span onClick={() => setMode("signup")} style={{ color: "#C6A24A", cursor: "pointer" }}>Sign up</span></>
+            <>Don't have an account? <span onClick={() => setMode("signup")} style={{ color: "#C6A24A", cursor: "pointer", fontWeight: 600 }}>Sign up</span></>
           ) : (
-            <>Already have an account? <span onClick={() => setMode("login")} style={{ color: "#C6A24A", cursor: "pointer" }}>Log in</span></>
+            <>Already have an account? <span onClick={() => setMode("login")} style={{ color: "#C6A24A", cursor: "pointer", fontWeight: 600 }}>Log in</span></>
           )}
         </div>
       </div>
@@ -1080,6 +1158,7 @@ function MainApp() {
   const [showEditPropertyModal, setShowEditPropertyModal] = useState(null);
   const [showEditEntryModal, setShowEditEntryModal] = useState(null);
   const [showDeleteEntryConfirm, setShowDeleteEntryConfirm] = useState(null);
+  const [showDeletePropertyConfirm, setShowDeletePropertyConfirm] = useState(null);
   const [newProperty, setNewProperty] = useState({
     address: "", type: "single_family", units: 1, rent: "", purchaseDate: "",
     purchasePrice: "", downPayment: "", mortgagePayment: "", isSTR: false,
@@ -1136,18 +1215,12 @@ function MainApp() {
   
   // Delete property
   const deleteProperty = async (propertyId) => {
-    const property = localProperties.find(p => p.id === propertyId);
-    const propertyName = property?.name || property?.address || 'this property';
-    
-    // More explicit confirmation
-    const confirmed = confirm(`⚠️ DELETE PROPERTY\n\nAre you sure you want to permanently delete "${propertyName}"?\n\nThis action cannot be undone. All data for this property will be removed.`);
-    if (!confirmed) return;
-    
     // Update local state
     const updatedProperties = localProperties.filter(p => p.id !== propertyId);
     setLocalProperties(updatedProperties);
     setShowPropertyDetailModal(null);
     setShowEditPropertyModal(null);
+    setShowDeletePropertyConfirm(null);
     
     // Update localStorage backup
     if (user) {
@@ -1163,9 +1236,51 @@ function MainApp() {
       if (!res.ok) {
         console.error("Error deleting from Supabase");
       }
+      console.log("✅ Property deleted:", propertyId);
     } catch (err) {
       console.error("Error deleting property:", err);
     }
+  };
+
+  // Remove duplicate entries (same activity, minutes, and date)
+  const removeDuplicateEntries = async () => {
+    const seen = new Map();
+    const duplicates = [];
+    const unique = [];
+    
+    localEntries.forEach(entry => {
+      const key = `${entry.date}-${entry.activity}-${entry.minutes}`;
+      if (seen.has(key)) {
+        duplicates.push(entry);
+      } else {
+        seen.set(key, entry);
+        unique.push(entry);
+      }
+    });
+    
+    if (duplicates.length === 0) {
+      alert("No duplicate entries found!");
+      return;
+    }
+    
+    const confirmed = confirm(`Found ${duplicates.length} duplicate entries. Remove them?`);
+    if (!confirmed) return;
+    
+    // Delete duplicates from Supabase
+    for (const dup of duplicates) {
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/entries?id=eq.${dup.id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+      } catch (err) {
+        console.error("Error deleting duplicate:", err);
+      }
+    }
+    
+    // Update local state
+    setLocalEntries(unique);
+    alert(`✅ Removed ${duplicates.length} duplicate entries!`);
   };
   
   // Helper to update unit details for multifamily
@@ -3410,6 +3525,13 @@ Since I can't directly read the document content, please ask me for the specific
                     <option key={year} value={year}>{year}</option>
                   ))}
                 </select>
+                <button onClick={removeDuplicateEntries} style={{ 
+                  display: "flex", alignItems: "center", gap: 6, padding: "10px 14px",
+                  background: "#fef2f2", border: "2px solid #fca5a5", borderRadius: 8,
+                  color: "#dc2626", fontSize: 12, fontWeight: 600, cursor: "pointer"
+                }}>
+                  🧹 Remove Duplicates
+                </button>
                 <button onClick={exportWeeklyPDF} style={{ 
                   display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
                   background: "white", border: `2px solid ${C.dark}`, borderRadius: 8,
@@ -3624,16 +3746,28 @@ Since I can't directly read the document content, please ask me for the specific
                             <div style={{ fontSize: 12, color: "#888" }}>{p.isSTR ? "Short-Term Rental" : "Long-Term Rental"}</div>
                           </div>
                         </div>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); startEditProperty(p); }}
-                          style={{ 
-                            padding: "6px 12px", background: "#f5f5f5", color: "#666", 
-                            border: "1px solid #ddd", borderRadius: 6, fontSize: 12, 
-                            cursor: "pointer", fontWeight: 500
-                          }}
-                        >
-                          Edit
-                        </button>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); startEditProperty(p); }}
+                            style={{ 
+                              padding: "6px 12px", background: "#f5f5f5", color: "#666", 
+                              border: "1px solid #ddd", borderRadius: 6, fontSize: 12, 
+                              cursor: "pointer", fontWeight: 500
+                            }}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setShowDeletePropertyConfirm(p); }}
+                            style={{ 
+                              padding: "6px 10px", background: "#fef2f2", color: "#dc2626", 
+                              border: "1px solid #fca5a5", borderRadius: 6, fontSize: 12, 
+                              cursor: "pointer"
+                            }}
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
                       
                       {/* Content */}
@@ -5941,6 +6075,67 @@ Since I can't directly read the document content, please ask me for the specific
                 }}
               >
                 🗑️ Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ DELETE PROPERTY CONFIRM MODAL ═══ */}
+      {showDeletePropertyConfirm && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 39, 66, 0.9)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+        }}>
+          <div style={{
+            background: "white", borderRadius: 12, padding: 24, width: "100%",
+            maxWidth: 420, boxShadow: "0 25px 80px rgba(0,0,0,0.5)"
+          }}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🏠</div>
+              <h2 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, color: "#dc2626" }}>
+                Delete Property?
+              </h2>
+              <p style={{ margin: 0, fontSize: 14, color: "#666" }}>
+                This will permanently remove this property and all its data.
+              </p>
+            </div>
+            
+            <div style={{ 
+              background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, 
+              padding: 16, marginBottom: 20 
+            }}>
+              <div style={{ fontSize: 16, color: "#991b1b", fontWeight: 700, marginBottom: 4 }}>
+                {showDeletePropertyConfirm.name}
+              </div>
+              <div style={{ fontSize: 13, color: "#666" }}>
+                {showDeletePropertyConfirm.address}
+              </div>
+              <div style={{ fontSize: 12, color: "#888", marginTop: 8 }}>
+                {showDeletePropertyConfirm.isSTR ? "🏖️ STR" : "🏠 LTR"} • 
+                ${(showDeletePropertyConfirm.rent || 0).toLocaleString()}/mo
+              </div>
+            </div>
+            
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setShowDeletePropertyConfirm(null)}
+                style={{
+                  flex: 1, padding: "12px", background: "#f0f0f0", color: "#333",
+                  border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteProperty(showDeletePropertyConfirm.id)}
+                style={{
+                  flex: 1, padding: "12px", background: "#dc2626", color: "white",
+                  border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer"
+                }}
+              >
+                🗑️ Delete Property
               </button>
             </div>
           </div>
