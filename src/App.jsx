@@ -1814,6 +1814,43 @@ function MainApp() {
     };
   };
 
+  // ═══ CHAT API HELPER ═══════════════════════════════════════════════════════
+  // Centralized call to /api/chat. Sends Supabase JWT so the serverless
+  // function can authenticate the user and enforce per-user rate limits.
+  // Handles 401 (expired session) and 429 (rate limited) cleanly.
+  const callChatApi = async (system, messages) => {
+    const token = localStorage.getItem('sb-token');
+    if (!token) {
+      throw new Error("Your session has expired. Please sign in again.");
+    }
+
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ system, messages })
+    });
+
+    if (response.status === 401) {
+      // Token is invalid/expired — force a clean re-auth
+      await supabase.auth.signOut();
+      window.location.reload();
+      throw new Error("Session expired. Please sign in again.");
+    }
+    if (response.status === 429) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Too many requests. Please wait a moment and try again.");
+    }
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Chat service is temporarily unavailable.");
+    }
+
+    return response.json();
+  };
+
   // Load all data from Supabase
   const loadAllData = async () => {
     if (!user) return;
@@ -2516,17 +2553,11 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
     setLoading(true);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          system: getSystemPrompt(reHrs, rePct, localEntries, profile, localProperties),
-          messages: [...messages.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })), { role: "user", content: input.trim() }]
-        })
-      });
+      const data = await callChatApi(
+        getSystemPrompt(reHrs, rePct, localEntries, profile, localProperties),
+        [...messages.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })), { role: "user", content: input.trim() }]
+      );
 
-      const data = await response.json();
-      
       if (data.error) {
         throw new Error(data.error);
       }
@@ -3186,16 +3217,10 @@ Since I can't directly read the document content, please ask me for the specific
 - What other key details should I provide?` }
                               ];
 
-                              const response = await fetch("/api/chat", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  system: systemPrompt,
-                                  messages: [{ role: "user", content: messageContent }]
-                                })
-                              });
-                              
-                              const data = await response.json();
+                              const data = await callChatApi(
+                                systemPrompt,
+                                [{ role: "user", content: messageContent }]
+                              );
                               let aiResponse = data.content?.[0]?.text || data.error || "I couldn't analyze the document. Please describe what's in it.";
                               
                               // Check for property add tag
