@@ -2713,8 +2713,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         content: cleanResponseText(responseText),
         activityLogged: !!activityData || !!propertyData || !!tenantData || !!vendorData
       };
-    setMessages(prev => [...prev, assistantMessage]);
-    } // end try
+     setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
       setMessages(prev => [...prev, {
         role: "assistant",
