@@ -94,13 +94,14 @@ const supabase = {
         const data = await res.json();
         if (data.error) return { error: data.error };
         if (data.access_token) {
-          localStorage.setItem('sb-token', data.access_token);
-          localStorage.setItem('sb-user', JSON.stringify(data.user));
-          // Save profile from user_metadata
-          if (data.user?.user_metadata) {
-            localStorage.setItem('sb-profile', JSON.stringify(data.user.user_metadata));
-          }
-        }
+  localStorage.setItem('sb-token', data.access_token);
+  localStorage.setItem('sb-refresh-token', data.refresh_token || '');
+  localStorage.setItem('sb-token-expires', String(Date.now() + (data.expires_in || 3600) * 1000));
+  localStorage.setItem('sb-user', JSON.stringify(data.user));
+  if (data.user?.user_metadata) {
+    localStorage.setItem('sb-profile', JSON.stringify(data.user.user_metadata));
+  }
+}
         return { data, error: null };
       } catch (err) {
         return { error: { message: err.message } };
