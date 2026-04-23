@@ -174,23 +174,12 @@ function AuthProvider({ children }) {
     }
     return { data, error };
   };
-
   const signOut = async () => {
-  const newToken = await refreshSession();
-      if (newToken) {
-        const retry = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${newToken}` },
-          body: JSON.stringify({ system, messages })
-        });
-        if (retry.ok) return retry.json();
-      }
-const signOut = async () => {
-  await supabase.auth.signOut();
-  setUser(null);
-  setProfile(null);
-  window.location.reload();
-};
+    await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
+    window.location.reload();
+  };
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, signOut }}>
