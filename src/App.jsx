@@ -2554,15 +2554,37 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
     setLoading(true);
 
     try {
-      const data = await callChatApi(
-        getSystemPrompt(reHrs, rePct, localEntries, profile, localProperties),
-        [...messages.filter(m => m.id !== "welcome").map(m => ({ role: m.role, content: m.content })), { role: "user", content: input.trim() }]
-      );
-
-      if (data.error) {
-        throw new Error(data.error);
+      const refreshSession = async () => {
+    const refreshToken = localStorage.getItem('sb-refresh-token');
+    if (!refreshToken) return null;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+        body: JSON.stringify({ refresh_token: refreshToken })
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        localStorage.setItem('sb-token', data.access_token);
+        localStorage.setItem('sb-refresh-token', data.refresh_token || refreshToken);
+        localStorage.setItem('sb-token-expires', String(Date.now() + (data.expires_in || 3600) * 1000));
+        if (data.user) localStorage.setItem('sb-user', JSON.stringify(data.user));
+        return data.access_token;
       }
+    } catch {}
+    return null;
+  };
 
+  const callChatApi = async (system, messages) => {
+    let token = localStorage.getItem('sb-token');
+    const expires = parseInt(localStorage.getItem('sb-token-expires') || '0');
+    if (!expires || Date.now() > expires - 5 * 60 * 1000) {
+      const newToken = await refreshSession();
+      if (newToken) token = newToken;
+    }
+    if (!token) {
+      throw new Error("Your session has expired. Please sign in again.");
+    }
       const responseText = data.content[0].text;
       
       // Check for activity to save - WITH DUPLICATE DETECTION
