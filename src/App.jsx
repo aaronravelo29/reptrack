@@ -185,9 +185,12 @@ function AuthProvider({ children }) {
         });
         if (retry.ok) return retry.json();
       }
-      await supabase.auth.signOut();
-      window.location.reload();
-      throw new Error("Session expired. Please sign in again.");
+const signOut = async () => {
+  await supabase.auth.signOut();
+  setUser(null);
+  setProfile(null);
+  window.location.reload();
+};
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, signOut }}>
