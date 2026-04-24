@@ -489,6 +489,81 @@ const IRS_CATEGORIES = {
   non_re: { label: "Non-REPP Work (General)", qualifies: false, examples: "other non-qualifying work" }
 };
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MAINTENANCE — request types and urgency levels
+// ═══════════════════════════════════════════════════════════════════════════
+const REQUEST_TYPES = [
+  { id: "hvac",          label: "HVAC" },
+  { id: "plumbing",      label: "Plumbing" },
+  { id: "electrical",    label: "Electrical" },
+  { id: "painting",      label: "Painting" },
+  { id: "appliance",     label: "Appliance" },
+  { id: "flooring",      label: "Flooring" },
+  { id: "pest_control",  label: "Pest Control" },
+  { id: "landscaping",   label: "Landscaping" },
+  { id: "general",       label: "General" },
+  { id: "emergency",     label: "Emergency" },
+];
+
+const URGENCY_LEVELS = [
+  { id: "low",       label: "Low",       color: "#6b7280", sla: "7 days"  },
+  { id: "medium",    label: "Medium",    color: "#2563eb", sla: "3 days"  },
+  { id: "high",      label: "High",      color: "#d97706", sla: "24 hrs"  },
+  { id: "emergency", label: "Emergency", color: "#dc2626", sla: "2 hrs"   },
+];
+
+const STATUS_COLUMNS = [
+  { id: "new",         label: "New",         description: "Not yet triaged" },
+  { id: "assigned",    label: "Assigned",    description: "Vendor notified" },
+  { id: "in_progress", label: "In Progress", description: "Work underway"   },
+  { id: "completed",   label: "Completed",   description: "Resolved"        },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ACCOUNTING — Chart of Accounts with Schedule E line tagging
+// Every expense account maps to a Schedule E (Form 1040) line number so
+// year-end reports can aggregate directly into the tax form.
+// ═══════════════════════════════════════════════════════════════════════════
+const CHART_OF_ACCOUNTS = [
+  // Assets (1xxx)
+  { code: "1010", name: "Operating Cash",      type: "asset",     schE: null },
+  { code: "1020", name: "Security Deposits Held", type: "asset",  schE: null },
+  { code: "1500", name: "Buildings",           type: "asset",     schE: null },
+  { code: "1510", name: "Accumulated Depreciation", type: "asset", schE: null },
+
+  // Liabilities (2xxx)
+  { code: "2010", name: "Accounts Payable",    type: "liability", schE: null },
+  { code: "2020", name: "Security Deposits Owed", type: "liability", schE: null },
+  { code: "2500", name: "Mortgage Payable",    type: "liability", schE: null },
+
+  // Equity (3xxx)
+  { code: "3010", name: "Owner Capital",       type: "equity",    schE: null },
+  { code: "3020", name: "Owner Draws",         type: "equity",    schE: null },
+
+  // Income (4xxx) → Schedule E line 3
+  { code: "4010", name: "Rental Income",       type: "income",    schE: 3 },
+  { code: "4020", name: "Late Fees",           type: "income",    schE: 3 },
+  { code: "4030", name: "Pet Fees",            type: "income",    schE: 3 },
+  { code: "4090", name: "Other Rental Income", type: "income",    schE: 3 },
+
+  // Expenses (5xxx) → Schedule E lines 5–19
+  { code: "5050", name: "Advertising",         type: "expense",   schE: 5  },
+  { code: "5060", name: "Auto & Travel",       type: "expense",   schE: 6  },
+  { code: "5070", name: "Cleaning & Maintenance", type: "expense", schE: 7 },
+  { code: "5080", name: "Commissions",         type: "expense",   schE: 8  },
+  { code: "5090", name: "Insurance",           type: "expense",   schE: 9  },
+  { code: "5100", name: "Legal & Professional", type: "expense",  schE: 10 },
+  { code: "5110", name: "Management Fees",     type: "expense",   schE: 11 },
+  { code: "5120", name: "Mortgage Interest",   type: "expense",   schE: 12 },
+  { code: "5130", name: "Other Interest",      type: "expense",   schE: 13 },
+  { code: "5140", name: "Repairs",             type: "expense",   schE: 14 },
+  { code: "5150", name: "Supplies",            type: "expense",   schE: 15 },
+  { code: "5160", name: "Taxes",               type: "expense",   schE: 16 },
+  { code: "5170", name: "Utilities",           type: "expense",   schE: 17 },
+  { code: "5180", name: "Depreciation",        type: "expense",   schE: 18 },
+  { code: "5900", name: "Other Expenses",      type: "expense",   schE: 19 },
+];
+
 // Non-REP quick add options
 const NON_RE_QUICK_OPTIONS = [
   { id: "w2_employment", label: "W-2 Job", icon: "💼" },
