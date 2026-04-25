@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useMemo, createContext, useContext } from "react";
+import { AccountingView, BankingView, QuickBillModal } from "./lib/AccountingModule.jsx";
+import { getAccountingPromptExtension, parseExpenseFromResponse, stripExpenseTag } from "./lib/accountingPrompts.js";
 
 // ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://lzxutumsrzjovjmebqns.supabase.co";
@@ -602,6 +604,8 @@ const VIEWS = [
   { id:"properties", icon:"⌂", label:"Properties" },
   { id:"tenants", icon:"👥", label:"Tenants" },
   { id:"vendors", icon:"🔧", label:"Vendors" },
+  { id:"accounting", icon:"§", label:"Accounting" },
+  { id:"banking", icon:"∎", label:"Banking" },
 ];
 
 // STR Platforms
@@ -1160,6 +1164,13 @@ function MainApp() {
   const [localProperties, setLocalProperties] = useState([]);
   const [localTenants, setLocalTenants] = useState([]);
   const [localVendors, setLocalVendors] = useState([]);
+  const [localExpenses, setLocalExpenses] = useState(() => {
+    try {
+      const saved = localStorage.getItem('reptrack-expenses');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [showQuickBill, setShowQuickBill] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   
   // Chat state - load from localStorage
@@ -1183,6 +1194,11 @@ function MainApp() {
       localStorage.setItem('reptrack-chat-history', JSON.stringify(toSave));
     }
   }, [messages]);
+
+  // Persist expenses ledger to localStorage
+  useEffect(() => {
+    localStorage.setItem('reptrack-expenses', JSON.stringify(localExpenses.slice(0, 500)));
+  }, [localExpenses]);
 
   // Quick-add non-REP modal state
   const [showNonREModal, setShowNonREModal] = useState(false);
@@ -2614,6 +2630,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
   const cleanResponseText = (text) => {
     return text
       .replace(/\[\[SAVE_ACTIVITY:.*?\]\]/g, '')
+      .replace(/\[\[SAVE_EXPENSE:.*?\]\]/g, '')
       .replace(/\[\[ADD_PROPERTY:.*?\]\]/g, '')
       .replace(/\[\[ADD_TENANT:.*?\]\]/g, '')
       .replace(/\[\[ADD_VENDOR:.*?\]\]/g, '')
@@ -2629,7 +2646,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
     setLoading(true);
 
       try {
-      const system = getSystemPrompt(reHrs, rePct, localEntries, profile, localProperties);
+      const system = getSystemPrompt(reHrs, rePct, localEntries, profile, localProperties) + getAccountingPromptExtension();
       const apiMessages = messages
         .filter(m => m.id !== "welcome")
         .concat(userMessage)
@@ -2638,7 +2655,13 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
       const data = await callChatApi(system, apiMessages);
       const responseText = data.content[0].text;
-      
+
+      // Check for accounting expense to save (alongside any activity)
+      const expenseData = parseExpenseFromResponse(responseText);
+      if (expenseData) {
+        setLocalExpenses(prev => [{ ...expenseData, id: uid(), savedAt: new Date().toISOString() }, ...prev]);
+      }
+
       // Check for activity to save - WITH DUPLICATE DETECTION
       const activityData = parseActivityFromResponse(responseText);
       if (activityData) {
@@ -4244,7 +4267,40 @@ Since I can't directly read the document content, please ask me for the specific
             </div>
           </div>
         )}
+
+        {/* ACCOUNTING VIEW */}
+        {view === "accounting" && (
+          <div className="tab-scroll">
+            <AccountingView
+              C={C}
+              fs={fs}
+              entries={localEntries}
+              expenses={localExpenses}
+              properties={localProperties}
+              onOpenQuickBill={() => setShowQuickBill(true)}
+            />
+          </div>
+        )}
+
+        {/* BANKING VIEW */}
+        {view === "banking" && (
+          <div className="tab-scroll">
+            <BankingView C={C} fs={fs} />
+          </div>
+        )}
       </main>
+
+      {/* QuickBill AI Invoice Modal */}
+      <QuickBillModal
+        C={C}
+        fs={fs}
+        isOpen={showQuickBill}
+        onClose={() => setShowQuickBill(false)}
+        properties={localProperties}
+        onSave={(data) => {
+          setLocalExpenses(prev => [{ ...data, id: uid(), savedAt: new Date().toISOString(), accountType: data.accountType || 'expense' }, ...prev]);
+        }}
+      />
 
       {/* Non-REPP Hours Quick Add Modal */}
       {showNonREModal && (
