@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, createContext, useContext } from "react";
 import { AccountingView, BankingView, QuickBillModal } from "./lib/AccountingModule.jsx";
 import { getAccountingPromptExtension, parseExpenseFromResponse, stripExpenseTag } from "./lib/accountingPrompts.js";
+import { FinancialDashboardWidgets, MaintenanceView, TenantLedgerPanel, Vendor1099Hub } from "./lib/PropertyManagementModule.jsx";
 
 // ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://lzxutumsrzjovjmebqns.supabase.co";
@@ -604,6 +605,7 @@ const VIEWS = [
   { id:"properties", icon:"⌂", label:"Properties" },
   { id:"tenants", icon:"👥", label:"Tenants" },
   { id:"vendors", icon:"🔧", label:"Vendors" },
+  { id:"maintenance", icon:"🔨", label:"Maintenance" },
   { id:"accounting", icon:"§", label:"Accounting" },
   { id:"banking", icon:"∎", label:"Banking" },
 ];
@@ -3626,6 +3628,9 @@ Since I can't directly read the document content, please ask me for the specific
                 ))
               )}
             </div>
+
+            {/* Financial dashboard widgets */}
+            <FinancialDashboardWidgets C={C} properties={localProperties} tenants={localTenants} localExpenses={localExpenses} />
           </div>
         )}
 
@@ -4124,6 +4129,9 @@ Since I can't directly read the document content, please ask me for the specific
               </div>
             )}
             </div>
+
+            {/* Tenant payment ledger */}
+            <TenantLedgerPanel C={C} tenants={localTenants} />
           </div>
         )}
 
@@ -4265,6 +4273,16 @@ Since I can't directly read the document content, please ask me for the specific
                 </div>
               </div>
             </div>
+
+            {/* Vendor 1099 hub */}
+            <Vendor1099Hub C={C} vendors={localVendors} />
+          </div>
+        )}
+
+        {/* MAINTENANCE VIEW */}
+        {view === "maintenance" && (
+          <div className="tab-scroll">
+            <MaintenanceView C={C} fs={fs} properties={localProperties} vendors={localVendors} />
           </div>
         )}
 
