@@ -580,34 +580,33 @@ const fmtH = (m) => { const h=Math.floor(m/60),mn=m%60; return !h&&!mn?"0h":`${h
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const todayStr = () => new Date().toISOString().split("T")[0];
 
+// Single palette: dark navy + teal accent + grays only
 const C = {
-  // Layout
-  bg:"#F1F5F9", white:"#ffffff", dark:"#0D1B2A", darker:"#060F1A", text:"#1E293B",
-  mid:"#475569", light:"#64748B", lighter:"#94A3B8", border:"#E2E8F0", borderL:"#F1F5F9",
-  // Teal accent (replaces gold)
+  bg:"#F4F6F9", white:"#ffffff", dark:"#0D1B2A", darker:"#060F1A", text:"#1E293B",
+  mid:"#475569", light:"#64748B", lighter:"#94A3B8", border:"#E2E8F0", borderL:"#EEF2F7",
+  // Teal — THE accent color
   gold:"#00A88C", goldL:"#00C9A7", goldPale:"#E0F7F4", goldBright:"#00E5C4",
-  // Green — success, REP qualifying
-  green:"#065F46", greenPale:"#D1FAE5", greenB:"#059669",
-  // Red — alerts, non-qualifying
-  red:"#991B1B", redPale:"#FEE2E2", redB:"#DC2626",
-  // Blue — info
-  blue:"#1E40AF", bluePale:"#DBEAFE", blueB:"#2563EB",
-  // Purple
-  purple:"#5B21B6", purpleB:"#7C3AED",
-  // Orange
-  orange:"#B45309", orangePale:"#FEF3C7", orangeB:"#D97706",
+  // "Green" → teal (positive uses accent, not green)
+  green:"#007A6A", greenPale:"#E0F7F4", greenB:"#00C9A7",
+  // "Red" → dark gray (alerts use dark, not red)
+  red:"#475569", redPale:"#F1F5F9", redB:"#64748B",
+  // "Blue" → same gray family
+  blue:"#334155", bluePale:"#F4F6F9", blueB:"#475569",
+  // Orange/Purple → gray
+  purple:"#475569", purpleB:"#64748B",
+  orange:"#475569", orangePale:"#F4F6F9", orangeB:"#64748B",
 };
 
 const VIEWS = [
-  { id:"assistant", icon:"◈", label:"Assistant" },
-  { id:"dashboard", icon:"◉", label:"Dashboard" },
-  { id:"records", icon:"⊟", label:"Records" },
-  { id:"properties", icon:"⌂", label:"Properties" },
-  { id:"tenants", icon:"👥", label:"Tenants" },
-  { id:"vendors", icon:"🔧", label:"Vendors" },
-  { id:"maintenance", icon:"🔨", label:"Maintenance" },
-  { id:"accounting", icon:"§", label:"Accounting" },
-  { id:"banking", icon:"∎", label:"Banking" },
+  { id:"assistant",   icon:"◈", label:"Assistant"   },
+  { id:"dashboard",   icon:"◉", label:"Dashboard"   },
+  { id:"records",     icon:"⊟", label:"Records"     },
+  { id:"properties",  icon:"⌂", label:"Properties"  },
+  { id:"tenants",     icon:"◎", label:"Tenants"     },
+  { id:"vendors",     icon:"⚙", label:"Vendors"     },
+  { id:"maintenance", icon:"⊕", label:"Maintenance" },
+  { id:"accounting",  icon:"§", label:"Accounting"  },
+  { id:"banking",     icon:"⊞", label:"Banking"     },
 ];
 
 // STR Platforms
@@ -1174,6 +1173,8 @@ function MainApp() {
   });
   const [showQuickBill, setShowQuickBill] = useState(false);
   const [emailRobot, setEmailRobot] = useState({ open: false, trigger: {} });
+  const [robotEnabled, setRobotEnabled] = useState(() => localStorage.getItem('reptrack-robot-enabled') !== 'false');
+  const toggleRobot = () => setRobotEnabled(v => { const n = !v; localStorage.setItem('reptrack-robot-enabled', String(n)); return n; });
   const [dataLoading, setDataLoading] = useState(true);
   
   // Chat state - load from localStorage
@@ -2849,8 +2850,8 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
 
         /* ── SIDEBAR ── */
         .sidebar {
-          width: 220px;
-          min-width: 220px;
+          width: 230px;
+          min-width: 230px;
           background: #0D1B2A;
           display: flex;
           flex-direction: column;
@@ -2861,50 +2862,61 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           overflow: hidden;
         }
         .sidebar-logo {
-          padding: 22px 20px 16px;
-          border-bottom: 1px solid rgba(0,201,167,0.18);
+          padding: 24px 20px 18px;
+          border-bottom: 1px solid rgba(0,201,167,0.15);
         }
         .sidebar-nav {
           flex: 1;
           overflow-y: auto;
-          padding: 12px 10px;
+          padding: 14px 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
         }
         .sidebar-nav-item {
           display: flex;
           align-items: center;
-          gap: 10px;
-          padding: 10px 12px;
+          gap: 12px;
+          padding: 11px 14px;
           cursor: pointer;
           border: none;
           background: transparent;
           width: 100%;
           text-align: left;
-          border-radius: 8px;
-          transition: all 0.15s;
-          margin-bottom: 2px;
+          border-radius: 10px;
+          transition: background 0.15s, color 0.15s;
         }
         .sidebar-nav-item:hover {
-          background: rgba(255,255,255,0.07);
+          background: rgba(255,255,255,0.06);
         }
         .sidebar-nav-item.active {
-          background: rgba(0,201,167,0.14);
-          box-shadow: inset 3px 0 0 #00C9A7;
+          background: rgba(0,201,167,0.16);
         }
-        .sidebar-nav-icon { font-size: 17px; min-width: 20px; text-align: center; }
+        .sidebar-nav-icon {
+          font-size: 16px;
+          min-width: 20px;
+          text-align: center;
+          color: rgba(255,255,255,0.55);
+          transition: color 0.15s;
+        }
+        .sidebar-nav-item.active .sidebar-nav-icon { color: #00C9A7; }
+        .sidebar-nav-item:hover .sidebar-nav-icon { color: rgba(255,255,255,0.9); }
         .sidebar-nav-label {
           font-family: 'Inter', sans-serif;
-          font-size: 13px;
+          font-size: 13.5px;
           font-weight: 500;
-          color: rgba(255,255,255,0.62);
+          color: rgba(255,255,255,0.58);
           white-space: nowrap;
+          transition: color 0.15s;
         }
         .sidebar-nav-item.active .sidebar-nav-label { color: #00C9A7; font-weight: 600; }
+        .sidebar-nav-item:hover .sidebar-nav-label { color: rgba(255,255,255,0.92); }
         .sidebar-footer {
-          padding: 14px 16px;
+          padding: 16px 16px;
           border-top: 1px solid rgba(255,255,255,0.07);
         }
         .app-content {
-          margin-left: 220px;
+          margin-left: 230px;
           flex: 1;
           display: flex;
           flex-direction: column;
@@ -2913,14 +2925,14 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         }
         .top-bar {
           background: #FFFFFF;
-          border-bottom: 2px solid #00C9A7;
-          padding: 0 24px;
-          height: 58px;
+          border-bottom: 1px solid #E2E8F0;
+          padding: 0 28px;
+          height: 60px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           flex-shrink: 0;
-          box-shadow: 0 2px 8px rgba(13,27,42,0.07);
+          box-shadow: 0 1px 6px rgba(13,27,42,0.05);
         }
 
         /* ── SCROLLING ── */
@@ -2990,11 +3002,12 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         .nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 18px; cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; transition:all .15s; color:#94A3B8; }
         .nav-item:hover { color:#00C9A7; }
         .nav-item.active { color:#00C9A7; border-bottom-color:#00C9A7; }
-        .card { background:#fff; border:1px solid ${C.border}; border-radius:12px; padding:20px; box-shadow:0 1px 6px rgba(13,27,42,0.06); }
-        .btn-gold { background:#00C9A7; border:none; color:#0D1B2A; font-weight:700; padding:10px 22px; font-family:'Inter',sans-serif; font-size:12px; letter-spacing:0.5px; cursor:pointer; border-radius:8px; transition:background 0.15s; }
-        .btn-gold:hover { background:#00A88C; }
-        .btn-outline { background:#fff; border:1px solid ${C.border}; color:${C.mid}; padding:9px 18px; font-family:'Inter',sans-serif; font-size:12px; cursor:pointer; border-radius:8px; transition:all 0.15s; }
-        .btn-outline:hover { border-color:#00C9A7; color:#00A88C; }
+        .card { background:#fff; border:1px solid #E8EDF4; border-radius:14px; padding:22px; box-shadow:0 2px 10px rgba(13,27,42,0.05); transition:box-shadow 0.2s; }
+        .card:hover { box-shadow:0 4px 18px rgba(13,27,42,0.09); }
+        .btn-gold { background:#00C9A7; border:none; color:#0D1B2A; font-weight:700; padding:11px 24px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer; border-radius:10px; transition:all 0.15s; }
+        .btn-gold:hover { background:#00B396; transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,201,167,0.3); }
+        .btn-outline { background:#fff; border:1px solid #E2E8F0; color:#475569; padding:10px 20px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer; border-radius:10px; transition:all 0.15s; }
+        .btn-outline:hover { border-color:#00C9A7; color:#00A88C; background:#F0FDFB; }
         .msg-bubble { max-width: 85%; padding: 14px 18px; border-radius: 14px; margin-bottom: 12px; }
         .msg-user { background: ${C.dark}; color: #00E5C4; margin-left: auto; border-bottom-right-radius: 4px; }
         .msg-assistant { background: white; border: 1px solid ${C.border}; color: ${C.text}; margin-right: auto; border-bottom-left-radius: 4px; box-shadow: 0 1px 4px rgba(13,27,42,0.06); }
@@ -3129,7 +3142,19 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
             {profile?.companyName && <span style={{ fontSize: 12, fontWeight: 400, color: C.light, marginLeft: 10 }}>{profile.companyName}</span>}
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {view === "accounting" && <button onClick={() => setShowQuickBill(true)} style={{ padding: "6px 14px", background: C.gold, border: "none", borderRadius: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", color: C.dark, cursor: "pointer" }}>+ QuickBill</button>}
+            {view === "accounting" && <button onClick={() => setShowQuickBill(true)} className="btn-gold" style={{ padding: "7px 16px", fontSize: 12 }}>+ QuickBill</button>}
+            {/* Robot on/off toggle */}
+            <button onClick={toggleRobot} title={robotEnabled ? "Email Robot is ON — click to disable" : "Email Robot is OFF — click to enable"} style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "6px 12px", borderRadius: 20,
+              background: robotEnabled ? C.goldPale : C.borderL,
+              border: `1px solid ${robotEnabled ? C.goldL : C.border}`,
+              cursor: "pointer", fontSize: 11, fontFamily: "'Inter', sans-serif", fontWeight: 600,
+              color: robotEnabled ? C.gold : C.lighter, transition: "all 0.2s",
+            }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: robotEnabled ? C.goldL : C.lighter }} />
+              Robot {robotEnabled ? "ON" : "OFF"}
+            </button>
           </div>
         </div>
 
@@ -4344,6 +4369,8 @@ Since I can't directly read the document content, please ask me for the specific
         trigger={emailRobot.trigger}
         properties={localProperties}
         vendors={localVendors}
+        robotEnabled={robotEnabled}
+        onToggleRobot={toggleRobot}
       />
 
       {/* QuickBill AI Invoice Modal */}

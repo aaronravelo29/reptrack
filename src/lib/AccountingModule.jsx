@@ -137,27 +137,27 @@ export function AccountingView({ C, fs, entries = [], expenses = [], properties 
 
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 18 }}>
-        <div className="card" style={{ borderLeft: `4px solid ${C.greenB}`, padding: 14 }}>
+        <div className="card" style={{ borderTop: `3px solid ${C.goldL}`, padding: 14 }}>
           <div style={sectionLabel(C)}>Revenue YTD</div>
-          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 600, color: C.green }}>
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 600, color: C.gold }}>
             {fmtUSD(summary.revenue)}
           </div>
         </div>
-        <div className="card" style={{ borderLeft: `4px solid ${C.redB}`, padding: 14 }}>
+        <div className="card" style={{ borderTop: `3px solid ${C.border}`, padding: 14 }}>
           <div style={sectionLabel(C)}>Expenses YTD</div>
-          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 600, color: C.red }}>
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 600, color: C.mid }}>
             {fmtUSD(summary.expenseTotal)}
           </div>
         </div>
-        <div className="card" style={{ borderLeft: `4px solid ${C.goldL}`, padding: 14 }}>
+        <div className="card" style={{ borderTop: `3px solid ${C.goldL}`, padding: 14 }}>
           <div style={sectionLabel(C)}>Net Income</div>
-          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 600, color: summary.net >= 0 ? C.green : C.red }}>
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 600, color: summary.net >= 0 ? C.gold : C.mid }}>
             {fmtUSD(summary.net)}
           </div>
         </div>
-        <div className="card" style={{ borderLeft: `4px solid ${C.blueB}`, padding: 14 }}>
+        <div className="card" style={{ borderTop: `3px solid ${C.border}`, padding: 14 }}>
           <div style={sectionLabel(C)}>Transactions</div>
-          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 600, color: C.blue }}>
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 18, fontWeight: 600, color: C.dark }}>
             {summary.count}
           </div>
         </div>
@@ -198,16 +198,16 @@ export function AccountingView({ C, fs, entries = [], expenses = [], properties 
 // ─── Chart of Accounts Tab ───────────────────────────────────────────────────
 function ChartOfAccountsTab({ C }) {
   const types = [
-    { key: 'asset', label: 'Assets', color: C.blueB },
-    { key: 'liability', label: 'Liabilities', color: C.red },
-    { key: 'equity', label: 'Equity', color: C.purpleB },
-    { key: 'revenue', label: 'Revenue', color: C.green },
-    { key: 'expense', label: 'Expenses', color: C.orange },
+    { key: 'asset',     label: 'Assets',      color: C.goldL },
+    { key: 'liability', label: 'Liabilities', color: C.lighter },
+    { key: 'equity',    label: 'Equity',      color: C.lighter },
+    { key: 'revenue',   label: 'Revenue',     color: C.goldL },
+    { key: 'expense',   label: 'Expenses',    color: C.light },
   ];
   return (
     <div>
       {types.map(t => (
-        <div key={t.key} className="card" style={{ marginBottom: 12, padding: 14, borderLeft: `4px solid ${t.color}` }}>
+        <div key={t.key} className="card" style={{ marginBottom: 12, padding: 14, borderLeft: `3px solid ${t.color}` }}>
           <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', color: t.color, fontWeight: 600, marginBottom: 8 }}>
             {t.label} · {CHART_OF_ACCOUNTS[t.key].length} accounts
           </div>

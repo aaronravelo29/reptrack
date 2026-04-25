@@ -64,21 +64,21 @@ export function FinancialDashboardWidgets({ C, properties = [], tenants = [], lo
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 4 }}>
 
         {/* Rent Collection */}
-        <div className="card" style={{ ...cardStyle, borderLeft: `4px solid ${collectionRate >= 90 ? C.greenB : C.orangeB}` }}>
+        <div className="card" style={{ ...cardStyle, borderTop: `3px solid ${C.goldL}` }}>
           <div style={labelStyle(C)}>Rent Collection · April</div>
           <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, color: C.dark }}>{fmtUSD(paidThisMonth)}</div>
-          <div style={{ fontSize: 11, color: C.light, marginTop: 4 }}>of {fmtUSD(totalRentOwedFallback)} owed · <span style={{ color: collectionRate >= 90 ? C.green : C.orange, fontWeight: 600 }}>{collectionRate}% collected</span></div>
+          <div style={{ fontSize: 11, color: C.light, marginTop: 4 }}>of {fmtUSD(totalRentOwedFallback)} owed · <span style={{ color: C.gold, fontWeight: 600 }}>{collectionRate}% collected</span></div>
           {overduePayments.length > 0 && (
-            <div style={{ marginTop: 8, padding: '4px 8px', background: C.redPale, borderRadius: 4, fontSize: 11, color: C.red, fontWeight: 600 }}>
+            <div style={{ marginTop: 8, padding: '4px 8px', background: C.borderL, borderRadius: 4, fontSize: 11, color: C.mid, fontWeight: 600 }}>
               ⚠ {overduePayments.length} overdue · {fmtUSD(overduePayments.reduce((s, p) => s + p.amount, 0))}
             </div>
           )}
         </div>
 
         {/* Cash Flow */}
-        <div className="card" style={{ ...cardStyle, borderLeft: `4px solid ${(totalCashFlow || 3840) >= 0 ? C.greenB : C.redB}` }}>
+        <div className="card" style={{ ...cardStyle, borderTop: `3px solid ${C.goldL}` }}>
           <div style={labelStyle(C)}>Monthly Cash Flow</div>
-          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, color: (totalCashFlow || 3840) >= 0 ? C.green : C.red }}>
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, color: C.gold }}>
             {fmtUSD(totalCashFlow || 3840)}
           </div>
           <div style={{ fontSize: 11, color: C.light, marginTop: 4 }}>
@@ -87,16 +87,16 @@ export function FinancialDashboardWidgets({ C, properties = [], tenants = [], lo
         </div>
 
         {/* Lease Expirations */}
-        <div className="card" style={{ ...cardStyle, borderLeft: `4px solid ${expiringLeases.length > 0 ? C.orangeB : C.greenB}` }}>
+        <div className="card" style={{ ...cardStyle, borderTop: `3px solid ${C.border}` }}>
           <div style={labelStyle(C)}>Lease Expirations (90d)</div>
-          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, color: expiringLeases.length > 0 ? C.orange : C.green }}>
+          <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, color: C.dark }}>
             {expiringLeases.length || 2}
           </div>
           {expiringLeases.length === 0 ? (
             <div style={{ fontSize: 11, color: C.light, marginTop: 4 }}>2 leases expiring · action needed</div>
           ) : (
             expiringLeases.slice(0, 2).map(t => (
-              <div key={t.id} style={{ fontSize: 11, color: C.orange, marginTop: 4 }}>
+              <div key={t.id} style={{ fontSize: 11, color: C.light, marginTop: 4 }}>
                 {t.firstName} {t.lastName} — {daysUntil(t.leaseEnd)}d
               </div>
             ))
@@ -104,11 +104,11 @@ export function FinancialDashboardWidgets({ C, properties = [], tenants = [], lo
         </div>
 
         {/* Maintenance */}
-        <div className="card" style={{ ...cardStyle, borderLeft: `4px solid ${openWOs > 2 ? C.orangeB : C.blueB}` }}>
+        <div className="card" style={{ ...cardStyle, borderTop: `3px solid ${C.border}` }}>
           <div style={labelStyle(C)}>Maintenance</div>
           <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 600, color: C.dark }}>{openWOs + inProgressWOs}</div>
           <div style={{ fontSize: 11, color: C.light, marginTop: 4 }}>
-            <span style={{ color: C.red }}>{openWOs} open</span> · <span style={{ color: C.orange }}>{inProgressWOs} in progress</span>
+            <span>{openWOs} open</span> · <span>{inProgressWOs} in progress</span>
           </div>
         </div>
       </div>
@@ -117,7 +117,7 @@ export function FinancialDashboardWidgets({ C, properties = [], tenants = [], lo
       {overduePayments.length > 0 && (
         <div style={{ marginTop: 8 }}>
           {overduePayments.map(p => (
-            <div key={p.id} className="card" style={{ padding: '10px 14px', borderLeft: `3px solid ${C.redB}`, marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={p.id} className="card" style={{ padding: '10px 14px', borderLeft: `3px solid ${C.goldL}`, marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <span style={{ fontWeight: 600, color: C.dark, fontSize: 13 }}>{p.tenantName}</span>
                 <span style={{ fontSize: 12, color: C.light, marginLeft: 8 }}>{p.property} · Unit {p.unit}</span>
@@ -142,14 +142,14 @@ export function MaintenanceView({ C, fs, properties = [], vendors = [], onEmailR
   const [newWO, setNewWO] = useState({ title: '', property: '', unit: '', priority: 'medium', category: 'general', notes: '' });
 
   const columns = [
-    { id: 'open', label: 'Open', color: C.redB },
-    { id: 'in_progress', label: 'In Progress', color: C.orangeB },
-    { id: 'scheduled', label: 'Scheduled', color: C.blueB },
-    { id: 'completed', label: 'Completed', color: C.greenB },
+    { id: 'open',        label: 'Open',        color: C.lighter },
+    { id: 'in_progress', label: 'In Progress',  color: C.goldL   },
+    { id: 'scheduled',   label: 'Scheduled',    color: C.gold    },
+    { id: 'completed',   label: 'Completed',    color: C.mid     },
   ];
 
-  const priorityColors = { high: C.red, medium: C.orange, low: C.blue };
-  const priorityBg = { high: C.redPale, medium: C.orangePale, low: C.bluePale };
+  const priorityColors = { high: C.mid, medium: C.light, low: C.lighter };
+  const priorityBg = { high: C.borderL, medium: C.bg, low: C.bg };
 
   const filtered = filterPriority === 'all' ? workOrders : workOrders.filter(w => w.priority === filterPriority);
 
@@ -478,10 +478,12 @@ export function Vendor1099Hub({ C, vendors = [] }) {
 // ─── EMAIL ROBOT ──────────────────────────────────────────────────────────────
 // Auto-drafts tenant + technician emails using Claude.
 // Triggered from: work order creation, overdue rent, lease expiry.
-export function EmailRobot({ C, isOpen, onClose, trigger = {}, properties = [], vendors = [] }) {
+export function EmailRobot({ C, isOpen, onClose, trigger = {}, properties = [], vendors = [], robotEnabled = true, onToggleRobot }) {
   const [drafts, setDrafts] = useState(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(null);
+
+  const updateDraft = (key, val) => setDrafts(prev => ({ ...prev, [key]: val }));
 
   const labelSt = { fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: C.light, marginBottom: 6 };
 
@@ -572,28 +574,55 @@ Draft:
         {/* Header */}
         <div style={{ padding: '16px 22px', background: `linear-gradient(135deg, ${C.dark} 0%, ${C.darker} 100%)`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, letterSpacing: 2, color: C.goldL, textTransform: 'uppercase' }}>Email Robot · Auto-Draft</div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: C.white, marginTop: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, letterSpacing: 2, color: C.goldL, textTransform: 'uppercase' }}>Email Robot</div>
+              {/* ON/OFF toggle */}
+              {onToggleRobot && (
+                <button onClick={onToggleRobot} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: robotEnabled ? 'rgba(0,201,167,0.18)' : 'rgba(255,255,255,0.08)',
+                  border: `1px solid ${robotEnabled ? C.goldL : 'rgba(255,255,255,0.2)'}`,
+                  borderRadius: 20, padding: '3px 10px 3px 6px', cursor: 'pointer',
+                }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: robotEnabled ? C.goldL : '#64748B', flexShrink: 0 }} />
+                  <span style={{ fontSize: 10, fontWeight: 600, color: robotEnabled ? C.goldL : '#94A3B8', fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1 }}>
+                    {robotEnabled ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              )}
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.white }}>
               {trigger.type === 'work_order' && `Work Order: ${trigger.title}`}
               {trigger.type === 'overdue_rent' && `Overdue Rent: ${trigger.tenantName}`}
               {trigger.type === 'lease_expiry' && `Lease Expiring: ${trigger.tenantName}`}
               {!trigger.type && 'Draft Email'}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${C.goldL}`, color: C.goldL, width: 32, height: 32, borderRadius: 4, cursor: 'pointer', fontSize: 18 }}>×</button>
+          <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${C.goldL}`, color: C.goldL, width: 32, height: 32, borderRadius: 8, cursor: 'pointer', fontSize: 18 }}>×</button>
         </div>
 
         <div style={{ padding: 22 }}>
           {!drafts && !loading && (
             <div style={{ textAlign: 'center', padding: '30px 0' }}>
-              <div style={{ fontSize: 40, marginBottom: 16 }}>🤖</div>
-              <div style={{ fontSize: 14, color: C.mid, marginBottom: 20, lineHeight: 1.6 }}>
-                Claude will draft two emails:<br />
-                <strong>1.</strong> To the tenant &nbsp;·&nbsp; <strong>2.</strong> To the technician/manager
-              </div>
-              <button onClick={generate} style={{ padding: '12px 32px', background: C.gold, border: 'none', borderRadius: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', color: C.dark, cursor: 'pointer' }}>
-                Generate Emails with AI
-              </button>
+              <div style={{ fontSize: 44, marginBottom: 16 }}>✉</div>
+              {!robotEnabled ? (
+                <div>
+                  <div style={{ fontSize: 14, color: C.mid, marginBottom: 16, lineHeight: 1.6 }}>
+                    Email Robot is currently <strong>OFF</strong>.<br />Turn it on to generate AI-drafted emails.
+                  </div>
+                  {onToggleRobot && (
+                    <button onClick={onToggleRobot} className="btn-gold">Turn Robot On</button>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 14, color: C.mid, marginBottom: 20, lineHeight: 1.6 }}>
+                    Claude will draft two emails you can edit before sending:<br />
+                    <strong>1.</strong> To the tenant &nbsp;·&nbsp; <strong>2.</strong> To the technician/manager
+                  </div>
+                  <button onClick={generate} className="btn-gold">Generate Emails with AI</button>
+                </div>
+              )}
             </div>
           )}
 
@@ -608,22 +637,28 @@ Draft:
           {drafts && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {[
-                { key: 'email1', label: '📧 Email to Tenant', text: drafts.email1 },
-                { key: 'email2', label: '🔧 Email to Technician / Manager', text: drafts.email2 },
+                { key: 'email1', label: '◎ Email to Tenant', text: drafts.email1 },
+                { key: 'email2', label: '⚙ Email to Technician / Manager', text: drafts.email2 },
               ].map(({ key, label, text }) => (
                 <div key={key} className="card" style={{ padding: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: C.gold, letterSpacing: 1 }}>{label}</div>
+                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: C.dark }}>{label}</div>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => copy(text, key)} style={{ padding: '5px 10px', background: copied === key ? C.greenPale : C.bg, border: `1px solid ${C.borderL}`, borderRadius: 4, fontSize: 11, cursor: 'pointer', color: copied === key ? C.green : C.mid }}>
-                        {copied === key ? '✓ Copied' : '📋 Copy'}
+                      <button onClick={() => copy(text, key)} style={{ padding: '6px 12px', background: copied === key ? C.goldPale : C.bg, border: `1px solid ${C.borderL}`, borderRadius: 8, fontSize: 12, cursor: 'pointer', color: copied === key ? C.gold : C.mid }}>
+                        {copied === key ? '✓ Copied' : 'Copy'}
                       </button>
-                      <button onClick={() => mailto(text)} style={{ padding: '5px 10px', background: C.bluePale, border: `1px solid ${C.blueB}`, borderRadius: 4, fontSize: 11, cursor: 'pointer', color: C.blue }}>
-                        ✉ Open in Mail
+                      <button onClick={() => mailto(text)} style={{ padding: '6px 12px', background: C.goldPale, border: `1px solid ${C.goldL}`, borderRadius: 8, fontSize: 12, cursor: 'pointer', color: C.gold }}>
+                        Open in Mail
                       </button>
                     </div>
                   </div>
-                  <textarea readOnly value={text} rows={8} style={{ width: '100%', padding: 12, border: `1px solid ${C.borderL}`, borderRadius: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, background: C.bg, color: C.text, resize: 'vertical', lineHeight: 1.6 }} />
+                  <div style={{ fontSize: 11, color: C.lighter, marginBottom: 6, fontFamily: "'Inter', sans-serif" }}>Edit below before sending:</div>
+                  <textarea
+                    value={text}
+                    onChange={e => updateDraft(key, e.target.value)}
+                    rows={9}
+                    style={{ width: '100%', padding: 12, border: `1px solid ${C.border}`, borderRadius: 10, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, background: C.bg, color: C.text, resize: 'vertical', lineHeight: 1.7, outline: 'none' }}
+                  />
                 </div>
               ))}
               <button onClick={generate} style={{ padding: '10px', background: 'transparent', border: `1px solid ${C.borderL}`, borderRadius: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, cursor: 'pointer' }}>
