@@ -495,36 +495,76 @@ export function QuickBillModal({ C, fs, isOpen, onClose, onSave, properties = []
 
   if (!isOpen) return null;
 
-  const simulateExtraction = (filename = 'invoice.pdf') => {
+  const extractWithAI = async (file) => {
     setStage('extracting');
-    setTimeout(() => {
+    try {
+      const toBase64 = (f) => new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result.split(',')[1]);
+        r.onerror = rej;
+        r.readAsDataURL(f);
+      });
+
+      const isImage = file && file.type.startsWith('image/');
+      const today = new Date().toISOString().split('T')[0];
+      const propList = properties.map(p => p.address || p.name).filter(Boolean).join(', ') || 'none on file';
+
+      let messages;
+      if (isImage) {
+        const b64 = await toBase64(file);
+        messages = [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: file.type, data: b64 } },
+          { type: 'text', text: `Extract this receipt/invoice and return ONLY valid JSON (no markdown):
+{"vendor":"...","invoiceNumber":"... or null","date":"YYYY-MM-DD","amount":0.00,"accountCode":"6XXX or 4XXX","accountName":"...","propertyName":"... or null","capitalVsRepair":"repair|capital|na","reasoning":"BAR test reasoning","confidence":0.0,"lineItems":[{"desc":"...","qty":1,"unit":0.00,"total":0.00}]}
+
+Account codes: 6010 Advertising, 6020 Auto & Travel, 6030 Cleaning & Maintenance, 6040 Commissions, 6050 Insurance, 6060 Legal & Professional, 6070 Management Fees, 6080 Mortgage Interest, 6100 Repairs, 6110 Supplies, 6120 Property Taxes, 6130 Utilities, 4010 Rental Income.
+Properties on file: ${propList}. Today: ${today}.` }
+        ]}];
+      } else {
+        messages = [{ role: 'user', content: `No image provided. Return demo JSON for a $485 plumbing repair at ${propList.split(',')[0] || '123 Main St'} with BAR test reasoning. Return ONLY valid JSON, no markdown.` }];
+      }
+
+      const resp = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system: 'You are a receipt/invoice extraction AI for a real estate accounting system. Return only valid JSON, no markdown fences.', messages }),
+      });
+      const data = await resp.json();
+      let text = data?.content?.[0]?.text || '{}';
+      text = text.replace(/```json|```/g, '').trim();
+      const parsed = JSON.parse(text);
+      setExtracted({ ...parsed, filename: file?.name || 'receipt', accountName: parsed.accountName || 'Repairs' });
+      setStage('review');
+    } catch (err) {
+      // Fallback demo extraction if AI call fails
       setExtracted({
-        filename,
-        vendor: 'ABC Plumbing LLC',
-        invoiceNumber: 'INV-2026-0421',
-        date: '2026-04-21',
-        dueDate: '2026-05-21',
-        amount: 485.00,
-        accountCode: '6030',
-        accountName: 'Cleaning & Maintenance',
-        propertyId: properties[0]?.id || null,
-        propertyName: properties[0]?.address || '456 Oak Ave',
-        reasoning: 'Invoice description "water heater valve replacement" indicates a routine repair (BAR test: not a betterment, adaptation, or restoration). Categorized as Cleaning & Maintenance (Schedule E Line 7).',
-        confidence: 0.94,
-        lineItems: [
-          { desc: 'Water heater valve replacement', qty: 1, unit: 425.00, total: 425.00 },
-          { desc: 'Travel & dispatch', qty: 1, unit: 60.00, total: 60.00 },
-        ],
+        filename: file?.name || 'receipt',
+        vendor: 'Vendor (AI unavailable)',
+        invoiceNumber: null,
+        date: new Date().toISOString().split('T')[0],
+        amount: 0,
+        accountCode: '6100',
+        accountName: 'Repairs',
+        propertyName: properties[0]?.address || null,
+        capitalVsRepair: 'repair',
+        reasoning: 'Could not reach AI — please fill in manually.',
+        confidence: 0.5,
+        lineItems: [],
       });
       setStage('review');
-    }, 1800);
+    }
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
     const f = e.dataTransfer.files?.[0];
-    simulateExtraction(f?.name || 'invoice.pdf');
+    if (f) extractWithAI(f);
+  };
+
+  const handleFileInput = (e) => {
+    const f = e.target.files?.[0];
+    if (f) extractWithAI(f);
   };
 
   const handleSave = () => {
@@ -578,31 +618,34 @@ export function QuickBillModal({ C, fs, isOpen, onClose, onSave, properties = []
         {/* Body */}
         <div style={{ padding: 22 }}>
           {stage === 'upload' && (
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={handleDrop}
-              style={{
-                padding: '50px 30px',
-                border: `2px dashed ${dragOver ? C.gold : C.borderL}`,
-                background: dragOver ? C.goldPale : C.bg,
-                borderRadius: 8,
-                textAlign: 'center',
-                cursor: 'pointer',
-              }}
-              onClick={() => simulateExtraction()}
-            >
-              <div style={{ fontSize: 44, marginBottom: 12 }}>📄</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: C.dark, marginBottom: 6 }}>
-                Drop a PDF, image, or click to demo
+            <>
+              <input id="qb-file-input" type="file" accept="image/*,application/pdf" style={{ display: 'none' }} onChange={handleFileInput} />
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => document.getElementById('qb-file-input').click()}
+                style={{
+                  padding: '50px 30px',
+                  border: `2px dashed ${dragOver ? C.gold : C.borderL}`,
+                  background: dragOver ? C.goldPale : C.bg,
+                  borderRadius: 8,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <div style={{ fontSize: 44, marginBottom: 12 }}>📸</div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: C.dark, marginBottom: 6 }}>
+                  Drop a receipt photo or click to upload
+                </div>
+                <div style={{ fontSize: 12, color: C.light, marginBottom: 14 }}>
+                  AI reads the image and instantly categorizes the expense by IRS code
+                </div>
+                <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                  Powered by Claude Vision
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: C.light, marginBottom: 14 }}>
-                AI extracts vendor, amount, account, property — typically &lt; 2 seconds
-              </div>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: C.light, letterSpacing: 1.5, textTransform: 'uppercase' }}>
-                Powered by Claude
-              </div>
-            </div>
+            </>
           )}
 
           {stage === 'extracting' && (

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, createContext, useContext } from "react";
 import { AccountingView, BankingView, QuickBillModal } from "./lib/AccountingModule.jsx";
 import { getAccountingPromptExtension, parseExpenseFromResponse, stripExpenseTag } from "./lib/accountingPrompts.js";
-import { FinancialDashboardWidgets, MaintenanceView, TenantLedgerPanel, Vendor1099Hub } from "./lib/PropertyManagementModule.jsx";
+import { FinancialDashboardWidgets, MaintenanceView, TenantLedgerPanel, Vendor1099Hub, EmailRobot } from "./lib/PropertyManagementModule.jsx";
 
 // ─── SUPABASE CONFIG ──────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://lzxutumsrzjovjmebqns.supabase.co";
@@ -1173,6 +1173,7 @@ function MainApp() {
     } catch { return []; }
   });
   const [showQuickBill, setShowQuickBill] = useState(false);
+  const [emailRobot, setEmailRobot] = useState({ open: false, trigger: {} });
   const [dataLoading, setDataLoading] = useState(true);
   
   // Chat state - load from localStorage
@@ -2841,30 +2842,140 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
   const hoursPerWeek = weeksRemaining > 0 ? (hoursNeeded / weeksRemaining).toFixed(1) : 0;
 
   return (
-    <div style={{ fontFamily: "Georgia, serif", background: C.bg, minHeight: "100vh", color: C.text }}>
+    <div style={{ fontFamily: "Georgia, serif", background: C.bg, minHeight: "100vh", color: C.text, display: "flex", height: "100vh", overflow: "hidden" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        /* ═══════════════════════════════════════════════════════════════════════
-           MOBILE-FRIENDLY SCROLLING - Touch optimized
-           ═══════════════════════════════════════════════════════════════════════ */
-        
-        /* Enable smooth touch scrolling everywhere */
-        html, body, div, main, section {
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+          width: 220px;
+          min-width: 220px;
+          background: #0F2742;
+          display: flex;
+          flex-direction: column;
+          height: 100vh;
+          position: fixed;
+          left: 0; top: 0; bottom: 0;
+          z-index: 200;
+          overflow: hidden;
+        }
+        .sidebar-logo {
+          padding: 20px 20px 14px;
+          border-bottom: 1px solid rgba(198,162,74,0.2);
+        }
+        .sidebar-nav {
+          flex: 1;
+          overflow-y: auto;
+          padding: 10px 0;
+        }
+        .sidebar-nav-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 11px 20px;
+          cursor: pointer;
+          border: none;
+          background: transparent;
+          width: 100%;
+          text-align: left;
+          border-radius: 0;
+          transition: all 0.15s;
+          border-left: 3px solid transparent;
+        }
+        .sidebar-nav-item:hover {
+          background: rgba(255,255,255,0.06);
+        }
+        .sidebar-nav-item.active {
+          background: rgba(198,162,74,0.12);
+          border-left-color: #C6A24A;
+        }
+        .sidebar-nav-icon { font-size: 18px; min-width: 22px; text-align: center; }
+        .sidebar-nav-label {
+          font-family: 'Inter', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+          color: rgba(255,255,255,0.7);
+          white-space: nowrap;
+        }
+        .sidebar-nav-item.active .sidebar-nav-label { color: #C6A24A; font-weight: 600; }
+        .sidebar-footer {
+          padding: 14px 20px;
+          border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .app-content {
+          margin-left: 220px;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          height: 100vh;
+          overflow: hidden;
+        }
+        .top-bar {
+          background: #FFFFFF;
+          border-bottom: 2px solid #B8860B;
+          padding: 0 20px;
+          height: 56px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-shrink: 0;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+
+        /* ── SCROLLING ── */
+        .main-scroll {
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          flex: 1;
           -webkit-overflow-scrolling: touch !important;
         }
-        
-        /* Desktop scrollbars - visible but not too wide */
+        .tab-scroll {
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          height: 100%;
+          -webkit-overflow-scrolling: touch !important;
+          padding-bottom: 80px !important;
+        }
+        .modal-scroll {
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          max-height: 70vh !important;
+          -webkit-overflow-scrolling: touch !important;
+          padding-right: 10px !important;
+        }
+        .card-scroll {
+          overflow-y: auto !important;
+          max-height: 400px !important;
+          -webkit-overflow-scrolling: touch !important;
+        }
+        html, body { overflow: hidden !important; height: 100% !important; }
+
+        /* ── MOBILE: bottom nav bar, hide sidebar ── */
+        @media (max-width: 768px) {
+          .sidebar { display: none; }
+          .app-content { margin-left: 0; }
+          .bottom-nav {
+            display: flex !important;
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: #0F2742;
+            border-top: 2px solid #B8860B;
+            z-index: 200;
+            overflow-x: auto;
+          }
+          .main-scroll { padding-bottom: 70px !important; }
+        }
         @media (min-width: 769px) {
-          ::-webkit-scrollbar { 
-            width: 14px !important; 
-            height: 14px !important; 
-          }
-          ::-webkit-scrollbar-track { 
-            background: #e8e8e8 !important; 
-            border-radius: 8px !important;
-          }
+          .bottom-nav { display: none !important; }
+        }
+
+        /* ── SCROLLBARS ── */
+        @media (min-width: 769px) {
+          ::-webkit-scrollbar { width: 8px !important; }
+          ::-webkit-scrollbar-track { background: #f0f0f0 !important; }
+          ::-webkit-scrollbar-thumb { background: #B8860B !important; border-radius: 4px !important; }
+        }
           ::-webkit-scrollbar-thumb { 
             background: linear-gradient(180deg, #B8860B 0%, #8B6914 100%) !important; 
             border-radius: 8px !important; 
@@ -3046,77 +3157,57 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
       `}</style>
 
       {/* Header - MOBILE RESPONSIVE */}
-      <header style={{ 
-        background: "#FFFFFF", 
-        borderBottom: "3px solid #B8860B", 
-        padding: "0 12px", 
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        position: "sticky",
-        top: 0,
-        zIndex: 100
-      }}>
-        <div style={{ maxWidth: 1400, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-          {/* Logo - always visible */}
-          <div style={{ padding: "10px 0" }}>
-            <span style={{ fontSize: 24, fontWeight: 800, color: "#1a1a2e", fontFamily: "'Inter', sans-serif" }}>
-              Rep<span style={{ color: "#B8860B" }}>Track</span>
-            </span>
-          </div>
-          
-          {/* Right side buttons - compact on mobile */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={() => setShowSettingsModal(true)} style={{ background: "#f5f5f5", border: "2px solid #e0e0e0", fontSize: 20, cursor: "pointer", padding: "8px 10px", borderRadius: 8, minHeight: 44 }} title="Settings">⚙️</button>
-            <button onClick={signOut} style={{ padding: "8px 12px", fontSize: 12, color: "#616161", background: "#f5f5f5", border: "2px solid #e0e0e0", borderRadius: 8, cursor: "pointer", fontWeight: 600, minHeight: 44 }}>Log Out</button>
-          </div>
+      {/* ── LEFT SIDEBAR ── */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <span style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", fontFamily: "'Inter', sans-serif", letterSpacing: -0.5 }}>
+            Rep<span style={{ color: "#C6A24A" }}>Track</span>
+          </span>
+          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 2, textTransform: "uppercase", marginTop: 4 }}>Property Manager</div>
         </div>
-        
-        {/* Navigation - scrollable on mobile */}
-        <nav style={{ 
-          display: "flex", 
-          gap: 2, 
-          overflowX: "auto", 
-          WebkitOverflowScrolling: "touch",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          paddingBottom: 2
-        }}>
+        <nav className="sidebar-nav">
           {VIEWS.map(v => (
-            <button 
-              key={v.id} 
-              onClick={() => setView(v.id)}
-              style={{
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                padding: "8px 14px", border: "none", cursor: "pointer",
-                background: view === v.id ? "#FFF8DC" : "transparent",
-                borderBottom: view === v.id ? "4px solid #B8860B" : "4px solid transparent",
-                borderRadius: "6px 6px 0 0",
-                transition: "all 0.2s",
-                flexShrink: 0,
-                minWidth: 60
-              }}
-            >
-              <span style={{ fontSize: 20 }}>{v.icon}</span>
-              <span style={{ 
-                fontFamily: "'Inter', sans-serif", 
-                fontSize: 11, 
-                fontWeight: view === v.id ? 700 : 500,
-                color: view === v.id ? "#8B6914" : "#424242",
-                whiteSpace: "nowrap"
-              }}>{v.label}</span>
+            <button key={v.id} onClick={() => setView(v.id)} className={`sidebar-nav-item${view === v.id ? " active" : ""}`}>
+              <span className="sidebar-nav-icon">{v.icon}</span>
+              <span className="sidebar-nav-label">{v.label}</span>
             </button>
           ))}
         </nav>
-      </header>
+        <div className="sidebar-footer">
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontFamily: "'IBM Plex Mono', monospace", marginBottom: 8, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {profile?.email || user?.email}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => setShowSettingsModal(true)} style={{ flex: 1, padding: "7px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "rgba(255,255,255,0.7)", fontSize: 12, cursor: "pointer" }}>⚙️ Settings</button>
+            <button onClick={signOut} style={{ flex: 1, padding: "7px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, color: "rgba(255,255,255,0.7)", fontSize: 12, cursor: "pointer" }}>↪ Log Out</button>
+          </div>
+        </div>
+      </aside>
 
-      {/* Main Content - SCROLLABLE with touch support */}
-      <main className="main-scroll" style={{ 
-        maxWidth: 1400, 
-        margin: "0 auto", 
-        padding: "16px", 
-        overflowY: "auto", 
-        WebkitOverflowScrolling: "touch",
-        maxHeight: "calc(100vh - 110px)"
-      }}>
+      {/* ── MAIN CONTENT AREA ── */}
+      <div className="app-content">
+        {/* Top bar */}
+        <div className="top-bar">
+          <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 16, fontWeight: 700, color: C.dark }}>
+            {VIEWS.find(v => v.id === view)?.label || "RepTrack"}
+            {profile?.companyName && <span style={{ fontSize: 12, fontWeight: 400, color: C.light, marginLeft: 10 }}>{profile.companyName}</span>}
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {view === "accounting" && <button onClick={() => setShowQuickBill(true)} style={{ padding: "6px 14px", background: C.gold, border: "none", borderRadius: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", color: C.dark, cursor: "pointer" }}>+ QuickBill</button>}
+          </div>
+        </div>
+
+        {/* Mobile bottom nav */}
+        <nav className="bottom-nav">
+          {VIEWS.map(v => (
+            <button key={v.id} onClick={() => setView(v.id)} style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "8px 14px", border: "none", cursor: "pointer", background: view === v.id ? "rgba(198,162,74,0.15)" : "transparent", borderTop: view === v.id ? "2px solid #C6A24A" : "2px solid transparent" }}>
+              <span style={{ fontSize: 18 }}>{v.icon}</span>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, fontWeight: view === v.id ? 700 : 500, color: view === v.id ? "#C6A24A" : "rgba(255,255,255,0.6)", whiteSpace: "nowrap" }}>{v.label}</span>
+            </button>
+          ))}
+        </nav>
+
+      <main className="main-scroll" style={{ padding: "16px", flex: 1 }}>
         
         {/* ASSISTANT VIEW */}
 
@@ -4131,7 +4222,7 @@ Since I can't directly read the document content, please ask me for the specific
             </div>
 
             {/* Tenant payment ledger */}
-            <TenantLedgerPanel C={C} tenants={localTenants} />
+            <TenantLedgerPanel C={C} tenants={localTenants} onEmailRobot={(trigger) => setEmailRobot({ open: true, trigger })} />
           </div>
         )}
 
@@ -4282,7 +4373,7 @@ Since I can't directly read the document content, please ask me for the specific
         {/* MAINTENANCE VIEW */}
         {view === "maintenance" && (
           <div className="tab-scroll">
-            <MaintenanceView C={C} fs={fs} properties={localProperties} vendors={localVendors} />
+            <MaintenanceView C={C} fs={fs} properties={localProperties} vendors={localVendors} onEmailRobot={(trigger) => setEmailRobot({ open: true, trigger })} />
           </div>
         )}
 
@@ -4307,6 +4398,17 @@ Since I can't directly read the document content, please ask me for the specific
           </div>
         )}
       </main>
+      </div>{/* end app-content */}
+
+      {/* Email Robot Modal */}
+      <EmailRobot
+        C={C}
+        isOpen={emailRobot.open}
+        onClose={() => setEmailRobot({ open: false, trigger: {} })}
+        trigger={emailRobot.trigger}
+        properties={localProperties}
+        vendors={localVendors}
+      />
 
       {/* QuickBill AI Invoice Modal */}
       <QuickBillModal

@@ -135,7 +135,7 @@ export function FinancialDashboardWidgets({ C, properties = [], tenants = [], lo
 }
 
 // ─── MAINTENANCE VIEW (KANBAN) ────────────────────────────────────────────────
-export function MaintenanceView({ C, fs, properties = [], vendors = [] }) {
+export function MaintenanceView({ C, fs, properties = [], vendors = [], onEmailRobot }) {
   const [workOrders, setWorkOrders] = useState(SAMPLE_WORK_ORDERS);
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterPriority, setFilterPriority] = useState('all');
@@ -234,13 +234,18 @@ export function MaintenanceView({ C, fs, properties = [], vendors = [] }) {
                   {w.tenantName && <div style={{ fontSize: 11, color: C.mid, marginBottom: 4 }}>👤 {w.tenantName}</div>}
                   {w.vendor && <div style={{ fontSize: 11, color: C.blue, marginBottom: 4 }}>🔧 {w.vendor}</div>}
                   {w.cost && <div style={{ fontSize: 11, fontFamily: "'IBM Plex Mono', monospace", color: C.text, marginBottom: 4 }}>{fmtUSD(w.cost)} est.</div>}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, flexWrap: 'wrap', gap: 4 }}>
                     <div style={{ fontSize: 10, color: C.lighter }}>{w.reportedDate}</div>
-                    {col.id !== 'completed' && (
-                      <button onClick={() => advance(w.id)} style={{ padding: '4px 8px', background: col.color, color: C.white, border: 'none', borderRadius: 4, fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', cursor: 'pointer', fontFamily: "'IBM Plex Mono', monospace" }}>
-                        {col.id === 'open' ? 'Assign →' : col.id === 'in_progress' ? 'Schedule →' : 'Complete →'}
-                      </button>
-                    )}
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {onEmailRobot && (
+                        <button onClick={() => onEmailRobot({ type: 'work_order', ...w })} style={{ padding: '4px 7px', background: C.bluePale, color: C.blue, border: `1px solid ${C.blueB}`, borderRadius: 4, fontSize: 9, fontWeight: 600, cursor: 'pointer' }}>✉</button>
+                      )}
+                      {col.id !== 'completed' && (
+                        <button onClick={() => advance(w.id)} style={{ padding: '4px 8px', background: col.color, color: C.white, border: 'none', borderRadius: 4, fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', cursor: 'pointer', fontFamily: "'IBM Plex Mono', monospace" }}>
+                          {col.id === 'open' ? 'Assign →' : col.id === 'in_progress' ? 'Schedule →' : 'Complete →'}
+                        </button>
+                      )}
+                    </div>
                     {col.id === 'completed' && <span style={{ fontSize: 10, color: C.green }}>✓ Done</span>}
                   </div>
                 </div>
@@ -300,7 +305,7 @@ export function MaintenanceView({ C, fs, properties = [], vendors = [] }) {
 }
 
 // ─── TENANT PAYMENT LEDGER ────────────────────────────────────────────────────
-export function TenantLedgerPanel({ C, tenants = [] }) {
+export function TenantLedgerPanel({ C, tenants = [], onEmailRobot }) {
   const [payments, setPayments] = useState(SAMPLE_PAYMENTS);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [newPayment, setNewPayment] = useState({ tenantName: '', amount: '', method: 'ACH', property: '', unit: '' });
@@ -379,12 +384,16 @@ export function TenantLedgerPanel({ C, tenants = [] }) {
             <div style={{ textAlign: 'right', fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, fontSize: 13, color: p.status === 'overdue' ? C.red : C.text }}>{fmtUSD(p.amount)}</div>
             <div style={{ fontSize: 11, color: C.mid }}>{p.method || '—'}</div>
             <div style={{ fontSize: 11, color: C.light, fontFamily: "'IBM Plex Mono', monospace" }}>{p.date ? p.date.slice(5) : '—'}</div>
-            <div>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               <span style={{
                 padding: '3px 7px', borderRadius: 4, fontSize: 9, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase',
                 background: p.status === 'paid' ? C.greenPale : C.redPale,
                 color: p.status === 'paid' ? C.green : C.red,
               }}>{p.status === 'paid' ? '✓ Paid' : `${p.daysLate}d Late`}</span>
+              {p.status === 'overdue' && onEmailRobot && (
+                <button onClick={() => onEmailRobot({ type: 'overdue_rent', tenantName: p.tenantName, property: p.property, unit: p.unit, amount: p.amount, daysLate: p.daysLate })}
+                  style={{ padding: '3px 6px', background: C.redPale, border: `1px solid ${C.redB}`, borderRadius: 4, fontSize: 9, cursor: 'pointer', color: C.red }}>✉</button>
+              )}
             </div>
           </div>
         ))}
@@ -461,6 +470,168 @@ export function Vendor1099Hub({ C, vendors = [] }) {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ─── EMAIL ROBOT ──────────────────────────────────────────────────────────────
+// Auto-drafts tenant + technician emails using Claude.
+// Triggered from: work order creation, overdue rent, lease expiry.
+export function EmailRobot({ C, isOpen, onClose, trigger = {}, properties = [], vendors = [] }) {
+  const [drafts, setDrafts] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(null);
+
+  const labelSt = { fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: C.light, marginBottom: 6 };
+
+  const generate = async () => {
+    setLoading(true);
+    const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const system = `You are RepTrack's email assistant for a real estate property manager. 
+Draft professional, warm-but-firm emails. Always include a subject line as the first line prefixed with "Subject: ".
+Return exactly two emails separated by "---EMAIL2---":
+1. Email to the TENANT (if applicable)
+2. Email to the TECHNICIAN/VENDOR or PROPERTY MANAGER
+
+Keep emails concise (3-5 sentences each). Use ${today} as today's date.`;
+
+    let prompt = '';
+    if (trigger.type === 'work_order') {
+      prompt = `Maintenance work order created:
+Title: ${trigger.title}
+Property: ${trigger.property}${trigger.unit ? ` Unit ${trigger.unit}` : ''}
+Tenant: ${trigger.tenantName || 'N/A'}
+Assigned vendor: ${trigger.vendor || 'Not yet assigned'}
+Priority: ${trigger.priority}
+Category: ${trigger.category}
+
+Draft:
+1. Email to tenant acknowledging their maintenance request and giving an ETA
+2. Email to the assigned technician/vendor with the work order details`;
+    } else if (trigger.type === 'overdue_rent') {
+      prompt = `Rent payment overdue:
+Tenant: ${trigger.tenantName}
+Property: ${trigger.property} Unit ${trigger.unit}
+Amount: $${trigger.amount}
+Days overdue: ${trigger.daysLate}
+
+Draft:
+1. Professional but firm late rent notice to the tenant
+2. Alert email to the property manager summarizing the delinquency`;
+    } else if (trigger.type === 'lease_expiry') {
+      prompt = `Lease expiring soon:
+Tenant: ${trigger.tenantName}
+Property: ${trigger.property}
+Lease end: ${trigger.leaseEnd}
+Days remaining: ${trigger.daysLeft}
+
+Draft:
+1. Lease renewal notice to the tenant
+2. Internal reminder to property manager to follow up`;
+    } else {
+      prompt = `Draft a general property management update email to a tenant and a follow-up to the property manager.`;
+    }
+
+    try {
+      const resp = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system, messages: [{ role: 'user', content: prompt }] }),
+      });
+      const data = await resp.json();
+      const text = data?.content?.[0]?.text || '';
+      const parts = text.split('---EMAIL2---');
+      setDrafts({ email1: parts[0]?.trim() || '', email2: parts[1]?.trim() || '' });
+    } catch {
+      setDrafts({
+        email1: `Subject: Your Maintenance Request — ${trigger.title || 'Update'}\n\nDear ${trigger.tenantName || 'Resident'},\n\nThank you for reporting the issue at your unit. We have received your request and our team will be in touch within 24 hours to schedule the repair.\n\nBest regards,\nProperty Management`,
+        email2: `Subject: New Work Order — ${trigger.title || 'Maintenance Request'}\n\nHello,\n\nA new work order has been submitted for ${trigger.property || 'the property'}${trigger.unit ? ` Unit ${trigger.unit}` : ''}. Please review the details and confirm your availability.\n\nThank you,\nProperty Management`,
+      });
+    }
+    setLoading(false);
+  };
+
+  const copy = (text, key) => {
+    navigator.clipboard.writeText(text).then(() => { setCopied(key); setTimeout(() => setCopied(null), 2000); });
+  };
+
+  const mailto = (text) => {
+    const lines = text.split('\n');
+    const subjectLine = lines.find(l => l.startsWith('Subject: '));
+    const subject = subjectLine ? subjectLine.replace('Subject: ', '') : 'Property Management Update';
+    const body = lines.filter(l => !l.startsWith('Subject: ')).join('\n').trim();
+    window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,13,26,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: 20 }}>
+      <div style={{ background: C.white, borderRadius: 8, width: '100%', maxWidth: 680, maxHeight: '90vh', overflow: 'auto', boxShadow: '0 30px 80px rgba(0,0,0,0.5)' }}>
+        {/* Header */}
+        <div style={{ padding: '16px 22px', background: `linear-gradient(135deg, ${C.dark} 0%, ${C.darker} 100%)`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, letterSpacing: 2, color: C.goldL, textTransform: 'uppercase' }}>Email Robot · Auto-Draft</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: C.white, marginTop: 4 }}>
+              {trigger.type === 'work_order' && `Work Order: ${trigger.title}`}
+              {trigger.type === 'overdue_rent' && `Overdue Rent: ${trigger.tenantName}`}
+              {trigger.type === 'lease_expiry' && `Lease Expiring: ${trigger.tenantName}`}
+              {!trigger.type && 'Draft Email'}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${C.goldL}`, color: C.goldL, width: 32, height: 32, borderRadius: 4, cursor: 'pointer', fontSize: 18 }}>×</button>
+        </div>
+
+        <div style={{ padding: 22 }}>
+          {!drafts && !loading && (
+            <div style={{ textAlign: 'center', padding: '30px 0' }}>
+              <div style={{ fontSize: 40, marginBottom: 16 }}>🤖</div>
+              <div style={{ fontSize: 14, color: C.mid, marginBottom: 20, lineHeight: 1.6 }}>
+                Claude will draft two emails:<br />
+                <strong>1.</strong> To the tenant &nbsp;·&nbsp; <strong>2.</strong> To the technician/manager
+              </div>
+              <button onClick={generate} style={{ padding: '12px 32px', background: C.gold, border: 'none', borderRadius: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', color: C.dark, cursor: 'pointer' }}>
+                Generate Emails with AI
+              </button>
+            </div>
+          )}
+
+          {loading && (
+            <div style={{ textAlign: 'center', padding: '40px 0' }}>
+              <div style={{ width: 40, height: 40, border: `4px solid ${C.borderL}`, borderTopColor: C.gold, borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              <div style={{ fontSize: 13, color: C.mid }}>Drafting emails with Claude…</div>
+            </div>
+          )}
+
+          {drafts && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {[
+                { key: 'email1', label: '📧 Email to Tenant', text: drafts.email1 },
+                { key: 'email2', label: '🔧 Email to Technician / Manager', text: drafts.email2 },
+              ].map(({ key, label, text }) => (
+                <div key={key} className="card" style={{ padding: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600, color: C.gold, letterSpacing: 1 }}>{label}</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={() => copy(text, key)} style={{ padding: '5px 10px', background: copied === key ? C.greenPale : C.bg, border: `1px solid ${C.borderL}`, borderRadius: 4, fontSize: 11, cursor: 'pointer', color: copied === key ? C.green : C.mid }}>
+                        {copied === key ? '✓ Copied' : '📋 Copy'}
+                      </button>
+                      <button onClick={() => mailto(text)} style={{ padding: '5px 10px', background: C.bluePale, border: `1px solid ${C.blueB}`, borderRadius: 4, fontSize: 11, cursor: 'pointer', color: C.blue }}>
+                        ✉ Open in Mail
+                      </button>
+                    </div>
+                  </div>
+                  <textarea readOnly value={text} rows={8} style={{ width: '100%', padding: 12, border: `1px solid ${C.borderL}`, borderRadius: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, background: C.bg, color: C.text, resize: 'vertical', lineHeight: 1.6 }} />
+                </div>
+              ))}
+              <button onClick={generate} style={{ padding: '10px', background: 'transparent', border: `1px solid ${C.borderL}`, borderRadius: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, cursor: 'pointer' }}>
+                ↺ Re-generate
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
