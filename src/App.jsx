@@ -1175,6 +1175,18 @@ function MainApp() {
   const [emailRobot, setEmailRobot] = useState({ open: false, trigger: {} });
   const [robotEnabled, setRobotEnabled] = useState(() => localStorage.getItem('reptrack-robot-enabled') !== 'false');
   const toggleRobot = () => setRobotEnabled(v => { const n = !v; localStorage.setItem('reptrack-robot-enabled', String(n)); return n; });
+
+  // Email Robot contacts — stored per-user in localStorage
+  const [emailContacts, setEmailContacts] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('reptrack-email-contacts') || '{}'); } catch { return {}; }
+  });
+  const saveEmailContacts = (updated) => {
+    setEmailContacts(updated);
+    localStorage.setItem('reptrack-email-contacts', JSON.stringify(updated));
+  };
+  // emailContacts shape:
+  // { pmEmail, autoSend,
+  //   technicians: { plumbing, hvac, electrical, roofing, painting, general, … } }
   const [dataLoading, setDataLoading] = useState(true);
   
   // Chat state - load from localStorage
@@ -4371,6 +4383,8 @@ Since I can't directly read the document content, please ask me for the specific
         vendors={localVendors}
         robotEnabled={robotEnabled}
         onToggleRobot={toggleRobot}
+        emailContacts={emailContacts}
+        onSaveContacts={saveEmailContacts}
       />
 
       {/* QuickBill AI Invoice Modal */}

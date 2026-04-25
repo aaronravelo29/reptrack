@@ -478,67 +478,72 @@ export function Vendor1099Hub({ C, vendors = [] }) {
 // ─── EMAIL ROBOT ──────────────────────────────────────────────────────────────
 // Auto-drafts tenant + technician emails using Claude.
 // Triggered from: work order creation, overdue rent, lease expiry.
-export function EmailRobot({ C, isOpen, onClose, trigger = {}, properties = [], vendors = [], robotEnabled = true, onToggleRobot }) {
-  const [drafts, setDrafts] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(null);
+const TECH_CATEGORIES = ['plumbing','hvac','electrical','roofing','painting','general','appliance','landscaping'];
+
+export function EmailRobot({ C, isOpen, onClose, trigger = {}, properties = [], vendors = [],
+  robotEnabled = true, onToggleRobot, emailContacts = {}, onSaveContacts }) {
+
+  const [drafts, setDrafts]         = useState(null);
+  const [loading, setLoading]       = useState(false);
+  const [sending, setSending]       = useState(false);
+  const [sentResults, setSentResults] = useState(null);
+  const [copied, setCopied]         = useState(null);
+  const [tab, setTab]               = useState('draft'); // 'draft' | 'contacts'
+
+  // Local editable contacts (save on blur)
+  const [contacts, setContacts] = useState({ pmEmail: '', autoSend: false, technicians: {}, ...emailContacts });
+  const saveContacts = (updated) => { setContacts(updated); onSaveContacts && onSaveContacts(updated); };
 
   const updateDraft = (key, val) => setDrafts(prev => ({ ...prev, [key]: val }));
 
-  const labelSt = { fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: C.light, marginBottom: 6 };
+  // Resolve recipient emails from contacts
+  const tenantEmail = trigger.tenantEmail || '';
+  const techEmail   = contacts.technicians?.[trigger.category] || '';
+  const pmEmail     = contacts.pmEmail || '';
+
+  const parseEmail = (text) => {
+    const lines = text.split('\n');
+    const subjectLine = lines.find(l => l.startsWith('Subject: '));
+    return {
+      subject: subjectLine ? subjectLine.replace('Subject: ', '').trim() : 'Property Management',
+      body: lines.filter(l => !l.startsWith('Subject: ')).join('\n').trim(),
+    };
+  };
 
   const generate = async () => {
-    setLoading(true);
+    setLoading(true); setDrafts(null); setSentResults(null);
     const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    const system = `You are RepTrack's email assistant for a real estate property manager. 
+    const system = `You are RepTrack's email assistant for a real estate property manager.
 Draft professional, warm-but-firm emails. Always include a subject line as the first line prefixed with "Subject: ".
 Return exactly two emails separated by "---EMAIL2---":
 1. Email to the TENANT (if applicable)
 2. Email to the TECHNICIAN/VENDOR or PROPERTY MANAGER
-
 Keep emails concise (3-5 sentences each). Use ${today} as today's date.`;
 
     let prompt = '';
     if (trigger.type === 'work_order') {
-      prompt = `Maintenance work order created:
+      prompt = `Maintenance work order:
 Title: ${trigger.title}
 Property: ${trigger.property}${trigger.unit ? ` Unit ${trigger.unit}` : ''}
 Tenant: ${trigger.tenantName || 'N/A'}
-Assigned vendor: ${trigger.vendor || 'Not yet assigned'}
-Priority: ${trigger.priority}
-Category: ${trigger.category}
-
-Draft:
-1. Email to tenant acknowledging their maintenance request and giving an ETA
-2. Email to the assigned technician/vendor with the work order details`;
+Vendor: ${trigger.vendor || 'Not yet assigned'}
+Priority: ${trigger.priority} | Category: ${trigger.category}
+Draft: 1) Tenant acknowledgment with ETA  2) Technician/vendor work order details`;
     } else if (trigger.type === 'overdue_rent') {
-      prompt = `Rent payment overdue:
-Tenant: ${trigger.tenantName}
-Property: ${trigger.property} Unit ${trigger.unit}
-Amount: $${trigger.amount}
-Days overdue: ${trigger.daysLate}
-
-Draft:
-1. Professional but firm late rent notice to the tenant
-2. Alert email to the property manager summarizing the delinquency`;
+      prompt = `Overdue rent: ${trigger.tenantName} at ${trigger.property} Unit ${trigger.unit}
+Amount: $${trigger.amount} — ${trigger.daysLate} days overdue
+Draft: 1) Firm late-rent notice to tenant  2) PM delinquency alert`;
     } else if (trigger.type === 'lease_expiry') {
-      prompt = `Lease expiring soon:
-Tenant: ${trigger.tenantName}
-Property: ${trigger.property}
-Lease end: ${trigger.leaseEnd}
-Days remaining: ${trigger.daysLeft}
-
-Draft:
-1. Lease renewal notice to the tenant
-2. Internal reminder to property manager to follow up`;
+      prompt = `Lease expiring: ${trigger.tenantName} at ${trigger.property}
+End: ${trigger.leaseEnd} (${trigger.daysLeft} days)
+Draft: 1) Renewal notice to tenant  2) PM follow-up reminder`;
     } else {
-      prompt = `Draft a general property management update email to a tenant and a follow-up to the property manager.`;
+      prompt = `Draft a general property management update email to a tenant and a PM follow-up.`;
     }
 
     try {
       const resp = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ system, messages: [{ role: 'user', content: prompt }] }),
       });
       const data = await resp.json();
@@ -547,124 +552,227 @@ Draft:
       setDrafts({ email1: parts[0]?.trim() || '', email2: parts[1]?.trim() || '' });
     } catch {
       setDrafts({
-        email1: `Subject: Your Maintenance Request — ${trigger.title || 'Update'}\n\nDear ${trigger.tenantName || 'Resident'},\n\nThank you for reporting the issue at your unit. We have received your request and our team will be in touch within 24 hours to schedule the repair.\n\nBest regards,\nProperty Management`,
-        email2: `Subject: New Work Order — ${trigger.title || 'Maintenance Request'}\n\nHello,\n\nA new work order has been submitted for ${trigger.property || 'the property'}${trigger.unit ? ` Unit ${trigger.unit}` : ''}. Please review the details and confirm your availability.\n\nThank you,\nProperty Management`,
+        email1: `Subject: Maintenance Request Received — ${trigger.title || 'Update'}\n\nDear ${trigger.tenantName || 'Resident'},\n\nWe have received your maintenance request and will be in touch within 24 hours to schedule the repair. Thank you for your patience.\n\nBest regards,\nProperty Management`,
+        email2: `Subject: New Work Order — ${trigger.title || 'Maintenance'}\n\nHello,\n\nA new work order has been submitted for ${trigger.property || 'the property'}${trigger.unit ? ` Unit ${trigger.unit}` : ''}. Please review and confirm your availability.\n\nThank you,\nProperty Management`,
       });
     }
     setLoading(false);
+    // Auto-send immediately if enabled and contacts are set
+    if (contacts.autoSend) setTimeout(() => sendAll(), 300);
+  };
+
+  const sendAll = async () => {
+    if (!drafts) return;
+    setSending(true);
+    const emails = [];
+    const e1 = parseEmail(drafts.email1);
+    const e2 = parseEmail(drafts.email2);
+
+    if (tenantEmail) emails.push({ to: tenantEmail, subject: e1.subject, text: e1.body, label: 'Tenant' });
+    if (techEmail)   emails.push({ to: techEmail,   subject: e2.subject, text: e2.body, label: 'Technician' });
+    if (pmEmail)     emails.push({ to: pmEmail,     subject: e2.subject, text: `[PM Alert] ${e2.body}`, label: 'Property Manager' });
+
+    if (emails.length === 0) {
+      // No emails configured — fall back to mailto
+      openMailto(drafts.email1, tenantEmail);
+      openMailto(drafts.email2, techEmail || pmEmail);
+      setSending(false); return;
+    }
+
+    try {
+      const resp = await fetch('/api/send-email', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails }),
+      });
+      const data = await resp.json();
+      if (!data.resend_configured) {
+        // Resend not set up — fall back to mailto for each
+        emails.forEach(e => openMailto(`Subject: ${e.subject}\n\n${e.text}`, e.to));
+        setSentResults(emails.map(e => ({ label: e.label, status: 'mailto' })));
+      } else {
+        setSentResults(data.results || []);
+      }
+    } catch {
+      emails.forEach(e => openMailto(`Subject: ${e.subject}\n\n${e.text}`, e.to));
+      setSentResults(emails.map(e => ({ label: e.label, status: 'mailto' })));
+    }
+    setSending(false);
+  };
+
+  const openMailto = (text, to = '') => {
+    const e = parseEmail(text);
+    window.open(`mailto:${to}?subject=${encodeURIComponent(e.subject)}&body=${encodeURIComponent(e.body)}`);
   };
 
   const copy = (text, key) => {
     navigator.clipboard.writeText(text).then(() => { setCopied(key); setTimeout(() => setCopied(null), 2000); });
   };
 
-  const mailto = (text) => {
-    const lines = text.split('\n');
-    const subjectLine = lines.find(l => l.startsWith('Subject: '));
-    const subject = subjectLine ? subjectLine.replace('Subject: ', '') : 'Property Management Update';
-    const body = lines.filter(l => !l.startsWith('Subject: ')).join('\n').trim();
-    window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`);
-  };
+  const hasContacts = tenantEmail || techEmail || pmEmail;
 
   if (!isOpen) return null;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,13,26,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: 20 }}>
-      <div style={{ background: C.white, borderRadius: 8, width: '100%', maxWidth: 680, maxHeight: '90vh', overflow: 'auto', boxShadow: '0 30px 80px rgba(0,0,0,0.5)' }}>
-        {/* Header */}
-        <div style={{ padding: '16px 22px', background: `linear-gradient(135deg, ${C.dark} 0%, ${C.darker} 100%)`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,13,26,0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: 20 }}>
+      <div style={{ background: C.white, borderRadius: 16, width: '100%', maxWidth: 700, maxHeight: '92vh', overflow: 'auto', boxShadow: '0 30px 80px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }}>
+
+        {/* ── Header ── */}
+        <div style={{ padding: '18px 24px', background: `linear-gradient(135deg, ${C.dark} 0%, ${C.darker} 100%)`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, borderRadius: '16px 16px 0 0' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, letterSpacing: 2, color: C.goldL, textTransform: 'uppercase' }}>Email Robot</div>
-              {/* ON/OFF toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 11, letterSpacing: 1.5, color: C.goldL, textTransform: 'uppercase', fontWeight: 700 }}>✉ Email Robot</span>
               {onToggleRobot && (
-                <button onClick={onToggleRobot} style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  background: robotEnabled ? 'rgba(0,201,167,0.18)' : 'rgba(255,255,255,0.08)',
-                  border: `1px solid ${robotEnabled ? C.goldL : 'rgba(255,255,255,0.2)'}`,
-                  borderRadius: 20, padding: '3px 10px 3px 6px', cursor: 'pointer',
-                }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: robotEnabled ? C.goldL : '#64748B', flexShrink: 0 }} />
-                  <span style={{ fontSize: 10, fontWeight: 600, color: robotEnabled ? C.goldL : '#94A3B8', fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1 }}>
-                    {robotEnabled ? 'ON' : 'OFF'}
-                  </span>
+                <button onClick={onToggleRobot} style={{ display: 'flex', alignItems: 'center', gap: 5, background: robotEnabled ? 'rgba(0,201,167,0.18)' : 'rgba(255,255,255,0.08)', border: `1px solid ${robotEnabled ? C.goldL : 'rgba(255,255,255,0.2)'}`, borderRadius: 20, padding: '3px 10px 3px 7px', cursor: 'pointer' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: robotEnabled ? C.goldL : '#64748B' }} />
+                  <span style={{ fontSize: 10, fontWeight: 700, color: robotEnabled ? C.goldL : '#94A3B8', fontFamily: "'Inter', sans-serif" }}>{robotEnabled ? 'ON' : 'OFF'}</span>
                 </button>
               )}
             </div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: C.white }}>
-              {trigger.type === 'work_order' && `Work Order: ${trigger.title}`}
-              {trigger.type === 'overdue_rent' && `Overdue Rent: ${trigger.tenantName}`}
-              {trigger.type === 'lease_expiry' && `Lease Expiring: ${trigger.tenantName}`}
+            <div style={{ fontSize: 18, fontWeight: 700, color: C.white }}>
+              {trigger.type === 'work_order'   && `Work Order: ${trigger.title}`}
+              {trigger.type === 'overdue_rent' && `Overdue Rent · ${trigger.tenantName}`}
+              {trigger.type === 'lease_expiry' && `Lease Expiring · ${trigger.tenantName}`}
               {!trigger.type && 'Draft Email'}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: `1px solid ${C.goldL}`, color: C.goldL, width: 32, height: 32, borderRadius: 8, cursor: 'pointer', fontSize: 18 }}>×</button>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: C.white, width: 34, height: 34, borderRadius: 8, cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
         </div>
 
-        <div style={{ padding: 22 }}>
-          {!drafts && !loading && (
-            <div style={{ textAlign: 'center', padding: '30px 0' }}>
-              <div style={{ fontSize: 44, marginBottom: 16 }}>✉</div>
-              {!robotEnabled ? (
-                <div>
-                  <div style={{ fontSize: 14, color: C.mid, marginBottom: 16, lineHeight: 1.6 }}>
-                    Email Robot is currently <strong>OFF</strong>.<br />Turn it on to generate AI-drafted emails.
-                  </div>
-                  {onToggleRobot && (
-                    <button onClick={onToggleRobot} className="btn-gold">Turn Robot On</button>
+        {/* ── Sub-tabs ── */}
+        <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, background: C.bg, flexShrink: 0 }}>
+          {[{ id: 'draft', label: 'Draft & Send' }, { id: 'contacts', label: '⚙ Contacts & Auto-Send' }].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: '12px 0', background: 'none', border: 'none', borderBottom: tab === t.id ? `2px solid ${C.goldL}` : '2px solid transparent', color: tab === t.id ? C.gold : C.mid, fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: tab === t.id ? 600 : 400, cursor: 'pointer' }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ padding: 22, flex: 1, overflow: 'auto' }}>
+
+          {/* ── CONTACTS TAB ── */}
+          {tab === 'contacts' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Property Manager</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                  <span style={{ fontSize: 12, color: C.mid }}>PM Email</span>
+                  <input type="email" value={contacts.pmEmail || ''} onChange={e => setContacts(p => ({ ...p, pmEmail: e.target.value }))} onBlur={() => saveContacts(contacts)} placeholder="manager@yourcompany.com" style={{ padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, outline: 'none', width: '100%' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+                  <button onClick={() => { const u = { ...contacts, autoSend: !contacts.autoSend }; saveContacts(u); }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', background: contacts.autoSend ? C.goldPale : C.bg, border: `1px solid ${contacts.autoSend ? C.goldL : C.border}`, borderRadius: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: contacts.autoSend ? C.gold : C.mid }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: contacts.autoSend ? C.goldL : C.lighter }} />
+                    Auto-Send {contacts.autoSend ? 'ON' : 'OFF'}
+                  </button>
+                  <span style={{ fontSize: 11, color: C.lighter }}>When ON, emails send automatically after generating</span>
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 14 }}>Technician Emails by Category</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {TECH_CATEGORIES.map(cat => (
+                    <div key={cat} style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 8, alignItems: 'center' }}>
+                      <span style={{ fontSize: 12, color: C.mid, textTransform: 'capitalize' }}>{cat}</span>
+                      <input type="email" value={contacts.technicians?.[cat] || ''} onChange={e => setContacts(p => ({ ...p, technicians: { ...p.technicians, [cat]: e.target.value } }))} onBlur={() => saveContacts(contacts)} placeholder={`${cat}@contractor.com`} style={{ padding: '7px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, outline: 'none', width: '100%' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── DRAFT TAB ── */}
+          {tab === 'draft' && (
+            <>
+              {!drafts && !loading && (
+                <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                  <div style={{ fontSize: 48, marginBottom: 16 }}>✉</div>
+                  {!robotEnabled ? (
+                    <div>
+                      <p style={{ fontSize: 14, color: C.mid, marginBottom: 16, lineHeight: 1.6 }}>Email Robot is <strong>OFF</strong>. Turn it on to generate emails.</p>
+                      {onToggleRobot && <button onClick={onToggleRobot} className="btn-gold">Turn Robot On</button>}
+                    </div>
+                  ) : (
+                    <div>
+                      <p style={{ fontSize: 14, color: C.mid, marginBottom: 8, lineHeight: 1.6 }}>
+                        Claude drafts 3 emails automatically:
+                      </p>
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+                        {[
+                          { icon: '◎', label: 'Tenant', addr: tenantEmail },
+                          { icon: '⚙', label: 'Technician', addr: techEmail || `(set in Contacts)` },
+                          { icon: '◉', label: 'Property Mgr', addr: pmEmail || `(set in Contacts)` },
+                        ].map(r => (
+                          <div key={r.label} style={{ padding: '8px 14px', background: C.bg, borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 12 }}>
+                            <span style={{ color: C.gold }}>{r.icon}</span>
+                            <span style={{ color: C.dark, fontWeight: 600, marginLeft: 6 }}>{r.label}</span>
+                            <div style={{ fontSize: 11, color: C.lighter, marginTop: 2 }}>{r.addr || 'not set'}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={generate} className="btn-gold">Generate Emails with AI</button>
+                      {!hasContacts && <div style={{ marginTop: 12, fontSize: 12, color: C.lighter }}>Add emails in the Contacts tab to enable auto-send.</div>}
+                    </div>
                   )}
                 </div>
-              ) : (
-                <div>
-                  <div style={{ fontSize: 14, color: C.mid, marginBottom: 20, lineHeight: 1.6 }}>
-                    Claude will draft two emails you can edit before sending:<br />
-                    <strong>1.</strong> To the tenant &nbsp;·&nbsp; <strong>2.</strong> To the technician/manager
-                  </div>
-                  <button onClick={generate} className="btn-gold">Generate Emails with AI</button>
+              )}
+
+              {loading && (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <div style={{ width: 44, height: 44, border: `4px solid ${C.borderL}`, borderTopColor: C.goldL, borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
+                  <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                  <div style={{ fontSize: 14, color: C.mid }}>Drafting emails with Claude…</div>
                 </div>
               )}
-            </div>
-          )}
 
-          {loading && (
-            <div style={{ textAlign: 'center', padding: '40px 0' }}>
-              <div style={{ width: 40, height: 40, border: `4px solid ${C.borderL}`, borderTopColor: C.gold, borderRadius: '50%', margin: '0 auto 16px', animation: 'spin 0.8s linear infinite' }} />
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-              <div style={{ fontSize: 13, color: C.mid }}>Drafting emails with Claude…</div>
-            </div>
-          )}
-
-          {drafts && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {[
-                { key: 'email1', label: '◎ Email to Tenant', text: drafts.email1 },
-                { key: 'email2', label: '⚙ Email to Technician / Manager', text: drafts.email2 },
-              ].map(({ key, label, text }) => (
-                <div key={key} className="card" style={{ padding: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, fontWeight: 600, color: C.dark }}>{label}</div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => copy(text, key)} style={{ padding: '6px 12px', background: copied === key ? C.goldPale : C.bg, border: `1px solid ${C.borderL}`, borderRadius: 8, fontSize: 12, cursor: 'pointer', color: copied === key ? C.gold : C.mid }}>
-                        {copied === key ? '✓ Copied' : 'Copy'}
-                      </button>
-                      <button onClick={() => mailto(text)} style={{ padding: '6px 12px', background: C.goldPale, border: `1px solid ${C.goldL}`, borderRadius: 8, fontSize: 12, cursor: 'pointer', color: C.gold }}>
-                        Open in Mail
-                      </button>
+              {drafts && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* Sent results banner */}
+                  {sentResults && (
+                    <div style={{ padding: '12px 16px', background: C.goldPale, borderRadius: 10, border: `1px solid ${C.goldL}`, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                      {sentResults.map((r, i) => (
+                        <span key={i} style={{ fontSize: 12, fontWeight: 600, color: r.status === 'sent' ? C.gold : C.mid }}>
+                          {r.status === 'sent' ? '✓' : r.status === 'mailto' ? '↗' : '!'} {r.label} {r.status === 'sent' ? 'sent' : r.status === 'mailto' ? 'opened' : `failed`}
+                        </span>
+                      ))}
                     </div>
+                  )}
+
+                  {[
+                    { key: 'email1', label: '◎ Email to Tenant',               to: tenantEmail },
+                    { key: 'email2', label: '⚙ Email to Technician & PM',      to: techEmail || pmEmail },
+                  ].map(({ key, label, to }) => (
+                    <div key={key} className="card" style={{ padding: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <div>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{label}</span>
+                          {to && <span style={{ fontSize: 11, color: C.lighter, marginLeft: 8 }}>→ {to}</span>}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => copy(drafts[key], key)} style={{ padding: '5px 11px', background: copied === key ? C.goldPale : C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, cursor: 'pointer', color: copied === key ? C.gold : C.mid }}>
+                            {copied === key ? '✓ Copied' : 'Copy'}
+                          </button>
+                          <button onClick={() => openMailto(drafts[key], to)} style={{ padding: '5px 11px', background: C.goldPale, border: `1px solid ${C.goldL}`, borderRadius: 8, fontSize: 12, cursor: 'pointer', color: C.gold }}>
+                            Open Mail
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: C.lighter, marginBottom: 5 }}>Edit before sending:</div>
+                      <textarea value={drafts[key]} onChange={e => updateDraft(key, e.target.value)} rows={8} style={{ width: '100%', padding: 12, border: `1px solid ${C.border}`, borderRadius: 10, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, background: C.bg, color: C.text, resize: 'vertical', lineHeight: 1.7, outline: 'none' }} />
+                    </div>
+                  ))}
+
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={sendAll} disabled={sending} className="btn-gold" style={{ flex: 1, opacity: sending ? 0.7 : 1 }}>
+                      {sending ? 'Sending…' : hasContacts ? `Send All (${[tenantEmail, techEmail, pmEmail].filter(Boolean).length} recipients)` : 'Send via Mail App'}
+                    </button>
+                    <button onClick={generate} style={{ padding: '11px 18px', background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 13, color: C.mid, cursor: 'pointer' }}>
+                      ↺ Re-draft
+                    </button>
                   </div>
-                  <div style={{ fontSize: 11, color: C.lighter, marginBottom: 6, fontFamily: "'Inter', sans-serif" }}>Edit below before sending:</div>
-                  <textarea
-                    value={text}
-                    onChange={e => updateDraft(key, e.target.value)}
-                    rows={9}
-                    style={{ width: '100%', padding: 12, border: `1px solid ${C.border}`, borderRadius: 10, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, background: C.bg, color: C.text, resize: 'vertical', lineHeight: 1.7, outline: 'none' }}
-                  />
                 </div>
-              ))}
-              <button onClick={generate} style={{ padding: '10px', background: 'transparent', border: `1px solid ${C.borderL}`, borderRadius: 4, fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: C.mid, cursor: 'pointer' }}>
-                ↺ Re-generate
-              </button>
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>
