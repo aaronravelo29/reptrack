@@ -213,12 +213,12 @@ function AuthScreen() {
 
   const inputStyle = { 
     width: "100%", padding: "12px 14px", fontSize: 14, 
-    border: "1px solid #d4cfbd", borderRadius: 4, 
-    background: "#faf8f4", color: "#0F2742", outline: "none", 
+    border: "1px solid #E2E8F0", borderRadius: 4, 
+    background: "#F1F5F9", color: "#0D1B2A", outline: "none", 
     fontFamily: "'IBM Plex Mono', monospace", boxSizing: "border-box" 
   };
   const labelStyle = { 
-    display: "block", fontSize: 10, color: "#4D6785", 
+    display: "block", fontSize: 10, color: "#64748B", 
     letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 
   };
 
@@ -275,10 +275,10 @@ function AuthScreen() {
   // ═══ EMAIL CONFIRMATION SCREEN ═══
   if (showConfirmation) {
     return (
-      <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 50%, #0F2742 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'IBM Plex Mono', monospace" }}>
+      <div style={{ minHeight: "100vh", background: "linear-gradient(150deg, #0D1B2A 0%, #0A2A3A 50%, #0D1B2A 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'IBM Plex Mono', monospace" }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');`}</style>
         
-        <div style={{ background: "#F7F5EA", borderRadius: 8, padding: "40px 36px", width: "100%", maxWidth: 420, boxShadow: "0 25px 80px rgba(0,0,0,0.4)", textAlign: "center" }}>
+        <div style={{ background: "#FFFFFF", borderRadius: 14, padding: "40px 36px", width: "100%", maxWidth: 420, boxShadow: "0 25px 80px rgba(0,0,0,0.4)", textAlign: "center" }}>
           {/* Success Icon */}
           <div style={{ 
             width: 80, height: 80, borderRadius: "50%", 
@@ -289,13 +289,13 @@ function AuthScreen() {
             ✉️
           </div>
           
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: "#0F2742", fontFamily: "'Inter', sans-serif", margin: "0 0 12px" }}>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: "#0D1B2A", fontFamily: "'Inter', sans-serif", margin: "0 0 12px" }}>
             Check Your Email
           </h1>
           
-          <p style={{ fontSize: 14, color: "#4D6785", lineHeight: 1.6, margin: "0 0 24px" }}>
+          <p style={{ fontSize: 14, color: "#64748B", lineHeight: 1.6, margin: "0 0 24px" }}>
             We sent a confirmation link to:<br/>
-            <strong style={{ color: "#0F2742" }}>{email}</strong>
+            <strong style={{ color: "#0D1B2A" }}>{email}</strong>
           </p>
           
           <div style={{ 
@@ -316,8 +316,8 @@ function AuthScreen() {
             onClick={goToLogin}
             style={{ 
               width: "100%", padding: "14px 20px", 
-              background: "#C6A24A", border: "none", borderRadius: 4, 
-              color: "#0F2742", fontSize: 14, fontWeight: 600, 
+              background: "#00C9A7", border: "none", borderRadius: 4, 
+              color: "#0D1B2A", fontSize: 14, fontWeight: 600, 
               cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace",
               marginBottom: 16
             }}
@@ -325,11 +325,11 @@ function AuthScreen() {
             ← Go to Login
           </button>
           
-          <p style={{ fontSize: 11, color: "#7a96b0", margin: 0 }}>
+          <p style={{ fontSize: 11, color: "#94A3B8", margin: 0 }}>
             Didn't receive the email? Check your spam folder or{" "}
             <span 
               onClick={() => { setShowConfirmation(false); setMode("signup"); }}
-              style={{ color: "#C6A24A", cursor: "pointer", textDecoration: "underline" }}
+              style={{ color: "#00C9A7", cursor: "pointer", textDecoration: "underline" }}
             >
               try again
             </span>
@@ -341,23 +341,23 @@ function AuthScreen() {
 
   // ═══ MAIN LOGIN/SIGNUP SCREEN ═══
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 50%, #0F2742 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'IBM Plex Mono', monospace" }}>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(150deg, #0D1B2A 0%, #0A2A3A 50%, #0D1B2A 100%)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, fontFamily: "'IBM Plex Mono', monospace" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');`}</style>
       
-      <div style={{ background: "#F7F5EA", borderRadius: 8, padding: "40px 36px", width: "100%", maxWidth: mode === "signup" ? 480 : 420, boxShadow: "0 25px 80px rgba(0,0,0,0.4)" }}>
+      <div style={{ background: "#FFFFFF", borderRadius: 14, padding: "40px 36px", width: "100%", maxWidth: mode === "signup" ? 480 : 420, boxShadow: "0 25px 80px rgba(0,0,0,0.4)" }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ fontSize: 32, fontWeight: 700, color: "#0F2742", fontFamily: "'Inter', sans-serif", letterSpacing: -1 }}>
-            Rep<span style={{ color: "#C6A24A" }}>Track</span>
+          <div style={{ fontSize: 32, fontWeight: 700, color: "#0D1B2A", fontFamily: "'Inter', sans-serif", letterSpacing: -1 }}>
+            Rep<span style={{ color: "#00C9A7" }}>Track</span>
           </div>
-          <div style={{ fontSize: 11, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginTop: 6 }}>Real Estate Professional Tracker</div>
+          <div style={{ fontSize: 11, color: "#64748B", letterSpacing: 2, textTransform: "uppercase", marginTop: 6 }}>Real Estate Professional Tracker</div>
         </div>
 
-        <div style={{ display: "flex", marginBottom: 24, borderBottom: "1px solid #d4cfbd" }}>
+        <div style={{ display: "flex", marginBottom: 24, borderBottom: "1px solid #E2E8F0" }}>
           {["login", "signup"].map(m => (
             <button key={m} onClick={() => { setMode(m); setError(""); setMessage(""); }}
               style={{ flex: 1, padding: "12px 0", background: "none", border: "none",
-                borderBottom: mode === m ? "2px solid #C6A24A" : "2px solid transparent",
-                color: mode === m ? "#C6A24A" : "#4D6785",
+                borderBottom: mode === m ? "2px solid #00C9A7" : "2px solid transparent",
+                color: mode === m ? "#00C9A7" : "#64748B",
                 fontSize: 12, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase",
                 cursor: "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
               {m === "login" ? "Log In" : "Sign Up"}
@@ -397,13 +397,13 @@ function AuthScreen() {
                       type="button"
                       onClick={() => setJobType(job.id)}
                       style={{
-                        padding: "10px 12px", border: `2px solid ${jobType === job.id ? "#C6A24A" : "#d4cfbd"}`,
-                        borderRadius: 6, background: jobType === job.id ? "#faf3dc" : "white",
+                        padding: "10px 12px", border: `2px solid ${jobType === job.id ? "#00C9A7" : "#E2E8F0"}`,
+                        borderRadius: 6, background: jobType === job.id ? "#E0F7F4" : "white",
                         cursor: "pointer", textAlign: "left", transition: "all 0.15s"
                       }}
                     >
                       <div style={{ fontSize: 16, marginBottom: 2 }}>{job.icon}</div>
-                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600, color: "#0F2742" }}>
+                      <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, fontWeight: 600, color: "#0D1B2A" }}>
                         {job.label}
                       </div>
                     </button>
@@ -425,8 +425,8 @@ function AuthScreen() {
                 />
               </div>
 
-              <div style={{ borderTop: "1px solid #d4cfbd", margin: "20px 0", paddingTop: 16 }}>
-                <div style={{ fontSize: 10, color: "#4D6785", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Account Credentials</div>
+              <div style={{ borderTop: "1px solid #E2E8F0", margin: "20px 0", paddingTop: 16 }}>
+                <div style={{ fontSize: 10, color: "#64748B", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Account Credentials</div>
               </div>
             </>
           )}
@@ -438,23 +438,23 @@ function AuthScreen() {
           <div style={{ marginBottom: 20 }}>
             <label style={labelStyle}>Password *</label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} style={inputStyle} placeholder="••••••••" />
-            {mode === "signup" && <div style={{ fontSize: 10, color: "#7a96b0", marginTop: 4 }}>Minimum 6 characters</div>}
+            {mode === "signup" && <div style={{ fontSize: 10, color: "#94A3B8", marginTop: 4 }}>Minimum 6 characters</div>}
           </div>
 
           {error && <div style={{ background: "#f5e4e4", border: "1px solid #993030", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#7a1a1a" }}>{error}</div>}
           {message && <div style={{ background: "#e4f2ea", border: "1px solid #256b45", borderRadius: 4, padding: "10px 14px", marginBottom: 16, fontSize: 12, color: "#1a5c38" }}>{message}</div>}
 
           <button type="submit" disabled={loading}
-            style={{ width: "100%", padding: "14px 20px", background: loading ? "#8a9aaa" : "#C6A24A", border: "none", borderRadius: 4, color: "#0F2742", fontSize: 12, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase", cursor: loading ? "not-allowed" : "pointer", fontFamily: "'IBM Plex Mono', monospace" }}>
+            style={{ width: "100%", padding: "14px 20px", background: loading ? "#94A3B8" : "#00C9A7", border: "none", borderRadius: 8, color: "#0D1B2A", fontSize: 13, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif" }}>
             {loading ? "Please wait..." : mode === "login" ? "Log In" : "Create Account"}
           </button>
         </form>
 
-        <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid #d4cfbd", textAlign: "center", fontSize: 11, color: "#7a96b0" }}>
+        <div style={{ marginTop: 24, paddingTop: 18, borderTop: "1px solid #E2E8F0", textAlign: "center", fontSize: 11, color: "#94A3B8" }}>
           {mode === "login" ? (
-            <>Don't have an account? <span onClick={() => setMode("signup")} style={{ color: "#C6A24A", cursor: "pointer", fontWeight: 600 }}>Sign up</span></>
+            <>Don't have an account? <span onClick={() => setMode("signup")} style={{ color: "#00C9A7", cursor: "pointer", fontWeight: 600 }}>Sign up</span></>
           ) : (
-            <>Already have an account? <span onClick={() => setMode("login")} style={{ color: "#C6A24A", cursor: "pointer", fontWeight: 600 }}>Log in</span></>
+            <>Already have an account? <span onClick={() => setMode("login")} style={{ color: "#00C9A7", cursor: "pointer", fontWeight: 600 }}>Log in</span></>
           )}
         </div>
       </div>
@@ -580,22 +580,22 @@ const fmtH = (m) => { const h=Math.floor(m/60),mn=m%60; return !h&&!mn?"0h":`${h
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const todayStr = () => new Date().toISOString().split("T")[0];
 
-// HIGH CONTRAST COLORS - Accessible for 50+ vision
 const C = {
-  bg:"#FAFAF5", white:"#ffffff", dark:"#1a1a2e", darker:"#0d0d1a", text:"#1a1a2e",
-  mid:"#3d3d5c", light:"#5a5a7a", lighter:"#8080a0", border:"#c0c0c0", borderL:"#e0e0e0",
-  // High contrast gold - deeper, richer
-  gold:"#8B6914", goldL:"#B8860B", goldPale:"#FFF8DC", goldBright:"#DAA520",
-  // High contrast green - darker, bolder
-  green:"#006400", greenPale:"#E8F5E9", greenB:"#228B22",
-  // High contrast red - clear, unmistakable  
-  red:"#B22222", redPale:"#FFEBEE", redB:"#DC143C",
-  // High contrast blue - rich, readable
-  blue:"#1E3A5F", bluePale:"#E3F2FD", blueB:"#1565C0",
-  // Purple - bold
-  purple:"#4B0082", purpleB:"#6A0DAD",
-  // Orange - warm, visible
-  orange:"#CC5500", orangePale:"#FFF3E0", orangeB:"#E65100",
+  // Layout
+  bg:"#F1F5F9", white:"#ffffff", dark:"#0D1B2A", darker:"#060F1A", text:"#1E293B",
+  mid:"#475569", light:"#64748B", lighter:"#94A3B8", border:"#E2E8F0", borderL:"#F1F5F9",
+  // Teal accent (replaces gold)
+  gold:"#00A88C", goldL:"#00C9A7", goldPale:"#E0F7F4", goldBright:"#00E5C4",
+  // Green — success, REP qualifying
+  green:"#065F46", greenPale:"#D1FAE5", greenB:"#059669",
+  // Red — alerts, non-qualifying
+  red:"#991B1B", redPale:"#FEE2E2", redB:"#DC2626",
+  // Blue — info
+  blue:"#1E40AF", bluePale:"#DBEAFE", blueB:"#2563EB",
+  // Purple
+  purple:"#5B21B6", purpleB:"#7C3AED",
+  // Orange
+  orange:"#B45309", orangePale:"#FEF3C7", orangeB:"#D97706",
 };
 
 const VIEWS = [
@@ -2842,16 +2842,16 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
   const hoursPerWeek = weeksRemaining > 0 ? (hoursNeeded / weeksRemaining).toFixed(1) : 0;
 
   return (
-    <div style={{ fontFamily: "Georgia, serif", background: C.bg, minHeight: "100vh", color: C.text, display: "flex", height: "100vh", overflow: "hidden" }}>
+    <div style={{ fontFamily: "'Inter', sans-serif", background: C.bg, minHeight: "100vh", color: C.text, display: "flex", height: "100vh", overflow: "hidden" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         /* ── SIDEBAR ── */
         .sidebar {
           width: 220px;
           min-width: 220px;
-          background: #0F2742;
+          background: #0D1B2A;
           display: flex;
           flex-direction: column;
           height: 100vh;
@@ -2861,47 +2861,47 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           overflow: hidden;
         }
         .sidebar-logo {
-          padding: 20px 20px 14px;
-          border-bottom: 1px solid rgba(198,162,74,0.2);
+          padding: 22px 20px 16px;
+          border-bottom: 1px solid rgba(0,201,167,0.18);
         }
         .sidebar-nav {
           flex: 1;
           overflow-y: auto;
-          padding: 10px 0;
+          padding: 12px 10px;
         }
         .sidebar-nav-item {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 11px 20px;
+          gap: 10px;
+          padding: 10px 12px;
           cursor: pointer;
           border: none;
           background: transparent;
           width: 100%;
           text-align: left;
-          border-radius: 0;
+          border-radius: 8px;
           transition: all 0.15s;
-          border-left: 3px solid transparent;
+          margin-bottom: 2px;
         }
         .sidebar-nav-item:hover {
-          background: rgba(255,255,255,0.06);
+          background: rgba(255,255,255,0.07);
         }
         .sidebar-nav-item.active {
-          background: rgba(198,162,74,0.12);
-          border-left-color: #C6A24A;
+          background: rgba(0,201,167,0.14);
+          box-shadow: inset 3px 0 0 #00C9A7;
         }
-        .sidebar-nav-icon { font-size: 18px; min-width: 22px; text-align: center; }
+        .sidebar-nav-icon { font-size: 17px; min-width: 20px; text-align: center; }
         .sidebar-nav-label {
           font-family: 'Inter', sans-serif;
           font-size: 13px;
           font-weight: 500;
-          color: rgba(255,255,255,0.7);
+          color: rgba(255,255,255,0.62);
           white-space: nowrap;
         }
-        .sidebar-nav-item.active .sidebar-nav-label { color: #C6A24A; font-weight: 600; }
+        .sidebar-nav-item.active .sidebar-nav-label { color: #00C9A7; font-weight: 600; }
         .sidebar-footer {
-          padding: 14px 20px;
-          border-top: 1px solid rgba(255,255,255,0.08);
+          padding: 14px 16px;
+          border-top: 1px solid rgba(255,255,255,0.07);
         }
         .app-content {
           margin-left: 220px;
@@ -2913,27 +2913,30 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         }
         .top-bar {
           background: #FFFFFF;
-          border-bottom: 2px solid #B8860B;
-          padding: 0 20px;
-          height: 56px;
+          border-bottom: 2px solid #00C9A7;
+          padding: 0 24px;
+          height: 58px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           flex-shrink: 0;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+          box-shadow: 0 2px 8px rgba(13,27,42,0.07);
         }
 
         /* ── SCROLLING ── */
+        html, body { overflow: hidden !important; height: 100% !important; }
         .main-scroll {
           overflow-y: auto !important;
           overflow-x: hidden !important;
           flex: 1;
+          max-height: calc(100vh - 58px);
           -webkit-overflow-scrolling: touch !important;
+          padding-bottom: 20px !important;
         }
         .tab-scroll {
           overflow-y: auto !important;
           overflow-x: hidden !important;
-          height: 100%;
+          max-height: calc(100vh - 130px) !important;
           -webkit-overflow-scrolling: touch !important;
           padding-bottom: 80px !important;
         }
@@ -2949,7 +2952,13 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           max-height: 400px !important;
           -webkit-overflow-scrolling: touch !important;
         }
-        html, body { overflow: hidden !important; height: 100% !important; }
+
+        /* ── SCROLLBARS ── */
+        ::-webkit-scrollbar { width: 7px !important; height: 7px !important; }
+        ::-webkit-scrollbar-track { background: #F1F5F9 !important; }
+        ::-webkit-scrollbar-thumb { background: #00C9A7 !important; border-radius: 6px !important; }
+        ::-webkit-scrollbar-thumb:hover { background: #00A88C !important; }
+        * { scrollbar-width: thin !important; scrollbar-color: #00C9A7 #F1F5F9 !important; }
 
         /* ── MOBILE: bottom nav bar, hide sidebar ── */
         @media (max-width: 768px) {
@@ -2959,126 +2968,53 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
             display: flex !important;
             position: fixed;
             bottom: 0; left: 0; right: 0;
-            background: #0F2742;
-            border-top: 2px solid #B8860B;
+            background: #0D1B2A;
+            border-top: 2px solid #00C9A7;
             z-index: 200;
             overflow-x: auto;
           }
-          .main-scroll { padding-bottom: 70px !important; }
+          .main-scroll { padding-bottom: 70px !important; max-height: calc(100vh - 58px) !important; }
+          .tab-scroll { max-height: calc(100vh - 100px) !important; padding-bottom: 100px !important; }
+          .modal-scroll { max-height: 60vh !important; }
+          .main-scroll { padding: 12px !important; }
+          button, select, input { min-height: 44px !important; font-size: 16px !important; }
+          .card { padding: 16px !important; }
         }
         @media (min-width: 769px) {
           .bottom-nav { display: none !important; }
+          .mobile-stats-bar { display: none !important; }
         }
+        @media (max-width: 480px) { .tiny-hide { display: none !important; } }
 
-        /* ── SCROLLBARS ── */
-        @media (min-width: 769px) {
-          ::-webkit-scrollbar { width: 8px !important; }
-          ::-webkit-scrollbar-track { background: #f0f0f0 !important; }
-          ::-webkit-scrollbar-thumb { background: #B8860B !important; border-radius: 4px !important; }
-        }
-          ::-webkit-scrollbar-thumb { 
-            background: linear-gradient(180deg, #B8860B 0%, #8B6914 100%) !important; 
-            border-radius: 8px !important; 
-            border: 2px solid #e8e8e8 !important;
-            min-height: 50px !important;
-          }
-          ::-webkit-scrollbar-thumb:hover { 
-            background: linear-gradient(180deg, #DAA520 0%, #B8860B 100%) !important;
-          }
-        }
-        
-        /* Mobile - thin scrollbars, rely on touch */
-        @media (max-width: 768px) {
-          ::-webkit-scrollbar { 
-            width: 6px !important; 
-            height: 6px !important; 
-          }
-          ::-webkit-scrollbar-track { 
-            background: transparent !important;
-          }
-          ::-webkit-scrollbar-thumb { 
-            background: rgba(184, 134, 11, 0.5) !important; 
-            border-radius: 3px !important;
-          }
-        }
-        
-        /* Firefox scrollbar */
-        * { 
-          scrollbar-width: thin !important; 
-          scrollbar-color: #B8860B #e8e8e8 !important; 
-        }
-        
-        /* Ensure scrolling is enabled everywhere */
-        html, body { 
-          overflow-y: auto !important; 
-          overflow-x: hidden !important;
-          height: 100% !important;
-        }
-        
-        /* Main app scrollable area */
-        .main-scroll {
-          overflow-y: auto !important;
-          overflow-x: hidden !important;
-          max-height: calc(100vh - 70px) !important;
-          -webkit-overflow-scrolling: touch !important;
-          padding-bottom: 20px !important;
-        }
-        
-        /* Modal scrollable content */
-        .modal-scroll { 
-          overflow-y: auto !important; 
-          overflow-x: hidden !important;
-          max-height: 70vh !important;
-          -webkit-overflow-scrolling: touch !important;
-          padding-right: 10px !important;
-        }
-        
-        /* Tab content scrollable */
-        .tab-scroll {
-          overflow-y: auto !important;
-          overflow-x: hidden !important;
-          max-height: calc(100vh - 130px) !important;
-          -webkit-overflow-scrolling: touch !important;
-          padding-bottom: 80px !important;
-        }
-        
-        /* Card content scrollable */
-        .card-scroll {
-          overflow-y: auto !important;
-          max-height: 400px !important;
-          -webkit-overflow-scrolling: touch !important;
-        }
-        
-        /* ═══════════════════════════════════════════════════════════════════════
-           MOBILE RESPONSIVE STYLES
-           ═══════════════════════════════════════════════════════════════════════ */
-        
-        @media (max-width: 768px) {
-          .main-scroll {
-            padding: 12px !important;
-            max-height: calc(100vh - 60px) !important;
-          }
-          .tab-scroll {
-            max-height: calc(100vh - 100px) !important;
-            padding-bottom: 100px !important;
-          }
-          .modal-scroll {
-            max-height: 60vh !important;
-          }
-        }
-        }
-        
-        .nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 18px; cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; transition:all .15s; color:#6a5830; }
-        .nav-item:hover { color:#e8c870; }
-        .nav-item.active { color:#e8c870; border-bottom-color:#C6A24A; }
-        .card { background:#fff; border:1px solid ${C.border}; border-radius:3px; padding:20px; }
-        .btn-gold { background:#C6A24A; border:none; color:#0F2742; font-weight:600; padding:10px 22px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; border-radius:2px; }
-        .btn-outline { background:#fff; border:1px solid ${C.border}; color:${C.mid}; padding:9px 18px; font-family:'IBM Plex Mono',monospace; font-size:11px; cursor:pointer; border-radius:2px; }
-        .msg-bubble { max-width: 85%; padding: 14px 18px; border-radius: 12px; margin-bottom: 12px; }
-        .msg-user { background: ${C.dark}; color: ${C.goldBright}; margin-left: auto; border-bottom-right-radius: 4px; }
-        .msg-assistant { background: white; border: 1px solid ${C.border}; color: ${C.text}; margin-right: auto; border-bottom-left-radius: 4px; }
+        /* ── COMPONENTS ── */
+        .nav-item { display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 18px; cursor:pointer; border:none; background:none; border-bottom:2px solid transparent; transition:all .15s; color:#94A3B8; }
+        .nav-item:hover { color:#00C9A7; }
+        .nav-item.active { color:#00C9A7; border-bottom-color:#00C9A7; }
+        .card { background:#fff; border:1px solid ${C.border}; border-radius:12px; padding:20px; box-shadow:0 1px 6px rgba(13,27,42,0.06); }
+        .btn-gold { background:#00C9A7; border:none; color:#0D1B2A; font-weight:700; padding:10px 22px; font-family:'Inter',sans-serif; font-size:12px; letter-spacing:0.5px; cursor:pointer; border-radius:8px; transition:background 0.15s; }
+        .btn-gold:hover { background:#00A88C; }
+        .btn-outline { background:#fff; border:1px solid ${C.border}; color:${C.mid}; padding:9px 18px; font-family:'Inter',sans-serif; font-size:12px; cursor:pointer; border-radius:8px; transition:all 0.15s; }
+        .btn-outline:hover { border-color:#00C9A7; color:#00A88C; }
+        .msg-bubble { max-width: 85%; padding: 14px 18px; border-radius: 14px; margin-bottom: 12px; }
+        .msg-user { background: ${C.dark}; color: #00E5C4; margin-left: auto; border-bottom-right-radius: 4px; }
+        .msg-assistant { background: white; border: 1px solid ${C.border}; color: ${C.text}; margin-right: auto; border-bottom-left-radius: 4px; box-shadow: 0 1px 4px rgba(13,27,42,0.06); }
         .msg-logged { border-left: 3px solid ${C.greenB}; }
         .progress-ring { transform: rotate(-90deg); }
+
+        /* ── RESPONSIVE GRIDS ── */
+        .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+        @media (max-width: 768px) { .grid-2,.grid-3 { grid-template-columns:1fr !important; } .mobile-hide { display:none !important; } .mobile-stack { grid-template-columns:1fr !important; } }
+
+        /* ── MOBILE NAV ── */
+        @media (max-width: 768px) {
+          .mobile-stats-bar { display: block !important; }
+          .desktop-sidebar { display: none !important; }
+          .assistant-layout { flex-direction: column !important; }
+          .chat-area { min-height: 300px !important; }
+          .upload-text { display: none !important; }
+          .quick-actions-row { overflow-x:auto !important; flex-wrap:nowrap !important; -webkit-overflow-scrolling:touch !important; }
+        }`}
         
         /* ═══════════════════════════════════════════════════════════════════════
            MOBILE RESPONSIVE STYLES
@@ -3161,7 +3097,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
       <aside className="sidebar">
         <div className="sidebar-logo">
           <span style={{ fontSize: 22, fontWeight: 800, color: "#ffffff", fontFamily: "'Inter', sans-serif", letterSpacing: -0.5 }}>
-            Rep<span style={{ color: "#C6A24A" }}>Track</span>
+            Rep<span style={{ color: "#00C9A7" }}>Track</span>
           </span>
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 2, textTransform: "uppercase", marginTop: 4 }}>Property Manager</div>
         </div>
@@ -3200,9 +3136,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         {/* Mobile bottom nav */}
         <nav className="bottom-nav">
           {VIEWS.map(v => (
-            <button key={v.id} onClick={() => setView(v.id)} style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "8px 14px", border: "none", cursor: "pointer", background: view === v.id ? "rgba(198,162,74,0.15)" : "transparent", borderTop: view === v.id ? "2px solid #C6A24A" : "2px solid transparent" }}>
+            <button key={v.id} onClick={() => setView(v.id)} style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "8px 14px", border: "none", cursor: "pointer", background: view === v.id ? "rgba(0,201,167,0.15)" : "transparent", borderTop: view === v.id ? "2px solid #00C9A7" : "2px solid transparent" }}>
               <span style={{ fontSize: 18 }}>{v.icon}</span>
-              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, fontWeight: view === v.id ? 700 : 500, color: view === v.id ? "#C6A24A" : "rgba(255,255,255,0.6)", whiteSpace: "nowrap" }}>{v.label}</span>
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, fontWeight: view === v.id ? 700 : 500, color: view === v.id ? "#00C9A7" : "rgba(255,255,255,0.6)", whiteSpace: "nowrap" }}>{v.label}</span>
             </button>
           ))}
         </nav>
@@ -3614,7 +3550,7 @@ Since I can't directly read the document content, please ask me for the specific
                 <button 
                   onClick={() => setShowREPCalculator(true)}
                   style={{ 
-                    padding: "8px 14px", background: "#0F2742", color: "white", 
+                    padding: "8px 14px", background: "#0D1B2A", color: "white", 
                     border: "none", borderRadius: 6, fontSize: 12, fontWeight: 600, 
                     cursor: "pointer", display: "flex", alignItems: "center", gap: 6
                   }}
@@ -5444,7 +5380,7 @@ Since I can't directly read the document content, please ask me for the specific
                 <button 
                   onClick={() => startEditProperty(showPropertyDetailModal)}
                   style={{ 
-                    flex: 1, padding: "16px", background: "#B8860B", color: "white", 
+                    flex: 1, padding: "16px", background: "#00C9A7", color: "white", 
                     border: "none", borderRadius: 8, fontSize: 16, fontWeight: 700, 
                     cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
                     minHeight: 54
@@ -5484,7 +5420,7 @@ Since I can't directly read the document content, please ask me for the specific
           }}>
             {/* Header */}
             <div style={{ 
-              background: "#B8860B", padding: "20px 24px", 
+              background: "#00C9A7", padding: "20px 24px", 
               borderRadius: "12px 12px 0 0", display: "flex", 
               justifyContent: "space-between", alignItems: "center",
               position: "sticky", top: 0, zIndex: 10
@@ -5582,7 +5518,7 @@ Since I can't directly read the document content, please ask me for the specific
               </div>
               
               {/* Operating Expenses */}
-              <div style={{ background: "#FFF8DC", border: "2px solid #B8860B", borderRadius: 12, padding: 20, marginBottom: 20 }}>
+              <div style={{ background: "#E0F7F4", border: "2px solid #00C9A7", borderRadius: 12, padding: 20, marginBottom: 20 }}>
                 <div style={{ fontSize: 16, fontWeight: 700, color: "#8B6914", marginBottom: 16 }}>📊 Monthly Operating Expenses</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div>
@@ -6127,7 +6063,7 @@ Since I can't directly read the document content, please ask me for the specific
             <div style={{ 
               padding: "16px 20px", borderBottom: "1px solid #e8e8e8",
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              background: "#0F2742"
+              background: "#0D1B2A"
             }}>
               <h2 style={{ margin: 0, color: "white", fontSize: 18, fontWeight: 700 }}>
                 ✏️ Edit Activity
@@ -6289,7 +6225,7 @@ Since I can't directly read the document content, please ask me for the specific
               <button
                 onClick={saveEditedEntry}
                 style={{
-                  padding: "10px 24px", background: "#0F2742", color: "white",
+                  padding: "10px 24px", background: "#0D1B2A", color: "white",
                   border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer"
                 }}
               >
@@ -6434,13 +6370,13 @@ Since I can't directly read the document content, please ask me for the specific
             <div style={{ 
               padding: "20px 24px", borderBottom: "1px solid #e8e8e8",
               display: "flex", justifyContent: "space-between", alignItems: "center",
-              background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 100%)"
+              background: "linear-gradient(135deg, #0D1B2A 0%, #0A2A3A 100%)"
             }}>
               <div>
                 <h2 style={{ margin: 0, color: "white", fontSize: 20, fontWeight: 700 }}>
                   🧮 Do I Need REP Status?
                 </h2>
-                <p style={{ margin: "4px 0 0", color: "#C6A24A", fontSize: 12 }}>
+                <p style={{ margin: "4px 0 0", color: "#00C9A7", fontSize: 12 }}>
                   Calculate your potential tax savings
                 </p>
               </div>
@@ -6602,10 +6538,10 @@ Since I can't directly read the document content, please ask me for the specific
                 return (
                   <div style={{ marginTop: 24 }}>
                     <div style={{ 
-                      background: "linear-gradient(135deg, #0F2742 0%, #1a3a5c 100%)", 
+                      background: "linear-gradient(135deg, #0D1B2A 0%, #0A2A3A 100%)", 
                       borderRadius: 12, padding: 20, color: "white" 
                     }}>
-                      <h3 style={{ margin: "0 0 16px", fontSize: 16, color: "#C6A24A" }}>
+                      <h3 style={{ margin: "0 0 16px", fontSize: 16, color: "#00C9A7" }}>
                         📊 Your REP Analysis
                       </h3>
                       
@@ -6650,27 +6586,27 @@ Since I can't directly read the document content, please ask me for the specific
                       {/* Savings */}
                       <div style={{ 
                         padding: 16, 
-                        background: additionalSavings > 1000 ? "rgba(198,162,74,0.3)" : "rgba(255,255,255,0.1)", 
+                        background: additionalSavings > 1000 ? "rgba(0,201,167,0.2)" : "rgba(255,255,255,0.1)", 
                         borderRadius: 8,
-                        border: additionalSavings > 1000 ? "2px solid #C6A24A" : "none"
+                        border: additionalSavings > 1000 ? "2px solid #00C9A7" : "none"
                       }}>
-                        <div style={{ fontSize: 13, color: "#C6A24A", marginBottom: 8 }}>💰 POTENTIAL TAX SAVINGS</div>
+                        <div style={{ fontSize: 13, color: "#00C9A7", marginBottom: 8 }}>💰 POTENTIAL TAX SAVINGS</div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
                           <div>
                             <div style={{ fontSize: 10, color: "#888" }}>Per Year</div>
-                            <div style={{ fontSize: 22, fontWeight: 800, color: "#C6A24A" }}>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: "#00C9A7" }}>
                               ${Math.round(additionalSavings).toLocaleString()}
                             </div>
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: "#888" }}>Over 5 Years</div>
-                            <div style={{ fontSize: 22, fontWeight: 800, color: "#C6A24A" }}>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: "#00C9A7" }}>
                               ${Math.round(additionalSavings * 5).toLocaleString()}
                             </div>
                           </div>
                           <div>
                             <div style={{ fontSize: 10, color: "#888" }}>Over 10 Years</div>
-                            <div style={{ fontSize: 22, fontWeight: 800, color: "#C6A24A" }}>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: "#00C9A7" }}>
                               ${Math.round(additionalSavings * 10).toLocaleString()}
                             </div>
                           </div>
@@ -6754,7 +6690,7 @@ Since I can't directly read the document content, please ask me for the specific
                       onClick={() => setShowREPCalculator(false)}
                       style={{
                         width: "100%", marginTop: 20, padding: "14px 20px",
-                        background: "#0F2742", color: "white", border: "none",
+                        background: "#0D1B2A", color: "white", border: "none",
                         borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: "pointer"
                       }}
                     >
@@ -6824,8 +6760,8 @@ Since I can't directly read the document content, please ask me for the specific
                       onClick={() => saveFontSize(opt.id)}
                       style={{
                         display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-                        padding: "16px", border: `3px solid ${fontSize === opt.id ? "#B8860B" : "#e0e0e0"}`,
-                        borderRadius: 12, background: fontSize === opt.id ? "#FFF8DC" : "white",
+                        padding: "16px", border: `3px solid ${fontSize === opt.id ? "#00C9A7" : "#E2E8F0"}`,
+                        borderRadius: 12, background: fontSize === opt.id ? "#E0F7F4" : "white",
                         cursor: "pointer"
                       }}
                     >
@@ -6856,8 +6792,8 @@ Since I can't directly read the document content, please ask me for the specific
                       onClick={() => saveEmailProvider(provider.id)}
                       style={{
                         display: "flex", alignItems: "center", gap: 12,
-                        padding: "14px 18px", border: `3px solid ${emailProvider === provider.id ? "#B8860B" : "#e0e0e0"}`,
-                        borderRadius: 12, background: emailProvider === provider.id ? "#FFF8DC" : "white",
+                        padding: "14px 18px", border: `3px solid ${emailProvider === provider.id ? "#00C9A7" : "#E2E8F0"}`,
+                        borderRadius: 12, background: emailProvider === provider.id ? "#E0F7F4" : "white",
                         cursor: "pointer", textAlign: "left"
                       }}
                     >
@@ -7246,8 +7182,8 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0F2742", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ color: "#C6A24A", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14 }}>Loading...</div>
+      <div style={{ minHeight: "100vh", background: "#0D1B2A", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: "#00C9A7", fontFamily: "'IBM Plex Mono', monospace", fontSize: 14 }}>Loading...</div>
       </div>
     );
   }
