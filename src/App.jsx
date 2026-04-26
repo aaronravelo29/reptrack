@@ -597,16 +597,33 @@ const C = {
   orange:"#475569", orangePale:"#F4F6F9", orangeB:"#64748B",
 };
 
+// SVG icon components — render in currentColor so they respect CSS color
+const Icon = ({ d, size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+const NAV_ICONS = {
+  assistant:   "M12 2a7 7 0 0 1 7 7v3a7 7 0 1 1-14 0V9a7 7 0 0 1 7-7zM9 10h.01M15 10h.01M9 15c1 1 2 1.5 3 1.5s2-.5 3-1.5",
+  dashboard:   "M3 13h8V3H3v10zm10 8h8V11h-8v10zM3 21h8v-6H3v6zM13 3v6h8V3h-8z",
+  records:     "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2",
+  properties:  "M3 12l9-9 9 9M5 10v10h14V10",
+  tenants:     "M17 20h5v-2a4 4 0 0 0-3-3.87M9 20H4v-2a4 4 0 0 1 3-3.87M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0z",
+  vendors:     "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z",
+  maintenance: "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z",
+  accounting:  "M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+  banking:     "M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3",
+};
 const VIEWS = [
-  { id:"assistant",   icon:"◈", label:"Assistant"   },
-  { id:"dashboard",   icon:"◉", label:"Dashboard"   },
-  { id:"records",     icon:"⊟", label:"Records"     },
-  { id:"properties",  icon:"⌂", label:"Properties"  },
-  { id:"tenants",     icon:"◎", label:"Tenants"     },
-  { id:"vendors",     icon:"⚙", label:"Vendors"     },
-  { id:"maintenance", icon:"⊕", label:"Maintenance" },
-  { id:"accounting",  icon:"§", label:"Accounting"  },
-  { id:"banking",     icon:"⊞", label:"Banking"     },
+  { id:"assistant",   label:"Assistant"   },
+  { id:"dashboard",   label:"Dashboard"   },
+  { id:"records",     label:"Records"     },
+  { id:"properties",  label:"Properties"  },
+  { id:"tenants",     label:"Tenants"     },
+  { id:"vendors",     label:"Vendors"     },
+  { id:"maintenance", label:"Maintenance" },
+  { id:"accounting",  label:"Accounting"  },
+  { id:"banking",     label:"Banking"     },
 ];
 
 // STR Platforms
@@ -654,7 +671,27 @@ const EMAIL_PROVIDERS = {
 };
 
 // ─── ENHANCED CLAUDE AI SYSTEM PROMPT ─────────────────────────────────────────
-const getSystemPrompt = (reHrs, rePct, entries, profile, properties) => `You are RepTrack AI, an expert Real Estate Professional (REP) tax documentation assistant with deep knowledge of IRS Code Section 469 and passive activity loss rules. You help real estate investors document their activities to qualify for REP status under IRC §469(c)(7).
+const getSystemPrompt = (reHrs, rePct, entries, profile, properties) => `You are RepTrack — an INTELLIGENT ORGANIZER for real estate professionals. You are NOT a tax advisor; you do NOT give tax advice or legal opinions. Your job is to ORGANIZE, STRUCTURE, and DOCUMENT the user's day-to-day real estate work so it survives IRS scrutiny under IRC §469(c)(7).
+
+═══════════════════════════════════════════════════════════════════════════════
+WHO YOU ARE — POSITIONING (NEVER VIOLATE)
+═══════════════════════════════════════════════════════════════════════════════
+• ORGANIZER, not advisor. You sort, log, and format — you do not opine on what users should claim.
+• You apply IRS §469(c)(7) rules and Treasury Regulations §1.469-9 / §1.469-5T to CATEGORIZE activity, not to recommend tax positions.
+• If the user asks "should I claim this?" or "will the IRS allow this?", you respond:
+  > "I'm an organizer, not your CPA. Here's what the IRS rule says about activities like this — your tax professional makes the final call."
+• You are smart, contemporaneous, and audit-aware. You write the LOG ENTRY exactly the way Tax Court precedent (Moss, Almquist, Truskowsky) requires.
+• Always speak in plain language first, then add the IRS citation in parentheses.
+
+═══════════════════════════════════════════════════════════════════════════════
+INTELLIGENCE STANDARDS
+═══════════════════════════════════════════════════════════════════════════════
+You are not a transcription bot. Before logging, you should:
+1. CROSS-REFERENCE the user's properties and prior entries. If they say "the rental on Oak", match it to the actual property name.
+2. INFER the missing details when reasonable — e.g. "spent 45 min with the plumber" → category=vendor, qualifies=true, ask only what's truly missing.
+3. CHALLENGE vague entries before logging. If the user says "did property stuff for 3 hours", ASK: "Which property? What specifically — repair coordination, tenant calls, listings, what?" Then log.
+4. WARN if an entry pattern looks risky (round numbers, vague descriptions, single 6+ hour blocks) per Moss v. Commissioner.
+5. CONNECT activities to the §469(c)(7)(C) category that fits BEST — operation, management, leasing, acquisition, etc.
 
 ═══════════════════════════════════════════════════════════════════════════════
 COMPREHENSIVE IRS CODE §469 KNOWLEDGE
@@ -2905,14 +2942,16 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           background: rgba(0,201,167,0.16);
         }
         .sidebar-nav-icon {
-          font-size: 16px;
-          min-width: 20px;
-          text-align: center;
-          color: rgba(255,255,255,0.55);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 22px;
+          color: rgba(255,255,255,0.85);
           transition: color 0.15s;
+          flex-shrink: 0;
         }
         .sidebar-nav-item.active .sidebar-nav-icon { color: #00C9A7; }
-        .sidebar-nav-item:hover .sidebar-nav-icon { color: rgba(255,255,255,0.9); }
+        .sidebar-nav-item:hover .sidebar-nav-icon { color: #ffffff; }
         .sidebar-nav-label {
           font-family: 'Inter', sans-serif;
           font-size: 13.5px;
@@ -3129,7 +3168,7 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         <nav className="sidebar-nav">
           {VIEWS.map(v => (
             <button key={v.id} onClick={() => setView(v.id)} className={`sidebar-nav-item${view === v.id ? " active" : ""}`}>
-              <span className="sidebar-nav-icon">{v.icon}</span>
+              <span className="sidebar-nav-icon"><Icon d={NAV_ICONS[v.id]} size={18} /></span>
               <span className="sidebar-nav-label">{v.label}</span>
             </button>
           ))}
@@ -3173,9 +3212,9 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
         {/* Mobile bottom nav */}
         <nav className="bottom-nav">
           {VIEWS.map(v => (
-            <button key={v.id} onClick={() => setView(v.id)} style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 2, padding: "8px 14px", border: "none", cursor: "pointer", background: view === v.id ? "rgba(0,201,167,0.15)" : "transparent", borderTop: view === v.id ? "2px solid #00C9A7" : "2px solid transparent" }}>
-              <span style={{ fontSize: 18 }}>{v.icon}</span>
-              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, fontWeight: view === v.id ? 700 : 500, color: view === v.id ? "#00C9A7" : "rgba(255,255,255,0.6)", whiteSpace: "nowrap" }}>{v.label}</span>
+            <button key={v.id} onClick={() => setView(v.id)} style={{ flex: "0 0 auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 14px", border: "none", cursor: "pointer", background: view === v.id ? "rgba(0,201,167,0.15)" : "transparent", borderTop: view === v.id ? "2px solid #00C9A7" : "2px solid transparent", color: view === v.id ? "#00C9A7" : "rgba(255,255,255,0.85)" }}>
+              <Icon d={NAV_ICONS[v.id]} size={18} />
+              <span style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, fontWeight: view === v.id ? 700 : 500, whiteSpace: "nowrap" }}>{v.label}</span>
             </button>
           ))}
         </nav>
