@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 // ─── CHART OF ACCOUNTS ────────────────────────────────────────────────────────
 // 5-type structure (Asset / Liability / Equity / Revenue / Expense).
@@ -333,9 +333,51 @@ function CashFlowTab({ C, expenses }) {
 
 // ─── BANKING VIEW ─────────────────────────────────────────────────────────────
 export function BankingView({ C, fs }) {
-  const [accounts] = useState(SAMPLE_BANK_ACCOUNTS);
-  const [transactions, setTransactions] = useState(SAMPLE_TRANSACTIONS);
+  const [accounts, setAccounts] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState(false);
+  const [plaidConfigured, setPlaidConfigured] = useState(true);
+  const [syncMsg, setSyncMsg] = useState('');
+  const [usingSample, setUsingSample] = useState(false);
+
+  const authToken = () => localStorage.getItem('sb-token') || '';
+
+  // Load linked accounts + transactions on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/plaid-transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken() },
+          body: JSON.stringify({}),
+        });
+        const data = await r.json();
+        if (!data.configured) {
+          setPlaidConfigured(false);
+          setAccounts(SAMPLE_BANK_ACCOUNTS);
+          setTransactions(SAMPLE_TRANSACTIONS);
+          setUsingSample(true);
+        } else if (data.accounts?.length) {
+          setAccounts(data.accounts);
+          setTransactions(data.transactions || []);
+          setUsingSample(false);
+        } else {
+          // Configured but no accounts linked yet
+          setAccounts([]);
+          setTransactions([]);
+          setUsingSample(false);
+        }
+      } catch {
+        setAccounts(SAMPLE_BANK_ACCOUNTS);
+        setTransactions(SAMPLE_TRANSACTIONS);
+        setUsingSample(true);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const visible = useMemo(() => {
     if (filter === 'flagged') return transactions.filter(t => t.flagged);
@@ -348,56 +390,182 @@ export function BankingView({ C, fs }) {
     setTransactions(prev => prev.map(t => t.id === id ? { ...t, flagged: false, confidence: 1.0 } : t));
   };
 
+  const loadPlaidScript = () =>
+    new Promise((resolve, reject) => {
+      if (window.Plaid) { resolve(); return; }
+      const s = document.createElement('script');
+      s.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+
+  const connectBank = async () => {
+    setConnecting(true);
+    setSyncMsg('');
+    try {
+      // Get link token from server
+      const ltRes = await fetch('/api/plaid-link-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken() },
+        body: JSON.stringify({}),
+      });
+      const lt = await ltRes.json();
+
+      if (!lt.configured) {
+        setSyncMsg('⚙ Plaid not configured. Add PLAID_CLIENT_ID + PLAID_SECRET to Vercel env vars, then restart.');
+        setConnecting(false);
+        return;
+      }
+
+      // Load Plaid Link SDK
+      await loadPlaidScript();
+
+      // Open Plaid Link
+      const handler = window.Plaid.create({
+        token: lt.link_token,
+        onSuccess: async (public_token, metadata) => {
+          setSyncMsg('Linking account…');
+          const exRes = await fetch('/api/plaid-exchange', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken() },
+            body: JSON.stringify({ public_token }),
+          });
+          const ex = await exRes.json();
+          if (ex.error) { setSyncMsg('Error: ' + ex.error); setConnecting(false); return; }
+
+          setSyncMsg('Fetching transactions…');
+          // Refresh all data
+          const txRes = await fetch('/api/plaid-transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken() },
+            body: JSON.stringify({}),
+          });
+          const txData = await txRes.json();
+          setAccounts(txData.accounts || []);
+          setTransactions(txData.transactions || []);
+          setUsingSample(false);
+          setSyncMsg(`✓ ${ex.institution_name || 'Bank'} connected — ${txData.transactions?.length || 0} transactions imported`);
+          setConnecting(false);
+        },
+        onExit: (err) => {
+          if (err) setSyncMsg('Link exited: ' + (err.error_message || err.display_message || 'cancelled'));
+          setConnecting(false);
+        },
+      });
+      handler.open();
+    } catch (err) {
+      setSyncMsg('Error: ' + err.message);
+      setConnecting(false);
+    }
+  };
+
+  const syncNow = async () => {
+    setConnecting(true);
+    setSyncMsg('Syncing…');
+    try {
+      const r = await fetch('/api/plaid-transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken() },
+        body: JSON.stringify({}),
+      });
+      const data = await r.json();
+      setAccounts(data.accounts || []);
+      setTransactions(data.transactions || []);
+      setSyncMsg(`✓ Synced — ${data.transactions?.length || 0} transactions`);
+    } catch (err) {
+      setSyncMsg('Sync error: ' + err.message);
+    }
+    setConnecting(false);
+  };
+
   return (
     <div style={{ padding: 16, paddingBottom: 80, color: C.text, fontFamily: "'Inter', sans-serif" }}>
-      <div style={{ marginBottom: 16 }}>
-        <div style={sectionLabel(C)}>Banking · Plaid Sync</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: C.dark }}>Connected Accounts</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <div style={sectionLabel(C)}>Banking · Plaid Sync</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: C.dark }}>Connected Accounts</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {accounts.length > 0 && !usingSample && (
+            <button onClick={syncNow} disabled={connecting} style={{
+              padding: '9px 16px', background: C.goldPale, border: `1px solid ${C.goldL}`,
+              borderRadius: 8, fontSize: 12, fontWeight: 600, color: C.gold, cursor: 'pointer',
+              fontFamily: "'IBM Plex Mono', monospace",
+            }}>
+              {connecting ? 'Syncing…' : '↻ Sync Now'}
+            </button>
+          )}
+          <button onClick={connectBank} disabled={connecting} style={{
+            padding: '9px 18px', background: connecting ? C.lighter : C.gold, border: 'none',
+            borderRadius: 8, fontSize: 13, fontWeight: 700, color: C.dark, cursor: connecting ? 'not-allowed' : 'pointer',
+            fontFamily: "'Inter', sans-serif",
+          }}>
+            {connecting ? 'Connecting…' : '+ Connect Bank'}
+          </button>
+        </div>
       </div>
 
-      {/* Account cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 20 }}>
-        {accounts.map(a => (
-          <div key={a.id} className="card" style={{ padding: 16, borderLeft: `4px solid ${C.greenB}` }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>{a.name}</span>
-              <span style={{
-                padding: '2px 8px',
-                background: C.greenPale,
-                color: C.green,
-                borderRadius: 10,
-                fontSize: 9,
-                fontWeight: 600,
-                letterSpacing: 1,
-                textTransform: 'uppercase',
-              }}>● Synced</span>
-            </div>
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 600, color: C.text, marginBottom: 4 }}>
-              {fmtUSD(a.balance)}
-            </div>
-            <div style={{ fontSize: 11, color: C.light }}>
-              {a.txCount} transactions · synced {a.lastSync}
-            </div>
-          </div>
-        ))}
-        <button style={{
-          padding: 16,
-          border: `2px dashed ${C.borderL}`,
-          background: 'transparent',
-          borderRadius: 6,
+      {/* Status message */}
+      {syncMsg && (
+        <div style={{
+          padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 12,
+          background: syncMsg.startsWith('✓') ? C.greenPale : syncMsg.startsWith('⚙') ? C.goldPale : C.redPale,
+          color: syncMsg.startsWith('✓') ? C.green : syncMsg.startsWith('⚙') ? C.gold : C.red,
+          border: `1px solid ${syncMsg.startsWith('✓') ? C.greenB : syncMsg.startsWith('⚙') ? C.goldL : C.redB}`,
           fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: 11,
-          letterSpacing: 1.5,
-          textTransform: 'uppercase',
-          color: C.light,
-          cursor: 'pointer',
-        }}>+ Connect Bank via Plaid</button>
-      </div>
+        }}>
+          {syncMsg}
+          {syncMsg.startsWith('⚙') && (
+            <span style={{ display: 'block', marginTop: 6, fontSize: 11, opacity: 0.8 }}>
+              Also run this SQL in your Supabase dashboard: create table plaid_items (id uuid default gen_random_uuid() primary key, user_id uuid not null references auth.users(id) on delete cascade, item_id text not null, access_token text not null, institution_name text, accounts jsonb default '[]', created_at timestamptz default now()); alter table plaid_items enable row level security; create policy "own" on plaid_items for all using (auth.uid() = user_id);
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Sample data notice */}
+      {usingSample && !loading && (
+        <div style={{
+          padding: '10px 14px', borderRadius: 8, marginBottom: 14, fontSize: 12,
+          background: C.goldPale, color: C.gold, border: `1px solid ${C.goldL}`,
+          fontFamily: "'IBM Plex Mono', monospace",
+        }}>
+          {plaidConfigured
+            ? 'No accounts connected yet. Click "+ Connect Bank" to link your first account.'
+            : '⚙ Showing sample data. Add PLAID_CLIENT_ID + PLAID_SECRET to Vercel env vars to enable real bank sync.'}
+        </div>
+      )}
+
+      {/* Account cards */}
+      {loading ? (
+        <div style={{ padding: 24, textAlign: 'center', color: C.light, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12 }}>Loading accounts…</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 20 }}>
+          {accounts.map(a => (
+            <div key={a.id} className="card" style={{ padding: 16, borderLeft: `4px solid ${C.greenB}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>{a.name}</span>
+                <span style={{
+                  padding: '2px 8px', background: C.greenPale, color: C.green,
+                  borderRadius: 10, fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase',
+                }}>● {a.status === 'connected' ? 'Live' : 'Sample'}</span>
+              </div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+                {fmtUSD(a.balance)}
+              </div>
+              <div style={{ fontSize: 11, color: C.light }}>
+                {a.txCount} transactions · {a.lastSync}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
         {[
-          { id: 'all', label: 'All Transactions' },
+          { id: 'all', label: `All (${transactions.length})` },
           { id: 'flagged', label: `Needs Review (${transactions.filter(t => t.flagged).length})` },
           { id: 'income', label: 'Income' },
           { id: 'expense', label: 'Expenses' },
@@ -411,34 +579,25 @@ export function BankingView({ C, fs }) {
       {/* Transactions table */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: '90px 1fr 110px 130px 90px 60px',
-          gap: 10,
-          padding: '12px 14px',
-          background: C.goldPale,
-          fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: 10,
-          letterSpacing: 1.5,
-          textTransform: 'uppercase',
-          color: C.gold,
-          fontWeight: 600,
+          display: 'grid', gridTemplateColumns: '90px 1fr 110px 130px 90px 60px',
+          gap: 10, padding: '12px 14px', background: C.goldPale,
+          fontFamily: "'IBM Plex Mono', monospace", fontSize: 10,
+          letterSpacing: 1.5, textTransform: 'uppercase', color: C.gold, fontWeight: 600,
         }}>
-          <span>Date</span>
-          <span>Description</span>
+          <span>Date</span><span>Description</span>
           <span style={{ textAlign: 'right' }}>Amount</span>
-          <span>Category</span>
-          <span>Confidence</span>
-          <span></span>
+          <span>Category</span><span>Confidence</span><span></span>
         </div>
+        {visible.length === 0 && (
+          <div style={{ padding: '24px 14px', textAlign: 'center', color: C.light, fontSize: 13 }}>
+            No transactions yet. Connect a bank account above.
+          </div>
+        )}
         {visible.map(t => (
           <div key={t.id} style={{
-            display: 'grid',
-            gridTemplateColumns: '90px 1fr 110px 130px 90px 60px',
-            gap: 10,
-            padding: '12px 14px',
-            borderBottom: `1px solid ${C.borderL}`,
-            alignItems: 'center',
-            fontSize: 12,
+            display: 'grid', gridTemplateColumns: '90px 1fr 110px 130px 90px 60px',
+            gap: 10, padding: '12px 14px', borderBottom: `1px solid ${C.borderL}`,
+            alignItems: 'center', fontSize: 12,
             background: t.flagged ? C.orangePale : C.white,
           }}>
             <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: C.light, fontSize: 11 }}>{t.date.slice(5)}</span>
@@ -447,35 +606,24 @@ export function BankingView({ C, fs }) {
               {t.property && <div style={{ fontSize: 10, color: C.light, marginTop: 2 }}>{t.property}</div>}
             </div>
             <span style={{
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontWeight: 600,
-              color: t.amount >= 0 ? C.green : C.text,
-              textAlign: 'right',
+              fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600,
+              color: t.amount >= 0 ? C.green : C.text, textAlign: 'right',
             }}>
               {fmtUSD(t.amount)}
             </span>
             <span style={{ fontSize: 11, color: C.mid }}>{t.accountName}</span>
             <span style={{
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontSize: 11,
-              fontWeight: 600,
+              fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, fontWeight: 600,
               color: t.confidence >= 0.9 ? C.green : t.confidence >= 0.75 ? C.gold : C.orange,
             }}>
               {(t.confidence * 100).toFixed(0)}%
             </span>
             {t.flagged ? (
               <button onClick={() => approve(t.id)} style={{
-                padding: '4px 8px',
-                background: C.gold,
-                color: C.white,
-                border: 'none',
-                borderRadius: 4,
-                fontSize: 10,
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: "'IBM Plex Mono', monospace",
-                letterSpacing: 1,
-                textTransform: 'uppercase',
+                padding: '4px 8px', background: C.gold, color: C.white,
+                border: 'none', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                cursor: 'pointer', fontFamily: "'IBM Plex Mono', monospace",
+                letterSpacing: 1, textTransform: 'uppercase',
               }}>OK</button>
             ) : (
               <span style={{ fontSize: 12, color: C.green, textAlign: 'center' }}>✓</span>
