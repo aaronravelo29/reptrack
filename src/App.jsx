@@ -194,6 +194,419 @@ function AuthProvider({ children }) {
 const useAuth = () => useContext(AuthContext);
 
 // ─── AUTH SCREEN ──────────────────────────────────────────────────────────────
+// ─── LANDING PAGE ─────────────────────────────────────────────────────────────
+function LandingPage({ onGetStarted }) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const navy = "#0D1B2A";
+  const teal = "#00C9A7";
+  const tealL = "#00E5C4";
+  const tealPale = "#E0F7F4";
+  const gray = "#475569";
+  const grayL = "#94A3B8";
+  const border = "#E2E8F0";
+  const white = "#ffffff";
+
+  const features = [
+    {
+      icon: "M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z",
+      title: "IRS Hour Tracking",
+      desc: "Log real estate hours with one tap. Auto-calculates your 750-hour REP test and 50% test status in real time.",
+    },
+    {
+      icon: "M3 12l9-9 9 9M5 10v10h14V10",
+      title: "Property Management",
+      desc: "Tenants, leases, maintenance, vendors — all in one place. Track every property with full financial history.",
+    },
+    {
+      icon: "M12 2a7 7 0 0 1 7 7v3a7 7 0 1 1-14 0V9a7 7 0 0 1 7-7zM9 10h.01M15 10h.01M9 15c1 1 2 1.5 3 1.5s2-.5 3-1.5",
+      title: "AI Organizer",
+      desc: "Intelligent assistant cross-references your properties, challenges vague entries, and flags Moss-standard red flags.",
+    },
+    {
+      icon: "M3 8l7.89 5.26a2 2 0 0 0 2.22 0L21 8M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z",
+      title: "Email Robot",
+      desc: "Auto-draft and send maintenance emails to tenant, technician, and property manager simultaneously — one click.",
+    },
+    {
+      icon: "M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 0 2-2h2a2 2 0 0 0 2 2",
+      title: "Audit Defense",
+      desc: "Every log entry is timestamped and categorized per §469(c)(7). Export an IRS-ready summary for your CPA.",
+    },
+    {
+      icon: "M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+      title: "Accounting & Banking",
+      desc: "Chart of accounts, rent roll, expense ledger, and 1099 vendor hub — everything your accountant needs.",
+    },
+  ];
+
+  const pmFeatures = [
+    { label: "Tenant Ledger", detail: "Track rent payments, late fees, security deposits per tenant" },
+    { label: "Maintenance Kanban", detail: "Open → Scheduled → Completed with priority levels and vendor assignment" },
+    { label: "Vendor & 1099 Hub", detail: "Track all contractors, generate 1099 reports, store W-9 on file" },
+    { label: "Lease Management", detail: "Lease dates, renewal alerts, rent escalation schedule" },
+    { label: "Financial Dashboard", detail: "Net income, occupancy rate, expense breakdown by property" },
+    { label: "Email Automation", detail: "Auto-notify tenants and technicians on new maintenance requests" },
+  ];
+
+  const steps = [
+    { n: "1", title: "Add Your Properties", detail: "Enter your rental properties, units, and tenants. Takes 5 minutes." },
+    { n: "2", title: "Log Hours Daily", detail: "Tap to log qualifying real estate activities. The AI reviews each entry." },
+    { n: "3", title: "Share With Your CPA", detail: "Export a clean summary showing REP status, hours, and property income." },
+  ];
+
+  const SvgIcon = ({ d, size = 22, color = teal }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} />
+    </svg>
+  );
+
+  return (
+    <div style={{ fontFamily: "'Inter', 'IBM Plex Mono', sans-serif", background: white, color: navy }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        .lp-btn-primary {
+          display: inline-block; padding: 14px 32px; background: ${teal}; color: ${navy};
+          font-weight: 700; font-size: 15px; border-radius: 8px; border: none;
+          cursor: pointer; transition: background 0.15s, transform 0.1s; text-decoration: none;
+          font-family: 'Inter', sans-serif;
+        }
+        .lp-btn-primary:hover { background: ${tealL}; transform: translateY(-1px); }
+        .lp-btn-ghost {
+          display: inline-block; padding: 13px 28px; background: transparent;
+          color: ${white}; font-weight: 600; font-size: 14px; border-radius: 8px;
+          border: 2px solid rgba(255,255,255,0.3); cursor: pointer; transition: all 0.15s;
+          text-decoration: none; font-family: 'Inter', sans-serif;
+        }
+        .lp-btn-ghost:hover { border-color: ${teal}; color: ${teal}; }
+        .lp-feature-card {
+          background: white; border: 1px solid ${border}; border-radius: 14px;
+          padding: 28px 24px; transition: box-shadow 0.2s, transform 0.15s;
+        }
+        .lp-feature-card:hover { box-shadow: 0 8px 32px rgba(0,201,167,0.12); transform: translateY(-2px); }
+        .lp-pm-pill {
+          background: ${tealPale}; border: 1px solid rgba(0,201,167,0.25); border-radius: 10px;
+          padding: 16px 20px; transition: background 0.15s;
+        }
+        .lp-pm-pill:hover { background: rgba(0,201,167,0.15); }
+        .lp-step { display: flex; gap: 20px; align-items: flex-start; margin-bottom: 36px; }
+        .lp-step-num {
+          width: 44px; height: 44px; border-radius: 50%; background: ${teal};
+          color: ${navy}; font-weight: 800; font-size: 18px; display: flex;
+          align-items: center; justify-content: center; flex-shrink: 0;
+          font-family: 'Inter', sans-serif;
+        }
+        @media (max-width: 768px) {
+          .lp-hero-grid { grid-template-columns: 1fr !important; }
+          .lp-features-grid { grid-template-columns: 1fr 1fr !important; }
+          .lp-pm-grid { grid-template-columns: 1fr !important; }
+          .lp-irs-grid { grid-template-columns: 1fr 1fr !important; }
+          .lp-hero-cards { display: none !important; }
+          h1.lp-h1 { font-size: 36px !important; }
+        }
+        @media (max-width: 480px) {
+          .lp-features-grid { grid-template-columns: 1fr !important; }
+          .lp-irs-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+
+      {/* ── NAV ── */}
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        background: scrolled ? "rgba(13,27,42,0.97)" : "transparent",
+        backdropFilter: scrolled ? "blur(12px)" : "none",
+        borderBottom: scrolled ? "1px solid rgba(255,255,255,0.08)" : "none",
+        transition: "all 0.2s", padding: "0 24px",
+      }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 64 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: white, letterSpacing: -0.5 }}>
+            Rep<span style={{ color: teal }}>Track</span>
+          </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <button onClick={onGetStarted} style={{
+              background: "none", border: "none", color: "rgba(255,255,255,0.75)",
+              fontSize: 14, cursor: "pointer", fontFamily: "'Inter', sans-serif", fontWeight: 500,
+              padding: "8px 16px", borderRadius: 6,
+            }}>Log In</button>
+            <button onClick={onGetStarted} className="lp-btn-primary" style={{ padding: "9px 22px", fontSize: 14 }}>
+              Get Started Free
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* ── HERO ── */}
+      <section style={{
+        background: `linear-gradient(150deg, ${navy} 0%, #0A2A3A 55%, ${navy} 100%)`,
+        minHeight: "100vh", display: "flex", alignItems: "center",
+        padding: "100px 24px 80px",
+      }}>
+        <div className="lp-hero-grid" style={{ maxWidth: 1080, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
+          <div>
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              background: "rgba(0,201,167,0.12)", border: "1px solid rgba(0,201,167,0.3)",
+              borderRadius: 20, padding: "6px 14px", marginBottom: 24,
+            }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: teal }} />
+              <span style={{ color: teal, fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", fontFamily: "'IBM Plex Mono', monospace" }}>
+                IRS §469(c)(7) Compliant
+              </span>
+            </div>
+
+            <h1 style={{ fontSize: 52, fontWeight: 800, color: white, lineHeight: 1.1, letterSpacing: -1.5, marginBottom: 20, fontFamily: "'Inter', sans-serif" }}>
+              Your Real Estate Portfolio,{" "}
+              <span style={{ color: teal }}>Organized</span>{" "}
+              for Tax Season
+            </h1>
+
+            <p style={{ fontSize: 18, color: "rgba(255,255,255,0.65)", lineHeight: 1.7, marginBottom: 36, maxWidth: 480 }}>
+              Track qualifying hours, manage properties, automate tenant communication,
+              and hand your CPA a clean IRS-ready report — all in one place.
+            </p>
+
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+              <button onClick={onGetStarted} className="lp-btn-primary" style={{ fontSize: 16, padding: "16px 36px" }}>
+                Start Free — No Credit Card
+              </button>
+              <button onClick={onGetStarted} className="lp-btn-ghost">
+                Log In to Your Account
+              </button>
+            </div>
+
+            <div style={{ display: "flex", gap: 24, marginTop: 40, flexWrap: "wrap" }}>
+              {[["750-hr", "REP test auto-tracked"], ["§469(c)(7)", "IRS guidelines built-in"], ["CPA-ready", "Export in one click"]].map(([label, sub]) => (
+                <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: teal, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: white, fontFamily: "'IBM Plex Mono', monospace" }}>{label}</div>
+                    <div style={{ fontSize: 11, color: grayL }}>{sub}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Hero card mockup */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "20px 24px" }}>
+              <div style={{ fontSize: 11, color: grayL, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14, fontFamily: "'IBM Plex Mono', monospace" }}>REP Status — 2025</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                {[["RE Hours", "847", "of 750 needed", true], ["50% Test", "72%", "above 50% ✓", true], ["Properties", "4", "active units", false]].map(([l, v, s, pass]) => (
+                  <div key={l} style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: pass ? teal : grayL, fontFamily: "'Inter', sans-serif" }}>{v}</div>
+                    <div style={{ fontSize: 10, color: grayL, marginTop: 2 }}>{l}</div>
+                    <div style={{ fontSize: 9, color: pass ? teal : grayL, marginTop: 2 }}>{s}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "18px 24px" }}>
+              <div style={{ fontSize: 11, color: grayL, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12, fontFamily: "'IBM Plex Mono', monospace" }}>Recent Activity</div>
+              {[
+                ["Property Management", "2.5 hrs", "Sunset Condo"],
+                ["Maintenance Coord.", "1.0 hr", "Oak Ave Unit 2"],
+                ["Tenant Screening", "3.0 hrs", "New listing"],
+              ].map(([act, hrs, prop]) => (
+                <div key={act} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: white, fontWeight: 500 }}>{act}</div>
+                    <div style={{ fontSize: 11, color: grayL }}>{prop}</div>
+                  </div>
+                  <div style={{ fontSize: 13, color: teal, fontWeight: 700, fontFamily: "'IBM Plex Mono', monospace" }}>{hrs}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: "rgba(0,201,167,0.08)", border: "1px solid rgba(0,201,167,0.2)", borderRadius: 14, padding: "16px 24px", display: "flex", gap: 14, alignItems: "center" }}>
+              <div style={{ fontSize: 28 }}>🤖</div>
+              <div>
+                <div style={{ fontSize: 13, color: teal, fontWeight: 600, marginBottom: 4 }}>AI Organizer</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>
+                  "Your Oak Ave maintenance log is missing vendor hours. Add them to strengthen your REP documentation."
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURES GRID ── */}
+      <section style={{ padding: "100px 24px", background: "#F8FAFC" }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 60 }}>
+            <h2 style={{ fontSize: 40, fontWeight: 800, color: navy, letterSpacing: -1, fontFamily: "'Inter', sans-serif", marginBottom: 14 }}>
+              Everything a Real Estate Professional Needs
+            </h2>
+            <p style={{ fontSize: 17, color: gray, maxWidth: 520, margin: "0 auto", lineHeight: 1.7 }}>
+              Built specifically for IRS §469(c)(7) real estate professionals.
+              Not just a spreadsheet — an intelligent organizer.
+            </p>
+          </div>
+
+          <div className="lp-features-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+            {features.map((f) => (
+              <div key={f.title} className="lp-feature-card">
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: tealPale, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
+                  <SvgIcon d={f.icon} size={22} color={teal} />
+                </div>
+                <h3 style={{ fontSize: 17, fontWeight: 700, color: navy, marginBottom: 10, fontFamily: "'Inter', sans-serif" }}>{f.title}</h3>
+                <p style={{ fontSize: 14, color: gray, lineHeight: 1.65 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── PROPERTY MANAGEMENT IN ONE PLACE ── */}
+      <section style={{ padding: "100px 24px", background: white }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" }}>
+          <div>
+            <div style={{ display: "inline-block", background: tealPale, color: teal, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", padding: "5px 12px", borderRadius: 4, marginBottom: 20, fontFamily: "'IBM Plex Mono', monospace" }}>
+              Property Management
+            </div>
+            <h2 style={{ fontSize: 38, fontWeight: 800, color: navy, letterSpacing: -0.8, fontFamily: "'Inter', sans-serif", marginBottom: 18, lineHeight: 1.15 }}>
+              All Your Properties,{" "}
+              <span style={{ color: teal }}>One Dashboard</span>
+            </h2>
+            <p style={{ fontSize: 16, color: gray, lineHeight: 1.75, marginBottom: 32 }}>
+              Stop juggling spreadsheets and sticky notes. RepTrack keeps tenants,
+              maintenance requests, vendor invoices, and rent payments connected —
+              so you always know what's happening at every property.
+            </p>
+            <button onClick={onGetStarted} className="lp-btn-primary">
+              Get Started Free
+            </button>
+          </div>
+
+          <div className="lp-pm-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {pmFeatures.map((f) => (
+              <div key={f.label} className="lp-pm-pill">
+                <div style={{ fontSize: 14, fontWeight: 700, color: navy, marginBottom: 6, fontFamily: "'Inter', sans-serif" }}>{f.label}</div>
+                <div style={{ fontSize: 12, color: gray, lineHeight: 1.55 }}>{f.detail}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── IRS COMPLIANCE ── */}
+      <section style={{ padding: "100px 24px", background: `linear-gradient(150deg, ${navy} 0%, #0A2A3A 100%)` }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 60 }}>
+            <div style={{ display: "inline-block", background: "rgba(0,201,167,0.12)", border: "1px solid rgba(0,201,167,0.3)", color: teal, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: 20, fontFamily: "'IBM Plex Mono', monospace" }}>
+              IRS Compliance
+            </div>
+            <h2 style={{ fontSize: 38, fontWeight: 800, color: white, letterSpacing: -0.8, fontFamily: "'Inter', sans-serif", marginBottom: 14, lineHeight: 1.2 }}>
+              Built Around IRS §469(c)(7)
+            </h2>
+            <p style={{ fontSize: 16, color: "rgba(255,255,255,0.6)", maxWidth: 560, margin: "0 auto", lineHeight: 1.75 }}>
+              RepTrack is not a tax advisor. We organize your records so your CPA
+              can confidently defend your Real Estate Professional status.
+            </p>
+          </div>
+
+          <div className="lp-irs-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+            {[
+              { title: "750-Hour Test", body: "Automatic running total of qualifying RE hours vs. your W-2 and other employment hours. Dashboard shows pass/fail in real time." },
+              { title: "50% Majority Test", body: "Confirms RE activities exceed all other trades or businesses combined. Required under §469(c)(7)(B) for full REP qualification." },
+              { title: "Material Participation", body: "Track grouping elections and per-property participation to satisfy the 7 material participation tests under Temp. Reg. §1.469-5T." },
+              { title: "Contemporaneous Logs", body: "Every entry is timestamped at the moment of entry — the IRS standard set by Moss v. Commissioner and similar cases." },
+              { title: "Audit-Defense Export", body: "Generate a formatted summary your CPA can attach to Form 8582 or include in an audit response package in seconds." },
+              { title: "AI Flags Red Flags", body: "The AI organizer challenges vague entries (\"worked on property\"), duplicate hours, and unusually high activity periods before you submit." },
+            ].map((c) => (
+              <div key={c.title} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "24px 22px" }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: teal, marginBottom: 14 }} />
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: white, marginBottom: 10, fontFamily: "'Inter', sans-serif" }}>{c.title}</h3>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", lineHeight: 1.65 }}>{c.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ── */}
+      <section style={{ padding: "100px 24px", background: "#F8FAFC" }}>
+        <div style={{ maxWidth: 700, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 60 }}>
+            <h2 style={{ fontSize: 38, fontWeight: 800, color: navy, letterSpacing: -0.8, fontFamily: "'Inter', sans-serif", marginBottom: 14 }}>
+              Up and Running in Minutes
+            </h2>
+            <p style={{ fontSize: 16, color: gray, lineHeight: 1.7 }}>
+              No training required. No expensive onboarding. Just sign up and start logging.
+            </p>
+          </div>
+
+          <div>
+            {steps.map((s) => (
+              <div key={s.n} className="lp-step">
+                <div className="lp-step-num">{s.n}</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: navy, marginBottom: 8, fontFamily: "'Inter', sans-serif" }}>{s.title}</div>
+                  <div style={{ fontSize: 15, color: gray, lineHeight: 1.65 }}>{s.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA BANNER ── */}
+      <section style={{ padding: "80px 24px", background: teal }}>
+        <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
+          <h2 style={{ fontSize: 36, fontWeight: 800, color: navy, letterSpacing: -0.8, fontFamily: "'Inter', sans-serif", marginBottom: 14 }}>
+            Ready to Get Organized?
+          </h2>
+          <p style={{ fontSize: 16, color: "rgba(13,27,42,0.7)", marginBottom: 32, lineHeight: 1.7 }}>
+            Join real estate professionals who use RepTrack to stay IRS-ready year-round.
+            Free to start — no credit card required.
+          </p>
+          <button onClick={onGetStarted} style={{
+            display: "inline-block", padding: "16px 40px", background: navy, color: white,
+            fontWeight: 700, fontSize: 16, borderRadius: 8, border: "none",
+            cursor: "pointer", fontFamily: "'Inter', sans-serif", transition: "opacity 0.15s",
+          }}>
+            Create Your Free Account
+          </button>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer style={{ background: navy, padding: "48px 24px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: white, marginBottom: 6 }}>
+              Rep<span style={{ color: teal }}>Track</span>
+            </div>
+            <div style={{ fontSize: 12, color: grayL, fontFamily: "'IBM Plex Mono', monospace" }}>
+              Real Estate Professional Tax Organizer
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
+            <button onClick={onGetStarted} style={{ background: "none", border: "none", color: grayL, fontSize: 13, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Sign In</button>
+            <button onClick={onGetStarted} style={{ background: "none", border: "none", color: grayL, fontSize: 13, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Get Started</button>
+            <span style={{ color: grayL, fontSize: 13, fontFamily: "'Inter', sans-serif" }}>Not a tax advisor — consult your CPA</span>
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(148,163,184,0.5)", fontFamily: "'IBM Plex Mono', monospace" }}>
+            © {new Date().getFullYear()} RepTrack. All rights reserved.
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// ─── AUTH SCREEN ───────────────────────────────────────────────────────────────
 function AuthScreen() {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -3078,8 +3491,8 @@ For example: "I spent 2 hours showing my Oak Street duplex to potential tenants"
           .chat-area { min-height: 300px !important; }
           .upload-text { display: none !important; }
           .quick-actions-row { overflow-x:auto !important; flex-wrap:nowrap !important; -webkit-overflow-scrolling:touch !important; }
-        }`}
-        
+        }
+
         /* ═══════════════════════════════════════════════════════════════════════
            MOBILE RESPONSIVE STYLES
            ═══════════════════════════════════════════════════════════════════════ */
@@ -7259,6 +7672,7 @@ export default function App() {
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const [showAuth, setShowAuth] = useState(false);
 
   if (loading) {
     return (
@@ -7268,5 +7682,7 @@ function AppContent() {
     );
   }
 
-  return user ? <MainApp /> : <AuthScreen />;
+  if (user) return <MainApp />;
+  if (showAuth) return <AuthScreen />;
+  return <LandingPage onGetStarted={() => setShowAuth(true)} />;
 }
