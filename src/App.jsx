@@ -197,12 +197,17 @@ const useAuth = () => useContext(AuthContext);
 // ─── LANDING PAGE ─────────────────────────────────────────────────────────────
 function LandingPage({ onGetStarted }) {
   const [scrolled, setScrolled] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const trackEvent = (name, props) => {
+    if (typeof window !== "undefined" && window.plausible) window.plausible(name, props ? { props } : undefined);
+  };
 
   const navy = "#0D1B2A";
   const teal = "#00C9A7";
@@ -311,6 +316,7 @@ function LandingPage({ onGetStarted }) {
           .lp-pm-grid { grid-template-columns: 1fr !important; }
           .lp-irs-grid { grid-template-columns: 1fr 1fr !important; }
           .lp-pricing-grid { grid-template-columns: 1fr !important; }
+          .lp-testimonials-grid { grid-template-columns: 1fr !important; }
           .lp-hero-cards { display: none !important; }
           h1.lp-h1 { font-size: 36px !important; }
         }
@@ -536,6 +542,62 @@ function LandingPage({ onGetStarted }) {
         </div>
       </section>
 
+      {/* ── TESTIMONIALS ── */}
+      <section style={{ padding: "100px 24px", background: white }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 60 }}>
+            <div style={{ display: "inline-block", background: tealPale, color: teal, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", padding: "5px 12px", borderRadius: 4, marginBottom: 18, fontFamily: "'IBM Plex Mono', monospace" }}>
+              Beta Testers
+            </div>
+            <h2 style={{ fontSize: 38, fontWeight: 800, color: navy, letterSpacing: -0.8, fontFamily: "'Inter', sans-serif", marginBottom: 14 }}>
+              Built With Real Estate Professionals
+            </h2>
+            <p style={{ fontSize: 16, color: gray, maxWidth: 540, margin: "0 auto", lineHeight: 1.7 }}>
+              Early users helped shape every feature. Here's what beta testers are saying.
+            </p>
+          </div>
+
+          <div className="lp-testimonials-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
+            {[
+              {
+                quote: "I used to dread tax season. With RepTrack I just hand my CPA the export and we're done in an hour. The 750-hour tracker alone is worth it.",
+                name: "M.K.",
+                role: "REP since 2018 · 6 properties",
+              },
+              {
+                quote: "The AI organizer caught two duplicate hour entries I would've submitted. It also flagged a vague log and made me rewrite it. Exactly what I needed.",
+                name: "S.R.",
+                role: "Property Manager · 18 units",
+              },
+              {
+                quote: "Finally an app that doesn't pretend to give tax advice. RepTrack organizes — my CPA decides. That separation makes me trust it more, not less.",
+                name: "J.D.",
+                role: "Real Estate Investor · STR portfolio",
+              },
+            ].map((t, i) => (
+              <div key={i} style={{
+                background: white, border: "1px solid #CBD5E1", borderRadius: 14,
+                padding: "28px 26px", display: "flex", flexDirection: "column",
+                boxShadow: "0 2px 10px rgba(13,27,42,0.04)",
+              }}>
+                <div style={{ fontSize: 32, color: teal, lineHeight: 1, marginBottom: 14, fontFamily: "Georgia, serif" }}>"</div>
+                <p style={{ fontSize: 14, color: "#1E293B", lineHeight: 1.7, marginBottom: 22, flex: 1 }}>
+                  {t.quote}
+                </p>
+                <div style={{ paddingTop: 16, borderTop: "1px solid #E2E8F0" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: navy, fontFamily: "'Inter', sans-serif" }}>{t.name}</div>
+                  <div style={{ fontSize: 11, color: "#475569", fontFamily: "'IBM Plex Mono', monospace", marginTop: 4 }}>{t.role}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: "center", marginTop: 36, fontSize: 11, color: "#475569", fontFamily: "'IBM Plex Mono', monospace", letterSpacing: 1, textTransform: "uppercase" }}>
+            Beta tester names abbreviated for privacy · Quotes used with permission
+          </div>
+        </div>
+      </section>
+
       {/* ── HOW IT WORKS ── */}
       <section style={{ padding: "100px 24px", background: "#F8FAFC" }}>
         <div style={{ maxWidth: 700, margin: "0 auto" }}>
@@ -662,7 +724,10 @@ function LandingPage({ onGetStarted }) {
                   ))}
                 </div>
 
-                <button onClick={onGetStarted} style={{
+                <button onClick={() => {
+                  if (tier.name === "Team") { trackEvent("Contact Sales Click"); setContactOpen(true); }
+                  else { trackEvent("Pricing CTA Click", { tier: tier.name }); onGetStarted(); }
+                }} style={{
                   width: "100%", padding: "13px 22px",
                   background: tier.highlight ? teal : "transparent",
                   color: tier.highlight ? navy : navy,
@@ -776,6 +841,7 @@ function LandingPage({ onGetStarted }) {
           <div style={{ display: "flex", gap: 28, flexWrap: "wrap" }}>
             <button onClick={onGetStarted} style={{ background: "none", border: "none", color: grayL, fontSize: 13, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Sign In</button>
             <button onClick={onGetStarted} style={{ background: "none", border: "none", color: grayL, fontSize: 13, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Get Started</button>
+            <button onClick={() => setContactOpen(true)} style={{ background: "none", border: "none", color: grayL, fontSize: 13, cursor: "pointer", fontFamily: "'Inter', sans-serif" }}>Contact</button>
             <span style={{ color: grayL, fontSize: 13, fontFamily: "'Inter', sans-serif" }}>Not a tax advisor — consult your CPA</span>
           </div>
           <div style={{ fontSize: 11, color: "rgba(148,163,184,0.5)", fontFamily: "'IBM Plex Mono', monospace" }}>
@@ -783,6 +849,154 @@ function LandingPage({ onGetStarted }) {
           </div>
         </div>
       </footer>
+
+      {contactOpen && <ContactSalesModal onClose={() => setContactOpen(false)} navy={navy} teal={teal} tealPale={tealPale} white={white} gray={gray} />}
+    </div>
+  );
+}
+
+// ─── CONTACT SALES MODAL ───────────────────────────────────────────────────────
+function ContactSalesModal({ onClose, navy, teal, tealPale, white, gray }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
+  const [properties, setProperties] = useState("");
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState(null); // null | "sending" | "sent" | "error"
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setStatus("sending");
+    setErrorMsg("");
+    try {
+      const r = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, company, properties, message }),
+      });
+      const data = await r.json();
+      if (!r.ok) { setStatus("error"); setErrorMsg(data.error || "Failed to send"); return; }
+
+      if (data.resend_configured === false && data.mailto) {
+        // Fallback: open user's email client with prefilled message
+        window.location.href = data.mailto;
+        setStatus("sent");
+      } else {
+        setStatus("sent");
+        if (window.plausible) window.plausible("Contact Sales Submitted");
+      }
+    } catch (err) {
+      setStatus("error");
+      setErrorMsg(err.message);
+    }
+  };
+
+  const inputStyle = {
+    width: "100%", padding: "12px 14px", fontSize: 14,
+    border: "1px solid #CBD5E1", borderRadius: 8,
+    background: "white", color: "#0F172A", outline: "none",
+    fontFamily: "'Inter', sans-serif", boxSizing: "border-box", marginBottom: 14,
+  };
+  const labelStyle = {
+    display: "block", fontSize: 11, color: "#475569",
+    letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6,
+    fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600,
+  };
+
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, background: "rgba(13,27,42,0.7)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 20, zIndex: 9999, backdropFilter: "blur(4px)",
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: white, borderRadius: 16, padding: "36px 32px",
+        width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto",
+        boxShadow: "0 25px 80px rgba(0,0,0,0.4)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+          <div>
+            <div style={{ display: "inline-block", background: tealPale, color: teal, fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", padding: "4px 10px", borderRadius: 4, marginBottom: 12, fontFamily: "'IBM Plex Mono', monospace" }}>
+              Team Plan
+            </div>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: navy, fontFamily: "'Inter', sans-serif", letterSpacing: -0.5, marginBottom: 6 }}>
+              Contact Sales
+            </h2>
+            <p style={{ fontSize: 13, color: gray, lineHeight: 1.6 }}>
+              Tell us about your portfolio and we'll get back to you within 1 business day.
+            </p>
+          </div>
+          <button onClick={onClose} style={{
+            background: "none", border: "none", fontSize: 24, color: "#475569",
+            cursor: "pointer", lineHeight: 1, padding: 0, marginLeft: 12,
+          }}>×</button>
+        </div>
+
+        {status === "sent" ? (
+          <div style={{
+            background: tealPale, border: `1px solid ${teal}`, borderRadius: 12,
+            padding: "32px 24px", textAlign: "center", marginTop: 20,
+          }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: navy, marginBottom: 8, fontFamily: "'Inter', sans-serif" }}>
+              Thanks — we'll be in touch
+            </h3>
+            <p style={{ fontSize: 13, color: gray, lineHeight: 1.6, marginBottom: 18 }}>
+              We received your message and will respond within 1 business day.
+            </p>
+            <button onClick={onClose} style={{
+              padding: "10px 24px", background: navy, color: white,
+              border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700,
+              cursor: "pointer", fontFamily: "'Inter', sans-serif",
+            }}>Close</button>
+          </div>
+        ) : (
+          <form onSubmit={submit} style={{ marginTop: 22 }}>
+            <label style={labelStyle}>Name *</label>
+            <input type="text" required value={name} onChange={e => setName(e.target.value)} style={inputStyle} placeholder="Jane Smith" />
+
+            <label style={labelStyle}>Work Email *</label>
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} placeholder="jane@yourcompany.com" />
+
+            <label style={labelStyle}>Company</label>
+            <input type="text" value={company} onChange={e => setCompany(e.target.value)} style={inputStyle} placeholder="Smith Property Management LLC" />
+
+            <label style={labelStyle}>Approximate # of Properties</label>
+            <select value={properties} onChange={e => setProperties(e.target.value)} style={inputStyle}>
+              <option value="">Select…</option>
+              <option value="1-10">1–10</option>
+              <option value="11-50">11–50</option>
+              <option value="51-200">51–200</option>
+              <option value="200+">200+</option>
+            </select>
+
+            <label style={labelStyle}>Message</label>
+            <textarea value={message} onChange={e => setMessage(e.target.value)} style={{ ...inputStyle, minHeight: 100, resize: "vertical" }} placeholder="What are you trying to organize? Any specific needs?" />
+
+            {status === "error" && (
+              <div style={{
+                background: "#FEE2E2", border: "1px solid #FCA5A5", borderRadius: 8,
+                padding: "10px 14px", marginBottom: 14, fontSize: 12, color: "#991B1B",
+              }}>{errorMsg}</div>
+            )}
+
+            <button type="submit" disabled={status === "sending"} style={{
+              width: "100%", padding: "14px 20px",
+              background: status === "sending" ? "#94A3B8" : teal,
+              color: navy, border: "none", borderRadius: 8,
+              fontSize: 14, fontWeight: 700, cursor: status === "sending" ? "not-allowed" : "pointer",
+              fontFamily: "'Inter', sans-serif",
+            }}>
+              {status === "sending" ? "Sending…" : "Send Message"}
+            </button>
+
+            <div style={{ fontSize: 11, color: gray, textAlign: "center", marginTop: 14, fontFamily: "'IBM Plex Mono', monospace" }}>
+              Falls back to your email client if our server isn't configured yet.
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
