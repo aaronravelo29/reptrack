@@ -310,6 +310,7 @@ function LandingPage({ onGetStarted }) {
           .lp-features-grid { grid-template-columns: 1fr 1fr !important; }
           .lp-pm-grid { grid-template-columns: 1fr !important; }
           .lp-irs-grid { grid-template-columns: 1fr 1fr !important; }
+          .lp-pricing-grid { grid-template-columns: 1fr !important; }
           .lp-hero-cards { display: none !important; }
           h1.lp-h1 { font-size: 36px !important; }
         }
@@ -561,6 +562,183 @@ function LandingPage({ onGetStarted }) {
         </div>
       </section>
 
+      {/* ── PRICING ── */}
+      <section style={{ padding: "100px 24px", background: white }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 60 }}>
+            <div style={{ display: "inline-block", background: tealPale, color: teal, fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", padding: "5px 12px", borderRadius: 4, marginBottom: 18, fontFamily: "'IBM Plex Mono', monospace" }}>
+              Pricing
+            </div>
+            <h2 style={{ fontSize: 38, fontWeight: 800, color: navy, letterSpacing: -0.8, fontFamily: "'Inter', sans-serif", marginBottom: 14 }}>
+              Simple, Honest Pricing
+            </h2>
+            <p style={{ fontSize: 16, color: gray, maxWidth: 520, margin: "0 auto", lineHeight: 1.7 }}>
+              Free during beta. No credit card required. Lock in your beta pricing for life.
+            </p>
+          </div>
+
+          <div className="lp-pricing-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18, maxWidth: 920, margin: "0 auto" }}>
+            {[
+              {
+                name: "Starter",
+                price: "Free",
+                period: "during beta",
+                desc: "For solo investors with up to 2 properties.",
+                highlight: false,
+                features: [
+                  "Up to 2 properties",
+                  "Hour tracking & REP test",
+                  "AI Organizer (basic)",
+                  "CPA-ready export",
+                  "Email support",
+                ],
+              },
+              {
+                name: "Professional",
+                price: "Free",
+                period: "during beta · $29/mo after",
+                desc: "For active real estate professionals.",
+                highlight: true,
+                features: [
+                  "Unlimited properties",
+                  "Full Property Management suite",
+                  "Plaid bank sync + auto-categorize",
+                  "Email Robot (auto-send)",
+                  "AI Organizer (advanced)",
+                  "Priority support",
+                ],
+              },
+              {
+                name: "Team",
+                price: "Custom",
+                period: "for property mgmt firms",
+                desc: "For PM companies with multiple owners.",
+                highlight: false,
+                features: [
+                  "Everything in Professional",
+                  "Multi-user access",
+                  "Per-owner reports",
+                  "1099 vendor hub",
+                  "Dedicated onboarding",
+                  "SLA + phone support",
+                ],
+              },
+            ].map((tier) => (
+              <div key={tier.name} style={{
+                background: tier.highlight ? `linear-gradient(150deg, ${navy} 0%, #0A2A3A 100%)` : white,
+                border: `1px solid ${tier.highlight ? teal : "#CBD5E1"}`,
+                borderRadius: 16,
+                padding: "32px 24px",
+                position: "relative",
+                color: tier.highlight ? white : navy,
+                boxShadow: tier.highlight ? "0 12px 40px rgba(0,201,167,0.18)" : "0 2px 10px rgba(13,27,42,0.04)",
+                transform: tier.highlight ? "scale(1.03)" : "none",
+              }}>
+                {tier.highlight && (
+                  <div style={{
+                    position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)",
+                    background: teal, color: navy, padding: "4px 14px", borderRadius: 20,
+                    fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", fontFamily: "'IBM Plex Mono', monospace",
+                  }}>Most Popular</div>
+                )}
+
+                <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase", color: tier.highlight ? teal : "#475569", marginBottom: 10, fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {tier.name}
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <span style={{ fontSize: 40, fontWeight: 800, fontFamily: "'Inter', sans-serif", letterSpacing: -1, color: tier.highlight ? white : navy }}>{tier.price}</span>
+                </div>
+                <div style={{ fontSize: 12, color: tier.highlight ? "rgba(255,255,255,0.6)" : "#475569", marginBottom: 18, fontFamily: "'IBM Plex Mono', monospace" }}>{tier.period}</div>
+                <p style={{ fontSize: 14, color: tier.highlight ? "rgba(255,255,255,0.7)" : "#334155", lineHeight: 1.6, marginBottom: 24 }}>
+                  {tier.desc}
+                </p>
+
+                <div style={{ marginBottom: 26 }}>
+                  {tier.features.map((f) => (
+                    <div key={f} style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 10, fontSize: 13, color: tier.highlight ? "rgba(255,255,255,0.85)" : "#334155" }}>
+                      <span style={{ color: teal, fontWeight: 700, flexShrink: 0 }}>✓</span>
+                      <span>{f}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={onGetStarted} style={{
+                  width: "100%", padding: "13px 22px",
+                  background: tier.highlight ? teal : "transparent",
+                  color: tier.highlight ? navy : navy,
+                  border: tier.highlight ? "none" : `2px solid ${navy}`,
+                  borderRadius: 8, fontSize: 14, fontWeight: 700,
+                  cursor: "pointer", fontFamily: "'Inter', sans-serif", transition: "all 0.15s",
+                }}>
+                  {tier.name === "Team" ? "Contact Sales" : "Get Started"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section style={{ padding: "100px 24px", background: "#F8FAFC" }}>
+        <div style={{ maxWidth: 760, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 50 }}>
+            <h2 style={{ fontSize: 38, fontWeight: 800, color: navy, letterSpacing: -0.8, fontFamily: "'Inter', sans-serif", marginBottom: 14 }}>
+              Frequently Asked Questions
+            </h2>
+            <p style={{ fontSize: 16, color: gray, lineHeight: 1.7 }}>
+              Quick answers about how RepTrack works and what it isn't.
+            </p>
+          </div>
+
+          {[
+            {
+              q: "Is RepTrack a tax advisor?",
+              a: "No. RepTrack is an organizer, not an advisor. We help you keep contemporaneous records and clean documentation so your CPA can confidently determine and defend your Real Estate Professional status. We never tell you whether you qualify for §469(c)(7) — that's your CPA's call.",
+            },
+            {
+              q: "How does the IRS 750-hour test tracking work?",
+              a: "Every time you log a real estate activity, RepTrack categorizes it (qualifying or non-qualifying), timestamps it, and adds it to your running totals. Your dashboard shows real-time progress on both the 750-hour test AND the 50% majority test required under §469(c)(7)(B).",
+            },
+            {
+              q: "Will my records hold up in an IRS audit?",
+              a: "Audit defense is based on contemporaneous documentation — entries logged at the time of activity, not reconstructed later (the standard from Moss v. Commissioner). RepTrack timestamps every entry, ties it to a property, and exports a CPA-formatted summary. Your CPA still represents you in audits; we just give them clean records.",
+            },
+            {
+              q: "Is my financial data secure?",
+              a: "Yes. Bank connections go through Plaid (the same infrastructure used by Venmo, Robinhood, and most major fintech apps). Bank credentials never touch RepTrack servers. All data is encrypted in transit and at rest via Supabase + Vercel.",
+            },
+            {
+              q: "What about short-term rentals (Airbnb, VRBO)?",
+              a: "RepTrack supports both long-term rentals (REP test) and short-term rentals (the separate STR loophole under the 7-day average stay rule). The system tracks both activity types separately so your CPA can apply the right tax treatment.",
+            },
+            {
+              q: "Can I import historical data?",
+              a: "Yes. Plaid pulls the last 90 days of bank transactions automatically. You can also bulk-import historical hours and expenses via CSV. Most users have current-year records up and running within 30 minutes.",
+            },
+            {
+              q: "What happens after the beta?",
+              a: "Beta users keep their pricing for the lifetime of their account. After beta, Professional plans will be $29/month — but if you sign up now, you'll stay free or grandfather into the lowest published price.",
+            },
+          ].map((item, i) => (
+            <details key={i} style={{
+              background: white, border: "1px solid #CBD5E1", borderRadius: 12,
+              padding: "18px 22px", marginBottom: 12, cursor: "pointer",
+            }}>
+              <summary style={{
+                fontSize: 16, fontWeight: 700, color: navy, fontFamily: "'Inter', sans-serif",
+                listStyle: "none", display: "flex", justifyContent: "space-between", alignItems: "center",
+              }}>
+                <span>{item.q}</span>
+                <span style={{ color: teal, fontSize: 22, fontWeight: 400, marginLeft: 14 }}>+</span>
+              </summary>
+              <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.7, marginTop: 14 }}>
+                {item.a}
+              </p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       {/* ── CTA BANNER ── */}
       <section style={{ padding: "80px 24px", background: teal }}>
         <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center" }}>
@@ -569,15 +747,18 @@ function LandingPage({ onGetStarted }) {
           </h2>
           <p style={{ fontSize: 16, color: "rgba(13,27,42,0.7)", marginBottom: 32, lineHeight: 1.7 }}>
             Join real estate professionals who use RepTrack to stay IRS-ready year-round.
-            Free to start — no credit card required.
+            Free during beta — no credit card required.
           </p>
           <button onClick={onGetStarted} style={{
             display: "inline-block", padding: "16px 40px", background: navy, color: white,
             fontWeight: 700, fontSize: 16, borderRadius: 8, border: "none",
             cursor: "pointer", fontFamily: "'Inter', sans-serif", transition: "opacity 0.15s",
           }}>
-            Create Your Free Account
+            Create Your Free Account →
           </button>
+          <div style={{ marginTop: 20, fontSize: 12, color: "rgba(13,27,42,0.6)", fontFamily: "'IBM Plex Mono', monospace" }}>
+            Takes 60 seconds · No credit card · Cancel anytime
+          </div>
         </div>
       </section>
 
@@ -7679,6 +7860,12 @@ function AppContent() {
   const { user, loading } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
 
+  // Subdomain routing: marketing on root domain, app on app.* subdomain
+  const hostname = typeof window !== "undefined" ? window.location.hostname : "";
+  const isAppHost = hostname.startsWith("app.") || hostname === "localhost" ||
+                    hostname.startsWith("127.0.0.1") || hostname.endsWith(".vercel.app");
+  const APP_URL = "https://app.reptrack.ai";
+
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", background: "#0D1B2A", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -7687,7 +7874,16 @@ function AppContent() {
     );
   }
 
-  if (user) return <MainApp />;
-  if (showAuth) return <AuthScreen />;
-  return <LandingPage onGetStarted={() => setShowAuth(true)} />;
+  // App subdomain (or local dev): auth + main app, no landing page
+  if (isAppHost) {
+    if (user) return <MainApp />;
+    return <AuthScreen />;
+  }
+
+  // Root domain (reptrack.ai): always landing page; CTAs send users to app subdomain
+  if (user) {
+    window.location.href = APP_URL;
+    return null;
+  }
+  return <LandingPage onGetStarted={() => { window.location.href = APP_URL; }} />;
 }
