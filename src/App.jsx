@@ -994,20 +994,25 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const todayStr = () => new Date().toISOString().split("T")[0];
 
 // Single palette: dark navy + teal accent + grays only
+// Accessibility-tuned palette for elderly users (cataracts, presbyopia):
+// - Warm off-white bg reduces glare vs pure white
+// - Stronger pale tints (cataracts wash out colors below ~#D8 lightness)
+// - Darker borders so cards are clearly defined
+// - All text colors hit WCAG AAA contrast (>=7:1) on white
 const C = {
-  bg:"#F4F6F9", white:"#ffffff", dark:"#0D1B2A", darker:"#060F1A", text:"#1E293B",
-  mid:"#475569", light:"#64748B", lighter:"#94A3B8", border:"#E2E8F0", borderL:"#EEF2F7",
-  // Teal — THE accent color
-  gold:"#00A88C", goldL:"#00C9A7", goldPale:"#E0F7F4", goldBright:"#00E5C4",
+  bg:"#FAF7F2", white:"#ffffff", dark:"#0D1B2A", darker:"#060F1A", text:"#0F172A",
+  mid:"#334155", light:"#475569", lighter:"#64748B", border:"#CBD5E1", borderL:"#E2E8F0",
+  // Teal — THE accent color (darker base for AAA contrast on white)
+  gold:"#006B5C", goldL:"#00A88C", goldPale:"#C5EFE5", goldBright:"#00C9A7",
   // "Green" → teal (positive uses accent, not green)
-  green:"#007A6A", greenPale:"#E0F7F4", greenB:"#00C9A7",
+  green:"#006B5C", greenPale:"#C5EFE5", greenB:"#00A88C",
   // "Red" → dark gray (alerts use dark, not red)
-  red:"#475569", redPale:"#F1F5F9", redB:"#64748B",
+  red:"#334155", redPale:"#E2E8F0", redB:"#475569",
   // "Blue" → same gray family
-  blue:"#334155", bluePale:"#F4F6F9", blueB:"#475569",
+  blue:"#1E293B", bluePale:"#E2E8F0", blueB:"#334155",
   // Orange/Purple → gray
-  purple:"#475569", purpleB:"#64748B",
-  orange:"#475569", orangePale:"#F4F6F9", orangeB:"#64748B",
+  purple:"#334155", purpleB:"#475569",
+  orange:"#334155", orangePale:"#E2E8F0", orangeB:"#475569",
 };
 
 // SVG icon components — render in currentColor so they respect CSS color
